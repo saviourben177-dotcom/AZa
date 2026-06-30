@@ -5,6 +5,7 @@ import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
 import DeadlinePill from "@/components/deadline-pill";
 import VerifiedBadge from "@/components/verified-badge";
 import SaveButton from "@/components/save-button";
+import OpportunityCvTailor from "@/components/cv/opportunity-cv-tailor";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +95,8 @@ export default async function OpportunityDetailPage({
           ))}
         </div>
       )}
+
+      {user && <OpportunityCvTailor opportunityId={opportunity.id} />}
 
       <div className="mt-6 flex items-center gap-3">
         <a
