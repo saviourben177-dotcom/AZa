@@ -175,7 +175,7 @@ function buildDocxFromMarkdown(markdown: string): Document {
   });
 }
 
-/** Strips basic **bold**/*italic* markdown markers since we render plain runs for v1. */
+// Strips basic bold/italic markdown markers since we render plain runs for v1.
 function stripMarkdownEmphasis(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1");
 }
