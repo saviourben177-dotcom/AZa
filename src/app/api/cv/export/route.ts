@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   const doc = buildDocxFromMarkdown(markdown!);
   const buffer = await Packer.toBuffer(doc);
 
-  return new NextResponse(buffer, {
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "Content-Disposition": `attachment; filename="${filenameBase}.docx"`,
