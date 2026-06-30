@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
     markdown = cv.generated_content;
   }
 
-  const doc = buildDocxFromMarkdown(markdown);
+  const doc = buildDocxFromMarkdown(markdown!);
   const buffer = await Packer.toBuffer(doc);
 
   return new NextResponse(buffer, {
