@@ -28,6 +28,8 @@ export default async function ProfilePage() {
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
+  const avatarUrl = profile?.avatar_url as string | null | undefined;
+
   const [{ data: saved }, { count: ideaCount }, { count: skillCount }] = await Promise.all([
     supabase
       .from("saved_opportunities")
@@ -45,10 +47,15 @@ export default async function ProfilePage() {
       <h1 className="font-display text-[20px] font-extrabold text-ink">Profile</h1>
 
       <div className="mt-4 flex items-center gap-3.5">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-paper-dim font-display text-xl font-extrabold text-ink/40">
-          {(profile?.full_name ?? user.email ?? "?").charAt(0).toUpperCase()}
-        </div>
-        <div>
+        {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-paper-dim font-display text-xl font-extrabold text-ink/40">
+            {(profile?.full_name ?? user.email ?? "?").charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="flex-1">
           <p className="font-display text-[16px] font-bold text-ink">{profile?.full_name ?? "Aza user"}</p>
           <p className="text-[12.5px] text-ink/50">{user.email}</p>
           {profile?.role !== "user" && (
@@ -57,6 +64,12 @@ export default async function ProfilePage() {
             </span>
           )}
         </div>
+        <Link
+          href="/profile/edit"
+          className="rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-ink/70"
+        >
+          Edit
+        </Link>
       </div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">

@@ -20,7 +20,6 @@ export default function BusinessHubPage() {
         <HubCard href="/businesses/funding" title="Funding & Grants" subtitle="Find capital and funding" icon={<FundingIcon />} />
         <HubCard href="/businesses/marketplace" title="Marketplace" subtitle="Buy, sell and collaborate" icon={<MarketplaceIcon />} />
         <HubCard href="/businesses/incubators" title="Incubators" subtitle="Join programs and accelerators" icon={<IncubatorIcon />} />
-        <DisabledHubCard title="Team Finder" subtitle="Find co-founders and teams" icon={<TeamIcon />} badge="Soon" />
       </div>
     </div>
   );
@@ -33,19 +32,6 @@ function HubCard({ href, title, subtitle, icon }: { href: string; title: string;
       <p className="mt-2.5 font-display text-[13.5px] font-bold text-ink">{title}</p>
       <p className="mt-0.5 text-[11px] text-ink/55">{subtitle}</p>
     </Link>
-  );
-}
-
-function DisabledHubCard({ title, subtitle, icon, badge }: { title: string; subtitle: string; icon: React.ReactNode; badge: string }) {
-  return (
-    <div className="rounded-card border border-line bg-surface/50 p-3.5 opacity-60">
-      <div className="flex items-center justify-between">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-dim">{icon}</div>
-        <span className="rounded-full bg-paper-dim px-2 py-0.5 text-[9.5px] font-bold uppercase text-ink/40">{badge}</span>
-      </div>
-      <p className="mt-2.5 font-display text-[13.5px] font-bold text-ink/60">{title}</p>
-      <p className="mt-0.5 text-[11px] text-ink/40">{subtitle}</p>
-    </div>
   );
 }
 
@@ -63,7 +49,4 @@ function MarketplaceIcon() {
 }
 function IncubatorIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2c4 4 6 8 6 11a6 6 0 0 1-12 0c0-3 2-7 6-11Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" /></svg>;
-}
-function TeamIcon() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="2.8" stroke="rgba(15,18,16,.4)" strokeWidth="1.5" /><circle cx="17" cy="9" r="2.2" stroke="rgba(15,18,16,.4)" strokeWidth="1.5" /><path d="M3.5 19c0-2.8 2.5-5 5.5-5s5.5 2.2 5.5 5M14.5 19c0-2-1.6-3.7-3.8-4.4" stroke="rgba(15,18,16,.4)" strokeWidth="1.5" strokeLinecap="round" /></svg>;
 }
