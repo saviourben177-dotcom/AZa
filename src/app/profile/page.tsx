@@ -139,14 +139,3 @@ function ProfileLinkRow({ href, label }: { href: string; label: string }) {
     </Link>
   );
 }
-
-function ProfileRow({ label }: { label: string }) {
-  return (
-    <div className="flex w-full items-center justify-between rounded-card border border-line bg-surface px-4 py-3.5">
-      <span className="text-[14px] font-semibold text-ink">{label}</span>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="m9 6 6 6-6 6" stroke="rgb(var(--ink) / 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
-  );
-}
