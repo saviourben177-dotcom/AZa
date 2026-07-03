@@ -112,6 +112,7 @@ export default async function ProfilePage() {
         <ThemeToggle />
         <ProfileRow label="Help & Support" />
         <ProfileRow label="About Aza" />
+        <ProfileLinkRow href="/profile/settings" label="Settings" />
       </section>
 
       <div className="mt-6"><SignOutButton /></div>
