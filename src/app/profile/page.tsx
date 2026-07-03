@@ -110,8 +110,8 @@ export default async function ProfilePage() {
 
       <section className="mt-6 space-y-2.5">
         <ThemeToggle />
-        <ProfileRow label="Help & Support" />
-        <ProfileRow label="About Aza" />
+        <ProfileLinkRow href="/help" label="Help & Support" />
+        <ProfileLinkRow href="/about" label="About Aza" />
         <ProfileLinkRow href="/profile/settings" label="Settings" />
       </section>
 
