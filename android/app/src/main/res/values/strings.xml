@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Aza</string>
+    <string name="title_activity_main">Aza</string>
+    <string name="package_name">com.yangatechnologies.aza</string>
+    <string name="custom_url_scheme">com.yangatechnologies.aza</string>
+</resources>
