@@ -15,14 +15,19 @@
   --paper: 255 255 255;        /* pure white background */
   --paper-dim: 244 247 245;    /* faint green-gray for subtle fills */
   --surface: 255 255 255;      /* cards */
+  --surface-raised: 255 255 255;
   --accent: 22 163 94;         /* AZA green */
   --accent-dark: 13 122 68;
   --accent-light: 219 245 231;
+  --gold: 202 138 4;
+  --gold-light: 254 243 199;
   --urgent: 217 119 6;
   --urgent-light: 254 240 215;
   --danger: 220 38 38;
   --danger-light: 254 226 226;
   --line: 228 232 229;
+  --line-strong: 214 220 216;
+  --shadow-color: 15 23 20;
 }
 
 [data-theme="dark"] {
@@ -30,14 +35,19 @@
   --paper: 10 12 11;           /* near-black background */
   --paper-dim: 20 24 22;
   --surface: 18 21 19;
+  --surface-raised: 22 27 24;
   --accent: 34 197 110;        /* same AZA green, slightly brighter for contrast */
   --accent-dark: 22 163 94;
   --accent-light: 20 46 32;
+  --gold: 232 184 75;
+  --gold-light: 46 38 15;
   --urgent: 224 178 96;
   --urgent-light: 46 38 20;
   --danger: 235 99 90;
   --danger-light: 48 24 22;
   --line: 38 42 40;
+  --line-strong: 54 60 57;
+  --shadow-color: 0 0 0;
 }
 
 @layer base {
@@ -67,6 +77,31 @@
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Elevation system — replaces flat shadow-sm/shadow-md everywhere */
+.shadow-card {
+  box-shadow: 0 10px 26px -10px rgb(var(--shadow-color) / 0.14);
+}
+[data-theme="dark"] .shadow-card {
+  box-shadow: 0 14px 30px -12px rgb(var(--shadow-color) / 0.55);
+}
+
+.shadow-elevated {
+  box-shadow: 0 24px 48px -18px rgb(var(--shadow-color) / 0.18), 0 2px 8px -2px rgb(var(--shadow-color) / 0.08);
+}
+[data-theme="dark"] .shadow-elevated {
+  box-shadow: 0 30px 60px -20px rgb(var(--shadow-color) / 0.65), 0 2px 0 rgb(255 255 255 / 0.03) inset;
+}
+
+.shadow-glow-accent {
+  box-shadow: 0 16px 28px -10px rgb(var(--accent) / 0.38);
+}
+
+.bg-ambient {
+  background-image:
+    radial-gradient(circle at 12% -5%, rgb(var(--accent) / 0.08) 0%, transparent 42%),
+    radial-gradient(circle at 92% 12%, rgb(var(--gold) / 0.06) 0%, transparent 38%);
 }
 
 @keyframes swipe-left {

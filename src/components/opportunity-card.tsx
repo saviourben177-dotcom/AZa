@@ -1,9 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Opportunity } from "@/lib/types";
-import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
 import DeadlinePill from "@/components/deadline-pill";
 import VerifiedBadge from "@/components/verified-badge";
 import SaveButton from "@/components/save-button";
+import { CATEGORY_IMAGE, CATEGORY_EYEBROW } from "@/lib/category-visuals";
 
 export default function OpportunityCard({
   opportunity,
@@ -15,42 +16,54 @@ export default function OpportunityCard({
   isAuthed: boolean;
 }) {
   return (
-    <div className="rounded-card border border-line bg-surface p-4 shadow-sm">
-      <div className="flex items-start justify-between gap-2">
-        <span className="rounded-full bg-paper-dim px-2.5 py-1 text-[11px] font-semibold text-ink/60">
-          {OPPORTUNITY_CATEGORY_LABELS[opportunity.category]}
-        </span>
-        <DeadlinePill deadline={opportunity.deadline} />
-      </div>
-
-      <Link href={`/opportunities/${opportunity.id}`} className="mt-2.5 block">
-        <h3 className="font-display text-[16px] font-bold leading-snug text-ink">
-          {opportunity.title}
-        </h3>
-        <p className="mt-0.5 text-[13px] text-ink/60">{opportunity.org}</p>
+    <div className="overflow-hidden rounded-card border border-line-strong bg-surface shadow-card">
+      <Link href={`/opportunities/${opportunity.id}`} className="block">
+        <div className="relative h-36 w-full overflow-hidden">
+          <Image
+            src={CATEGORY_IMAGE[opportunity.category]}
+            alt=""
+            fill
+            sizes="(max-width: 448px) 100vw, 448px"
+            className="object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/10 to-transparent" />
+          <div className="absolute left-3 top-3 right-3 flex items-start justify-between">
+            <span className="rounded-pill bg-black/55 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
+              {CATEGORY_EYEBROW[opportunity.category]}
+            </span>
+            {opportunity.curator_verified && <VerifiedBadge />}
+          </div>
+          <div className="absolute -bottom-3 left-3">
+            <DeadlinePill deadline={opportunity.deadline} />
+          </div>
+        </div>
       </Link>
 
-      <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/70">
-        {opportunity.description}
-      </p>
+      <div className="px-4 pb-4 pt-6">
+        <Link href={`/opportunities/${opportunity.id}`} className="block">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-aza" />
+            <p className="text-[12px] font-semibold text-ink/55">{opportunity.org}</p>
+          </div>
+          <h3 className="font-display text-[17px] font-bold leading-snug text-ink">
+            {opportunity.title}
+          </h3>
+        </Link>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {opportunity.curator_verified && <VerifiedBadge />}
-          {opportunity.remote && (
-            <span className="text-[11px] font-medium text-ink/50">Remote</span>
-          )}
-          {!opportunity.remote && opportunity.location && (
-            <span className="text-[11px] font-medium text-ink/50">
-              {opportunity.location}
-            </span>
-          )}
+        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/65">
+          {opportunity.description}
+        </p>
+
+        <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+          <span className="text-[11.5px] font-medium text-ink/50">
+            {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Nigeria"}
+          </span>
+          <SaveButton
+            opportunityId={opportunity.id}
+            initialSaved={isSaved}
+            isAuthed={isAuthed}
+          />
         </div>
-        <SaveButton
-          opportunityId={opportunity.id}
-          initialSaved={isSaved}
-          isAuthed={isAuthed}
-        />
       </div>
     </div>
   );

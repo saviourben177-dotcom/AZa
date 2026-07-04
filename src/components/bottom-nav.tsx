@@ -16,10 +16,10 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-line bg-paper/95 backdrop-blur-sm"
+      className="fixed bottom-0 left-1/2 z-40 w-full max-w-md -translate-x-1/2 border-t border-line bg-paper/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"
       aria-label="Primary"
     >
-      <ul className="flex items-stretch justify-between px-1">
+      <ul className="flex items-stretch justify-between px-2 py-2">
         {TABS.map((tab) => {
           const active =
             tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
@@ -27,11 +27,17 @@ export default function BottomNav() {
             <li key={tab.href} className="flex-1">
               <Link
                 href={tab.href}
-                className="flex flex-col items-center gap-1 py-2.5 text-[10.5px] font-medium"
+                className="flex flex-col items-center gap-1 py-1 text-[10.5px] font-semibold"
                 aria-current={active ? "page" : undefined}
               >
-                <tab.icon active={active} />
-                <span className={active ? "text-ink" : "text-ink/50"}>
+                <span
+                  className={`flex items-center justify-center rounded-pill px-3.5 py-1.5 transition-colors ${
+                    active ? "bg-aza-light" : ""
+                  }`}
+                >
+                  <tab.icon active={active} />
+                </span>
+                <span className={active ? "text-aza" : "text-ink/45"}>
                   {tab.label}
                 </span>
               </Link>

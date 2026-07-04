@@ -55,15 +55,17 @@ const FEATURED: OpportunityCategory[] = [
 
 export default function CategoryGrid() {
   return (
-    <div className="grid grid-cols-3 gap-2.5">
+    <div className="grid grid-cols-3 gap-3">
       {FEATURED.map((cat) => (
         <Link
           key={cat}
           href={`/?category=${cat}`}
-          className="flex flex-col items-center gap-1.5 rounded-card border border-line bg-surface py-3.5"
+          className="flex flex-col items-center gap-2 rounded-card-sm border border-line-strong bg-surface py-4 shadow-card transition-transform active:scale-95"
         >
-          {ICONS[cat]}
-          <span className="text-[11px] font-semibold text-ink/80">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-aza-light">
+            {ICONS[cat]}
+          </span>
+          <span className="text-[11.5px] font-bold text-ink/80">
             {OPPORTUNITY_CATEGORY_LABELS[cat]}
           </span>
         </Link>

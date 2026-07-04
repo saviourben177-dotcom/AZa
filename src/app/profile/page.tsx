@@ -15,13 +15,21 @@ export default async function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="px-4 pt-12 text-center">
-        <h1 className="font-display text-xl font-extrabold text-ink">You&apos;re not logged in</h1>
-        <p className="mt-2 text-[13px] text-ink/60">Log in to save opportunities and manage your account.</p>
-        <Link href="/login" className="mt-5 inline-block rounded-card bg-aza px-6 py-3 text-[14px] font-bold text-white">
+      <div className="px-5 pt-16 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-aza-light text-3xl shadow-card">
+          👋
+        </div>
+        <h1 className="mt-5 font-display text-[21px] font-bold text-ink">You&apos;re not logged in</h1>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55">
+          Log in to save opportunities and manage your account.
+        </p>
+        <Link
+          href="/login"
+          className="mt-6 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent"
+        >
           Log in
         </Link>
-        <div className="mt-8 text-left"><ThemeToggle /></div>
+        <div className="mt-10 text-left"><ThemeToggle /></div>
       </div>
     );
   }
@@ -43,57 +51,61 @@ export default async function ProfilePage() {
   const savedOpportunities = (saved ?? []).map((s) => s.opportunities).filter(Boolean) as unknown as Opportunity[];
 
   return (
-    <div className="px-4 pt-6">
-      <h1 className="font-display text-[20px] font-extrabold text-ink">Profile</h1>
+    <div className="px-5 pt-7">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Profile</p>
 
-      <div className="mt-4 flex items-center gap-3.5">
+      <div className="mt-4 flex items-center gap-4 rounded-card border border-line-strong bg-surface p-4 shadow-card">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover" />
+          <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover ring-2 ring-aza/30" />
         ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-paper-dim font-display text-xl font-extrabold text-ink/40">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-aza-light font-display text-xl font-bold text-aza ring-2 ring-aza/20">
             {(profile?.full_name ?? user.email ?? "?").charAt(0).toUpperCase()}
           </div>
         )}
-        <div className="flex-1">
-          <p className="font-display text-[16px] font-bold text-ink">{profile?.full_name ?? "Aza user"}</p>
-          <p className="text-[12.5px] text-ink/50">{user.email}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[16px] font-bold text-ink">{profile?.full_name ?? "Aza user"}</p>
+          <p className="truncate text-[12.5px] text-ink/50">{user.email}</p>
           {profile?.role !== "user" && (
-            <span className="mt-1 inline-block rounded-full bg-aza-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-aza">
+            <span className="mt-1.5 inline-block rounded-pill bg-aza-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-aza">
               {profile?.role}
             </span>
           )}
         </div>
         <Link
           href="/profile/edit"
-          className="rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-ink/70"
+          className="shrink-0 rounded-pill border border-line-strong px-3.5 py-1.5 text-[12px] font-bold text-ink/70"
         >
           Edit
         </Link>
       </div>
 
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-4 grid grid-cols-3 divide-x divide-line rounded-card border border-line-strong bg-surface shadow-card">
         <StatBox label="Saved" value={savedOpportunities.length} />
         <StatBox label="Ideas" value={ideaCount ?? 0} />
         <StatBox label="Skills" value={skillCount ?? 0} />
       </div>
 
       {(profile?.role === "curator" || profile?.role === "admin") && (
-        <Link href="/curator" className="mt-4 block rounded-card bg-ink px-4 py-3 text-center text-[14px] font-bold text-paper">
+        <Link href="/curator" className="mt-4 block rounded-card bg-ink px-4 py-3.5 text-center text-[14px] font-bold text-paper shadow-card">
           Open curator dashboard →
         </Link>
       )}
 
-      <section className="mt-6">
+      <section className="mt-7">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-[14px] font-bold text-ink">Saved Opportunities</h2>
+          <h2 className="font-display text-[16px] font-bold text-ink">Saved Opportunities</h2>
           {savedOpportunities.length > 3 && (
-            <Link href="/profile/saved" className="text-[12px] font-semibold text-aza">See all</Link>
+            <Link href="/profile/saved" className="text-[12.5px] font-bold text-aza">See all</Link>
           )}
         </div>
-        <div className="mt-2.5 space-y-3">
+        <div className="mt-3 space-y-4">
           {savedOpportunities.length === 0 && (
-            <p className="text-[13px] text-ink/50">Nothing saved yet — tap the bookmark icon on any opportunity.</p>
+            <div className="rounded-card border border-line-strong bg-surface p-6 text-center shadow-card">
+              <p className="text-[13px] leading-relaxed text-ink/55">
+                Nothing saved yet — tap the bookmark icon on any opportunity.
+              </p>
+            </div>
           )}
           {savedOpportunities.slice(0, 3).map((opp) => (
             <OpportunityCard key={opp.id} opportunity={opp} isSaved={true} isAuthed={true} />
@@ -101,37 +113,37 @@ export default async function ProfilePage() {
         </div>
       </section>
 
-      <section className="mt-6 space-y-2.5">
+      <section className="mt-7 space-y-2.5">
         <ProfileLinkRow href="/profile/cv" label="CV Builder" />
         <ProfileLinkRow href="/growth/ideas?filter=mine" label="My Ideas" />
         <ProfileLinkRow href="/growth/skills" label="My Skills" />
         <ProfileLinkRow href="/businesses/marketplace" label="My Listings" />
       </section>
 
-      <section className="mt-6 space-y-2.5">
+      <section className="mt-7 space-y-2.5">
         <ThemeToggle />
         <ProfileLinkRow href="/help" label="Help & Support" />
         <ProfileLinkRow href="/about" label="About Aza" />
         <ProfileLinkRow href="/profile/settings" label="Settings" />
       </section>
 
-      <div className="mt-6"><SignOutButton /></div>
+      <div className="mt-7"><SignOutButton /></div>
     </div>
   );
 }
 
 function StatBox({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-card border border-line bg-surface py-3 text-center">
-      <p className="font-display text-[18px] font-extrabold text-ink tabular">{value}</p>
-      <p className="mt-0.5 text-[10.5px] font-medium text-ink/50">{label}</p>
+    <div className="py-4 text-center">
+      <p className="font-display text-[19px] font-bold text-ink tabular">{value}</p>
+      <p className="mt-0.5 text-[10.5px] font-semibold text-ink/50">{label}</p>
     </div>
   );
 }
 
 function ProfileLinkRow({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} className="flex w-full items-center justify-between rounded-card border border-line bg-surface px-4 py-3.5">
+    <Link href={href} className="flex w-full items-center justify-between rounded-card-sm border border-line-strong bg-surface px-4 py-4 shadow-card">
       <span className="text-[14px] font-semibold text-ink">{label}</span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="m9 6 6 6-6 6" stroke="rgb(var(--ink) / 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

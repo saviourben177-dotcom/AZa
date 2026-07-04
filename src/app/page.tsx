@@ -79,31 +79,32 @@ export default async function HomePage({
   )[0];
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-5 pt-7">
       <header className="flex items-start justify-between">
         <div>
           {firstName ? (
             <>
-              <h1 className="font-display text-[19px] font-extrabold text-ink">{greeting()}, {firstName} 👋</h1>
-              <p className="mt-0.5 text-[12.5px] text-ink/60">Let&apos;s make today count.</p>
+              <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Welcome back</p>
+              <h1 className="mt-1 font-display text-[24px] font-bold leading-tight text-ink">{greeting()}, {firstName} 👋</h1>
+              <p className="mt-1 text-[13px] text-ink/55">Let&apos;s make today count.</p>
             </>
           ) : (
             <>
-              <h1 className="font-display text-[22px] font-extrabold text-aza">Aza</h1>
-              <p className="mt-0.5 text-[12.5px] text-ink/60">Find your next big opportunity</p>
+              <h1 className="font-display text-[28px] font-bold leading-tight text-aza">Aza</h1>
+              <p className="mt-1 text-[13px] text-ink/55">Find your next big opportunity</p>
             </>
           )}
         </div>
         {user && <NotificationBell />}
       </header>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <SearchBar placeholder="Search opportunities..." />
       </div>
 
       {isFiltering ? (
-        <div className="mt-4 space-y-3">
-          <Link href="/" className="text-[12.5px] font-semibold text-ink/50">← Clear filters</Link>
+        <div className="mt-5 space-y-4">
+          <Link href="/" className="text-[12.5px] font-bold text-ink/50">← Clear filters</Link>
           {(filteredList ?? []).length === 0 && <p className="text-[13px] text-ink/50">No matches found.</p>}
           {filteredList?.map((opp: Opportunity) => (
             <OpportunityCard key={opp.id} opportunity={opp} isSaved={savedIds.has(opp.id)} isAuthed={!!user} />
@@ -112,9 +113,9 @@ export default async function HomePage({
       ) : (
         <>
           {profile && personalized.wasFiltered && personalized.hiddenCount > 0 && (
-            <div className="mt-4 flex items-center justify-between rounded-card bg-aza-light px-3.5 py-2.5">
-              <p className="text-[12px] font-medium text-aza-dark">
-                Showing matches based on your profile ({personalized.hiddenCount} hidden)
+            <div className="mt-5 flex items-center justify-between rounded-card-sm bg-aza-light px-4 py-3 shadow-card">
+              <p className="text-[12px] font-semibold text-aza-dark">
+                Matched to your profile ({personalized.hiddenCount} hidden)
               </p>
               <Link href="/?showAll=true" className="text-[12px] font-bold text-aza-dark underline">
                 Show all
@@ -122,14 +123,14 @@ export default async function HomePage({
             </div>
           )}
 
-          <section className="mt-5">
+          <section className="mt-7">
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-[14px] font-bold text-ink">
+              <h2 className="font-display text-[16px] font-bold text-ink">
                 {profile ? "Recommended for you" : "Latest Opportunities"}
               </h2>
-              <Link href="/discover" className="text-[12px] font-semibold text-aza">See all</Link>
+              <Link href="/discover" className="text-[12.5px] font-bold text-aza">See all</Link>
             </div>
-            <div className="mt-2.5 space-y-3">
+            <div className="mt-3 space-y-4">
               {personalized.opportunities.length === 0 && <EmptyState />}
               {personalized.opportunities.slice(0, 3).map((opp: Opportunity) => (
                 <OpportunityCard key={opp.id} opportunity={opp} isSaved={savedIds.has(opp.id)} isAuthed={!!user} />
@@ -138,9 +139,9 @@ export default async function HomePage({
           </section>
 
           {upcoming && (
-            <section className="mt-6">
-              <h2 className="font-display text-[14px] font-bold text-ink">Upcoming deadline</h2>
-              <div className="mt-2.5">
+            <section className="mt-7">
+              <h2 className="font-display text-[16px] font-bold text-ink">Upcoming deadline</h2>
+              <div className="mt-3">
                 <DeadlineCountdown
                   opportunityId={upcoming.id}
                   title={upcoming.title}
@@ -151,18 +152,18 @@ export default async function HomePage({
           )}
 
           {user && savedRows.length > 0 && (
-            <section className="mt-6">
+            <section className="mt-7">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-[14px] font-bold text-ink">Recent activity</h2>
-                <Link href="/profile" className="text-[12px] font-semibold text-aza">See all</Link>
+                <h2 className="font-display text-[16px] font-bold text-ink">Recent activity</h2>
+                <Link href="/profile" className="text-[12.5px] font-bold text-aza">See all</Link>
               </div>
-              <div className="mt-2.5 space-y-2">
+              <div className="mt-3 space-y-2.5">
                 {savedRows.slice(0, 3).map((s) => (
-                  <div key={s.opportunity_id} className="rounded-card border border-line bg-surface px-3.5 py-3">
-                    <p className="text-[12.5px] text-ink/75">
-                      You saved <span className="font-semibold text-ink">{s.opportunities?.title}</span>
+                  <div key={s.opportunity_id} className="rounded-card-sm border border-line-strong bg-surface px-4 py-3.5 shadow-card">
+                    <p className="text-[13px] text-ink/75">
+                      You saved <span className="font-bold text-ink">{s.opportunities?.title}</span>
                     </p>
-                    <p className="mt-0.5 text-[11px] text-ink/40">{relativeTime(s.saved_at)}</p>
+                    <p className="mt-1 text-[11px] font-medium text-ink/40">{relativeTime(s.saved_at)}</p>
                   </div>
                 ))}
               </div>
@@ -187,9 +188,10 @@ function relativeTime(iso: string): string {
 
 function EmptyState() {
   return (
-    <div className="rounded-card border border-dashed border-line bg-surface/60 p-8 text-center">
+    <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">✨</div>
       <p className="font-display text-[15px] font-bold text-ink">Nothing here yet</p>
-      <p className="mt-1 text-[13px] text-ink/60">New opportunities are added regularly — check back soon.</p>
+      <p className="mt-1 text-[13px] text-ink/55">New opportunities are added regularly — check back soon.</p>
     </div>
   );
 }

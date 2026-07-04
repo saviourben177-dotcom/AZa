@@ -3,7 +3,7 @@ import { daysUntil } from "@/lib/types";
 export default function DeadlinePill({ deadline }: { deadline: string | null }) {
   if (!deadline) {
     return (
-      <span className="rounded-full bg-paper-dim px-2.5 py-1 text-[11px] font-semibold text-ink/50">
+      <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-semibold text-ink/50">
         No deadline
       </span>
     );
@@ -15,7 +15,7 @@ export default function DeadlinePill({ deadline }: { deadline: string | null }) 
 
   if (days < 0) {
     return (
-      <span className="rounded-full bg-ink/10 px-2.5 py-1 text-[11px] font-semibold text-ink/40">
+      <span className="rounded-pill bg-ink/10 px-3 py-1.5 text-[11px] font-semibold text-ink/40">
         Closed
       </span>
     );
@@ -23,7 +23,7 @@ export default function DeadlinePill({ deadline }: { deadline: string | null }) 
 
   if (days === 0) {
     return (
-      <span className="rounded-full bg-danger px-2.5 py-1 text-[11px] font-bold text-white">
+      <span className="rounded-pill bg-danger px-3 py-1.5 text-[11px] font-bold text-white shadow-card">
         Closes today
       </span>
     );
@@ -31,22 +31,22 @@ export default function DeadlinePill({ deadline }: { deadline: string | null }) 
 
   if (days <= 3) {
     return (
-      <span className="rounded-full bg-danger px-2.5 py-1 text-[11px] font-bold text-white">
-        {days} day{days === 1 ? "" : "s"} left
+      <span className="rounded-pill bg-danger px-3 py-1.5 text-[11px] font-bold text-white shadow-card">
+        ⏳ {days} day{days === 1 ? "" : "s"} left
       </span>
     );
   }
 
   if (days <= 7) {
     return (
-      <span className="rounded-full bg-urgent-light px-2.5 py-1 text-[11px] font-bold text-urgent">
-        {days} days left
+      <span className="rounded-pill bg-gold px-3 py-1.5 text-[11px] font-extrabold text-[rgb(24_18_4)] shadow-card">
+        ⏳ {days} days left
       </span>
     );
   }
 
   return (
-    <span className="rounded-full bg-aza-light px-2.5 py-1 text-[11px] font-semibold text-aza tabular">
+    <span className="rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-semibold text-aza tabular">
       Due {new Date(deadline).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
     </span>
   );

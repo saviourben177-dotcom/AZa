@@ -31,8 +31,10 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
   return (
     <button
       onClick={onClick}
-      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
-        active ? "border-aza bg-aza text-white" : "border-line bg-surface text-ink/70"
+      className={`shrink-0 rounded-pill border px-4 py-2 text-[13px] font-bold transition-colors ${
+        active
+          ? "border-aza bg-aza text-white shadow-glow-accent"
+          : "border-line-strong bg-surface text-ink/60"
       }`}
     >
       {label}

@@ -13,14 +13,16 @@ export default async function DiscoverPage({
   const { opportunities, isAuthed } = await getDiscoverQueue(category);
 
   return (
-    <div className="px-4 pt-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[20px] font-extrabold text-ink">Discover opportunities</h1>
-        </div>
+    <div className="px-5 pt-7">
+      <header>
+        <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Discover</p>
+        <h1 className="mt-1 font-display text-[24px] font-bold leading-tight text-ink">Find your next move</h1>
+        <p className="mt-1 text-[13px] text-ink/55">Swipe through opportunities picked for you</p>
       </header>
 
-      <DiscoverFilters />
+      <div className="mt-4">
+        <DiscoverFilters />
+      </div>
 
       <DiscoverDeck key={category ?? "all"} opportunities={opportunities} isAuthed={isAuthed} />
     </div>

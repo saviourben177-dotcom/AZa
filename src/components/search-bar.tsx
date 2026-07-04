@@ -41,7 +41,7 @@ export default function SearchBar({ placeholder }: { placeholder: string }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-card border border-line bg-surface py-2.5 pl-10 pr-4 text-[14px] text-ink placeholder:text-ink/40"
+        className="w-full rounded-pill border border-line-strong bg-surface py-3.5 pl-11 pr-4 text-[14px] text-ink shadow-card placeholder:text-ink/40"
       />
     </form>
   );
