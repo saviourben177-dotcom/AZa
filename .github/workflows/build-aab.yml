@@ -26,6 +26,9 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
       - name: Decode keystore
         working-directory: android
         run: |
