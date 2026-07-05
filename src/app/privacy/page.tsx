@@ -22,15 +22,16 @@ export default function PrivacyPage() {
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>Display name</li>
             <li>Email address</li>
-            <li>Profile picture (if provided)</li>
+            <li>Profile picture (if you upload an avatar)</li>
           </ul>
 
-          <p className="mt-3 text-[13px] font-bold text-ink">User Content</p>
+          <p className="mt-3 text-[13px] font-bold text-ink">Content You Provide</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
-            <li>Posts</li>
-            <li>Comments</li>
-            <li>Profile information</li>
-            <li>Other content you choose to share</li>
+            <li>Profile and onboarding details (e.g. interests, goals, skills)</li>
+            <li>Ideas you share in Growth Hub</li>
+            <li>CV Builder information and generated CV documents</li>
+            <li>Business or marketplace listings you create</li>
+            <li>Saved opportunities and skill-tracking progress</li>
           </ul>
 
           <p className="mt-3 text-[13px] font-bold text-ink">Device and Usage Information</p>
@@ -52,8 +53,9 @@ export default function PrivacyPage() {
           <ul className="mt-1 list-disc space-y-1 pl-5">
             <li>Create and manage your account</li>
             <li>Provide and improve our services</li>
-            <li>Display your profile and content to other users</li>
-            <li>Enable community interactions</li>
+            <li>Personalize opportunities, skills, and recommendations shown to you</li>
+            <li>Generate documents you request, such as CVs</li>
+            <li>Display your public profile, ideas, or listings to other users where applicable</li>
             <li>Maintain app security</li>
             <li>Detect fraud, spam, or abuse</li>
             <li>Respond to customer support requests</li>
@@ -124,8 +126,10 @@ export default function PrivacyPage() {
         <section>
           <h2 className="font-display text-[15px] font-bold text-ink">8. Third-Party Services</h2>
           <p className="mt-1.5">
-            AZA may use third-party services that help us operate the application, such as cloud
-            hosting, authentication, and database services.
+            AZA uses third-party services to operate the application, including cloud hosting,
+            authentication, database, and file storage services (for items such as your avatar
+            and generated CV documents), and AI services used to power features like the CV
+            Builder.
           </p>
           <p className="mt-1.5">
             These providers only process information necessary to perform services on our behalf.
