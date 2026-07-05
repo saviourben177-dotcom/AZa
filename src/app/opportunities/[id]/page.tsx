@@ -7,6 +7,7 @@ import VerifiedBadge from "@/components/verified-badge";
 import SaveButton from "@/components/save-button";
 import OpportunityCvTailor from "@/components/cv/opportunity-cv-tailor";
 import { CATEGORY_IMAGE, CATEGORY_EYEBROW } from "@/lib/category-visuals";
+import type { Opportunity } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,15 @@ export default async function OpportunityDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: opportunity, error } = await supabase
+  const { data: rawOpportunity, error } = await supabase
     .from("opportunities")
     .select("*")
     .eq("id", id)
     .single();
 
-  if (error || !opportunity) notFound();
+  if (error || !rawOpportunity) notFound();
+
+  const opportunity = rawOpportunity as Opportunity;
 
   const {
     data: { user },
