@@ -27,28 +27,28 @@ export default async function BusinessDirectoryPage({
   const categories = Array.from(new Set((categoryRows ?? []).map((b) => b.category))).sort();
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-5 pt-7">
       <div className="flex items-center gap-3">
-        <Link href="/businesses" aria-label="Back" className="text-ink/60">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <Link href="/businesses" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
-        <h1 className="font-display text-[18px] font-extrabold text-ink">Business Directory</h1>
+        <h1 className="font-display text-[19px] font-bold text-ink">Business Directory</h1>
       </div>
 
-      <div className="mt-4"><SearchBar placeholder="Search businesses..." /></div>
+      <div className="mt-5"><SearchBar placeholder="Search businesses..." /></div>
 
       {categories.length > 0 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <CategoryLink label="All" active={!category} category={null} />
           {categories.map((cat) => <CategoryLink key={cat} label={cat} active={category === cat} category={cat} />)}
         </div>
       )}
 
       <div className="mt-4 space-y-3">
-        {error && <p className="rounded-card bg-danger-light p-3 text-[13px] text-danger">Couldn&apos;t load businesses right now.</p>}
+        {error && <p className="rounded-card-sm bg-danger-light p-3.5 text-[13px] font-medium text-danger">Couldn&apos;t load businesses right now.</p>}
         {!error && (!businesses || businesses.length === 0) && (
-          <div className="rounded-card border border-dashed border-line bg-surface/60 p-8 text-center">
-            <p className="text-[13px] text-ink/60">No businesses found.</p>
+          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+            <p className="text-[13px] text-ink/55">No businesses found.</p>
           </div>
         )}
         {businesses?.map((business) => <BusinessCard key={business.id} business={business} />)}
@@ -61,7 +61,7 @@ function CategoryLink({ label, active, category }: { label: string; active: bool
   return (
     <a
       href={category ? `/businesses/directory?category=${encodeURIComponent(category)}` : "/businesses/directory"}
-      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold ${active ? "border-aza bg-aza text-white" : "border-line bg-surface text-ink/70"}`}
+      className={`shrink-0 rounded-pill border px-4 py-2 text-[13px] font-bold ${active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"}`}
     >
       {label}
     </a>

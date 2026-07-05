@@ -13,9 +13,10 @@ export default async function MySkillsPage() {
 
   if (!user) {
     return (
-      <div className="px-4 pt-12 text-center">
-        <p className="font-display text-[16px] font-bold text-ink">Log in to track your skills</p>
-        <Link href="/login?next=/growth/skills" className="mt-4 inline-block rounded-card bg-aza px-6 py-3 text-[14px] font-bold text-white">
+      <div className="px-5 pt-16 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-aza-light text-2xl shadow-card">🎯</div>
+        <p className="mt-4 font-display text-[17px] font-bold text-ink">Log in to track your skills</p>
+        <Link href="/login?next=/growth/skills" className="mt-5 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent">
           Log in
         </Link>
       </div>
@@ -35,29 +36,31 @@ export default async function MySkillsPage() {
   const availableSkills = (allSkills ?? []).filter((s) => !trackedIds.has(s.id));
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-5 pt-7">
       <div className="flex items-center gap-3">
-        <Link href="/growth" aria-label="Back" className="text-ink/60">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <Link href="/growth" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
-        <h1 className="font-display text-[18px] font-extrabold text-ink">My Skills</h1>
+        <h1 className="font-display text-[19px] font-bold text-ink">My Skills</h1>
       </div>
 
-      <section className="mt-5">
-        <h2 className="font-display text-[13px] font-bold text-ink/70">Your Skills</h2>
-        <div className="mt-2.5 space-y-2.5">
+      <section className="mt-6">
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Your Skills</h2>
+        <div className="mt-3 space-y-3">
           {(userSkills ?? []).length === 0 && (
-            <p className="text-[13px] text-ink/50">No skills tracked yet — add one below.</p>
+            <div className="rounded-card border border-line-strong bg-surface p-6 text-center shadow-card">
+              <p className="text-[13px] text-ink/55">No skills tracked yet — add one below.</p>
+            </div>
           )}
           {userSkills?.map((s) => {
             const skill = s.skills as unknown as { id: string; name: string; category: string };
             return (
-              <div key={s.skill_id} className="rounded-card border border-line bg-surface p-3.5">
+              <div key={s.skill_id} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
                 <div className="flex items-center justify-between">
-                  <p className="text-[13.5px] font-bold text-ink">{skill.name}</p>
-                  <span className="text-[11px] font-semibold capitalize text-ink/50">{s.level}</span>
+                  <p className="text-[14px] font-bold text-ink">{skill.name}</p>
+                  <span className="rounded-pill bg-paper-dim px-2.5 py-1 text-[10.5px] font-bold capitalize text-ink/55">{s.level}</span>
                 </div>
-                <div className="mt-2.5">
+                <div className="mt-3">
                   <SkillProgressBar skillId={s.skill_id} progress={s.progress_percent} />
                 </div>
               </div>
@@ -66,9 +69,9 @@ export default async function MySkillsPage() {
         </div>
       </section>
 
-      <section className="mt-6">
-        <h2 className="font-display text-[13px] font-bold text-ink/70">Add a skill</h2>
-        <div className="mt-2.5 flex flex-wrap gap-2">
+      <section className="mt-7">
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Add a skill</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
           {availableSkills.map((skill) => (
             <AddSkillButton key={skill.id} skillId={skill.id} name={skill.name} />
           ))}

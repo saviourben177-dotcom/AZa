@@ -41,11 +41,12 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="px-4 pt-12 text-center">
-        <h1 className="font-display text-xl font-extrabold text-ink">
+      <div className="px-5 pt-16 text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-aza-light text-2xl shadow-card">📬</div>
+        <h1 className="mt-4 font-display text-[19px] font-bold text-ink">
           Check your email
         </h1>
-        <p className="mt-2 text-[13px] text-ink/60">
+        <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55">
           We sent a confirmation link to {email}. Confirm it to finish setting
           up your account.
         </p>
@@ -54,48 +55,49 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="px-4 pt-12">
-      <h1 className="font-display text-2xl font-extrabold text-ink">
+    <div className="px-5 pt-16">
+      <h1 className="font-display text-[16px] font-bold text-aza">Aza</h1>
+      <h2 className="mt-3 font-display text-[24px] font-bold text-ink">
         Create your account
-      </h1>
-      <p className="mt-1 text-[13px] text-ink/60">
+      </h2>
+      <p className="mt-1.5 text-[13.5px] text-ink/55">
         Save opportunities and apply faster.
       </p>
 
-      <form onSubmit={handleSubmit} className="mt-6 space-y-3">
+      <form onSubmit={handleSubmit} className="mt-7 space-y-4">
         <div>
-          <label className="text-[13px] font-semibold text-ink/70">Full name</label>
+          <label className="text-[13px] font-bold text-ink/65">Full name</label>
           <input
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
           />
         </div>
         <div>
-          <label className="text-[13px] font-semibold text-ink/70">Email</label>
+          <label className="text-[13px] font-bold text-ink/65">Email</label>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
           />
         </div>
         <div>
-          <label className="text-[13px] font-semibold text-ink/70">Password</label>
+          <label className="text-[13px] font-bold text-ink/65">Password</label>
           <input
             type="password"
             required
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
           />
         </div>
 
         {error && (
-          <p className="rounded-card bg-aza-light p-2.5 text-[13px] text-aza-dark">
+          <p className="rounded-card-sm bg-danger-light p-3 text-[13px] font-medium text-danger">
             {error}
           </p>
         )}
@@ -103,15 +105,15 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-card bg-aza py-3 text-[14px] font-bold text-white disabled:opacity-60"
+          className="w-full rounded-pill bg-aza py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
 
-      <p className="mt-4 text-center text-[13px] text-ink/60">
+      <p className="mt-5 text-center text-[13px] text-ink/55">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-aza">
+        <Link href="/login" className="font-bold text-aza">
           Log in
         </Link>
       </p>
