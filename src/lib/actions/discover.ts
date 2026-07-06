@@ -1,8 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { personalize } from "@/lib/personalization";
-import type { Profile } from "@/lib/types";
+import { personalize, buildSwipeHistory } from "@/lib/personalization";
+import type { Profile, OpportunityCategory } from "@/lib/types";
 
 export async function getDiscoverQueue(category?: string) {
   const supabase = await createClient();
@@ -21,8 +21,8 @@ export async function getDiscoverQueue(category?: string) {
   }
 
   const [{ data: saved }, { data: dismissed }, { data: profile }] = await Promise.all([
-    supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id),
-    supabase.from("dismissed_opportunities").select("opportunity_id").eq("user_id", user.id),
+    supabase.from("saved_opportunities").select("opportunity_id, opportunities(category)").eq("user_id", user.id),
+    supabase.from("dismissed_opportunities").select("opportunity_id, opportunities(category)").eq("user_id", user.id),
     supabase.from("profiles").select("*").eq("id", user.id).single(),
   ]);
 
@@ -30,6 +30,14 @@ export async function getDiscoverQueue(category?: string) {
     ...(saved ?? []).map((s) => s.opportunity_id),
     ...(dismissed ?? []).map((d) => d.opportunity_id),
   ]);
+
+  const savedCategories = (saved ?? [])
+    .map((s) => (s.opportunities as unknown as { category: OpportunityCategory } | null)?.category)
+    .filter((c): c is OpportunityCategory => !!c);
+  const dismissedCategories = (dismissed ?? [])
+    .map((d) => (d.opportunities as unknown as { category: OpportunityCategory } | null)?.category)
+    .filter((c): c is OpportunityCategory => !!c);
+  const swipeHistory = buildSwipeHistory(savedCategories, dismissedCategories);
 
   let query = supabase
     .from("opportunities")
@@ -39,7 +47,7 @@ export async function getDiscoverQueue(category?: string) {
   const { data } = await query.limit(80);
 
   const available = (data ?? []).filter((o) => !excludeIds.has(o.id));
-  const personalized = personalize(available, profile as Profile | null);
+  const personalized = personalize(available, profile as Profile | null, { swipeHistory });
 
   return { opportunities: personalized.opportunities.slice(0, 25), isAuthed: true };
 }

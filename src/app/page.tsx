@@ -4,8 +4,8 @@ import OpportunityCard from "@/components/opportunity-card";
 import SearchBar from "@/components/search-bar";
 import NotificationBell from "@/components/notification-bell";
 import DeadlineCountdown from "@/components/deadline-countdown";
-import { personalize } from "@/lib/personalization";
-import type { Opportunity, Profile } from "@/lib/types";
+import { personalize, buildSwipeHistory } from "@/lib/personalization";
+import type { Opportunity, Profile, OpportunityCategory } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -52,22 +52,38 @@ export default async function HomePage({
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const personalized = personalize(allOpportunities ?? [], profile, {
-    forceShowAll: showAll === "true",
-  });
-
   let savedIds = new Set<string>();
   let savedRows: { opportunity_id: string; saved_at: string; opportunities: Opportunity }[] = [];
+  let swipeHistory;
   if (user) {
-    const { data: saved } = await supabase
-      .from("saved_opportunities")
-      .select("opportunity_id, saved_at, opportunities(*)")
-      .eq("user_id", user.id)
-      .order("saved_at", { ascending: false })
-      .limit(5);
+    const [{ data: saved }, { data: dismissed }] = await Promise.all([
+      supabase
+        .from("saved_opportunities")
+        .select("opportunity_id, saved_at, opportunities(*)")
+        .eq("user_id", user.id)
+        .order("saved_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("dismissed_opportunities")
+        .select("opportunity_id, opportunities(category)")
+        .eq("user_id", user.id),
+    ]);
     savedRows = (saved ?? []) as unknown as typeof savedRows;
     savedIds = new Set(savedRows.map((s) => s.opportunity_id));
+
+    const savedCategories = savedRows
+      .map((s) => s.opportunities?.category)
+      .filter((c): c is OpportunityCategory => !!c);
+    const dismissedCategories = (dismissed ?? [])
+      .map((d) => (d.opportunities as unknown as { category: OpportunityCategory } | null)?.category)
+      .filter((c): c is OpportunityCategory => !!c);
+    swipeHistory = buildSwipeHistory(savedCategories, dismissedCategories);
   }
+
+  const personalized = personalize(allOpportunities ?? [], profile, {
+    forceShowAll: showAll === "true",
+    swipeHistory,
+  });
 
   // Upcoming deadline card: most urgent saved opportunity, else most urgent
   // personalized one — always a real, live value.
