@@ -15,6 +15,7 @@ export default function BusinessHubPage() {
       </Link>
 
       <div className="mt-5 grid grid-cols-2 gap-3">
+        <HubCard href="/businesses/team-finder" title="Team Finder" subtitle="Find people, build together" icon={<TeamFinderIcon />} />
         <HubCard href="/businesses/directory" title="Business Directory" subtitle="Browse local businesses" icon={<DirectoryIcon />} />
         <HubCard href="/businesses/tools" title="Business Tools" subtitle="Templates, calculators, guides" icon={<ToolsIcon />} />
         <HubCard href="/businesses/funding" title="Funding & Grants" subtitle="Find capital and funding" icon={<FundingIcon />} />
@@ -35,6 +36,9 @@ function HubCard({ href, title, subtitle, icon }: { href: string; title: string;
   );
 }
 
+function TeamFinderIcon() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="rgb(var(--accent))" strokeWidth="1.6" /><circle cx="17" cy="9" r="2.4" stroke="rgb(var(--accent))" strokeWidth="1.6" /><path d="M3 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M15 20c0-2.2-1-4-2.5-5.1a5.2 5.2 0 0 1 8 4.3" stroke="rgb(var(--accent))" strokeWidth="1.5" strokeLinecap="round" /></svg>;
+}
 function DirectoryIcon() {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" /></svg>;
 }

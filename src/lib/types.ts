@@ -158,6 +158,70 @@ export interface Incubator {
   created_at: string;
 }
 
+export interface Idea {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string;
+  category: string | null;
+  tags: string[];
+  stage: "idea" | "validation" | "building" | "launched";
+  visibility: "public" | "private";
+  upvotes_count: number;
+  looking_for_collaborators: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdeaRole {
+  id: string;
+  idea_id: string;
+  role_name: string;
+  slots_needed: number;
+  slots_filled: number;
+  created_at: string;
+}
+
+export type JoinRequestStatus = "pending" | "accepted" | "declined";
+
+export interface JoinRequest {
+  id: string;
+  idea_id: string;
+  role_id: string;
+  requester_id: string;
+  message: string;
+  portfolio_url: string | null;
+  status: JoinRequestStatus;
+  created_at: string;
+  responded_at: string | null;
+}
+
+export interface TeamMessage {
+  id: string;
+  join_request_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
+export function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export const IDEA_STAGE_LABELS: Record<Idea["stage"], string> = {
+  idea: "Idea",
+  validation: "Validation",
+  building: "Building",
+  launched: "Launched",
+};
+
 export type MarketplaceListingType = "sell" | "buy" | "collaborate" | "service";
 
 export interface MarketplaceListing {

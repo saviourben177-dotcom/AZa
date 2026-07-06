@@ -17,6 +17,7 @@ export async function createIdea(formData: FormData) {
     .filter(Boolean);
 
   const visibility = formData.get("visibility") === "private" ? "private" : "public";
+  const lookingForCollaborators = formData.get("looking_for_collaborators") === "on";
 
   const { data, error } = await supabase
     .from("ideas")
@@ -27,14 +28,33 @@ export async function createIdea(formData: FormData) {
       category: (formData.get("category") as string) || null,
       tags,
       visibility,
+      looking_for_collaborators: lookingForCollaborators,
     })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
 
+  if (lookingForCollaborators) {
+    const roleNames = formData.getAll("role_name[]") as string[];
+    const slotsNeeded = formData.getAll("slots_needed[]") as string[];
+
+    const roles = roleNames
+      .map((name, i) => ({
+        idea_id: data.id,
+        role_name: name.trim(),
+        slots_needed: Math.max(1, Math.min(20, parseInt(slotsNeeded[i], 10) || 1)),
+      }))
+      .filter((r) => r.role_name.length > 0);
+
+    if (roles.length > 0) {
+      await supabase.from("idea_roles").insert(roles);
+    }
+  }
+
   revalidatePath("/growth/ideas");
-  redirect(`/growth/ideas/${data.id}`);
+  revalidatePath("/businesses/team-finder");
+  redirect(lookingForCollaborators ? `/growth/ideas/posted?id=${data.id}` : `/growth/ideas/${data.id}`);
 }
 
 export async function toggleUpvote(ideaId: string, currentlyUpvoted: boolean) {

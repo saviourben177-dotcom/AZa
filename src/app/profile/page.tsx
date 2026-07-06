@@ -116,6 +116,7 @@ export default async function ProfilePage() {
       <section className="mt-7 space-y-2.5">
         <ProfileLinkRow href="/profile/cv" label="CV Builder" />
         <ProfileLinkRow href="/growth/ideas?filter=mine" label="My Ideas" />
+        <ProfileLinkRow href="/businesses/team-finder/my-requests" label="My Join Requests" />
         <ProfileLinkRow href="/growth/skills" label="My Skills" />
         <ProfileLinkRow href="/businesses/marketplace" label="My Listings" />
       </section>
