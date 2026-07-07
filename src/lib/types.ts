@@ -32,6 +32,7 @@ export interface Profile {
   learning_context: string[];
   additional_notes: string | null;
   onboarding_completed: boolean;
+  has_seen_app_guide: boolean;
   show_business_hub: boolean;
   created_at: string;
   updated_at: string;

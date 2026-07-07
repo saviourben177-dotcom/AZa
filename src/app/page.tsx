@@ -5,6 +5,7 @@ import SearchBar from "@/components/search-bar";
 import NotificationBell from "@/components/notification-bell";
 import DeadlineCountdown from "@/components/deadline-countdown";
 import { personalize, buildSwipeHistory } from "@/lib/personalization";
+import AppGuideGate from "@/components/app-guide/app-guide-gate";
 import type { Opportunity, Profile, OpportunityCategory } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,9 @@ export default async function HomePage({
 
   return (
     <div className="px-5 pt-7">
+      {profile?.onboarding_completed && !profile?.has_seen_app_guide && (
+        <AppGuideGate shouldShow />
+      )}
       <header className="flex items-start justify-between">
         <div>
           {firstName ? (

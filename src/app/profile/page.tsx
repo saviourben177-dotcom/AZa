@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
 import OpportunityCard from "@/components/opportunity-card";
 import SignOutButton from "@/components/sign-out-button";
 import ThemeToggle from "@/components/theme-toggle";
@@ -123,6 +124,7 @@ export default async function ProfilePage() {
 
       <section className="mt-7 space-y-2.5">
         <ThemeToggle />
+        <ReplayGuideRow />
         <ProfileLinkRow href="/help" label="Help & Support" />
         <ProfileLinkRow href="/about" label="About Aza" />
         <ProfileLinkRow href="/profile/settings" label="Settings" />
