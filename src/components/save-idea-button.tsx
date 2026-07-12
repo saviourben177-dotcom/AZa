@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SaveButton({
-  opportunityId,
+export default function SaveIdeaButton({
+  ideaId,
   initialSaved,
   isAuthed,
 }: {
-  opportunityId: string;
+  ideaId: string;
   initialSaved: boolean;
   isAuthed: boolean;
 }) {
@@ -18,9 +18,12 @@ export default function SaveButton({
   const router = useRouter();
   const supabase = createClient();
 
-  function toggle() {
+  function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!isAuthed) {
-      router.push(`/login?next=/`);
+      router.push(`/login?next=/growth/ideas`);
       return;
     }
 
@@ -29,21 +32,21 @@ export default function SaveButton({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push(`/login?next=/`);
+        router.push(`/login?next=/growth/ideas`);
         return;
       }
 
       if (saved) {
         await supabase
-          .from("saved_opportunities")
+          .from("saved_ideas")
           .delete()
           .eq("user_id", user.id)
-          .eq("opportunity_id", opportunityId);
+          .eq("idea_id", ideaId);
         setSaved(false);
       } else {
         await supabase
-          .from("saved_opportunities")
-          .insert({ user_id: user.id, opportunity_id: opportunityId });
+          .from("saved_ideas")
+          .insert({ user_id: user.id, idea_id: ideaId });
         setSaved(true);
       }
     });
@@ -54,8 +57,8 @@ export default function SaveButton({
       onClick={toggle}
       disabled={isPending}
       aria-pressed={saved}
-      aria-label={saved ? "Remove from saved" : "Save this opportunity"}
-      className="rounded-full p-1.5 transition-colors disabled:opacity-50"
+      aria-label={saved ? "Remove from saved" : "Save this idea"}
+      className="shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50"
     >
       <svg
         width="20"

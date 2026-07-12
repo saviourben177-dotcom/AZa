@@ -4,7 +4,11 @@ import Link from "next/link";
 import UpvoteButton from "@/components/growth/upvote-button";
 import IdeaStageControl from "@/components/growth/idea-stage-control";
 import DeleteIdeaButton from "@/components/growth/delete-idea-button";
-import ShareButton from "@/components/share-button";
+import SaveIdeaButton from "@/components/save-idea-button";
+import CommentForm from "@/components/growth/comment-form";
+import DeleteCommentButton from "@/components/growth/delete-comment-button";
+import { relativeTime } from "@/lib/types";
+import type { IdeaComment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +20,7 @@ export default async function IdeaDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: idea, error } = await supabase
-    .from("ideas")
-    .select("*, profiles(full_name), idea_roles(id)")
-    .eq("id", id)
-    .single();
+  const { data: idea, error } = await supabase.from("ideas").select("*").eq("id", id).single();
   if (error || !idea) notFound();
 
   const {
@@ -28,90 +28,117 @@ export default async function IdeaDetailPage({
   } = await supabase.auth.getUser();
 
   let upvoted = false;
+  let isSaved = false;
   if (user) {
-    const { data } = await supabase
-      .from("idea_upvotes")
-      .select("user_id")
-      .eq("user_id", user.id)
-      .eq("idea_id", id)
-      .maybeSingle();
-    upvoted = !!data;
+    const [{ data: upvoteRow }, { data: savedRow }] = await Promise.all([
+      supabase.from("idea_upvotes").select("user_id").eq("user_id", user.id).eq("idea_id", id).maybeSingle(),
+      supabase.from("saved_ideas").select("user_id").eq("user_id", user.id).eq("idea_id", id).maybeSingle(),
+    ]);
+    upvoted = !!upvoteRow;
+    isSaved = !!savedRow;
+  }
+
+  const { data: comments } = await supabase
+    .from("idea_comments")
+    .select("*")
+    .eq("idea_id", id)
+    .order("created_at", { ascending: true });
+
+  const commentList = (comments ?? []) as IdeaComment[];
+  const commenterIds = Array.from(new Set(commentList.map((c) => c.user_id)));
+
+  let commenterNames = new Map<string, string>();
+  if (commenterIds.length > 0) {
+    const { data: commenters } = await supabase
+      .from("public_profiles")
+      .select("id, full_name")
+      .in("id", commenterIds);
+    commenterNames = new Map(
+      (commenters ?? [])
+        .filter((p): p is { id: string; full_name: string | null } => p.id !== null)
+        .map((p) => [p.id, p.full_name ?? "Aza user"])
+    );
   }
 
   const isOwner = user?.id === idea.user_id;
-  const author = (idea.profiles as unknown as { full_name: string | null } | null)?.full_name;
-  const openRoleCount = (idea.idea_roles as unknown[] | null)?.length ?? 0;
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-5 pt-7">
       <div className="flex items-center justify-between">
-        <Link href="/growth/ideas" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-dim text-ink/70">
+        <Link href="/growth/ideas" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
-        <div className="flex items-center gap-2">
-          <ShareButton title={idea.title} />
-          {/* Bookmark/save icon from the mockup is intentionally omitted —
-              saved_ideas table doesn't exist yet (screen-mapping doc §15),
-              so there's nowhere real to persist a save. */}
+        <div className="flex items-center gap-1">
+          <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvoted} isAuthed={!!user} />
+          <SaveIdeaButton ideaId={idea.id} initialSaved={isSaved} isAuthed={!!user} />
         </div>
       </div>
 
-      <h1 className="mt-4 text-[21px] font-bold leading-tight text-ink">{idea.title}</h1>
-      <p className="mt-1 text-[12.5px] font-medium text-text-secondary">
-        {author ?? "Aza member"} · {new Date(idea.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
-      </p>
+      <h1 className="mt-4 font-display text-[21px] font-bold leading-tight text-ink">{idea.title}</h1>
+      {idea.category && (
+        <span className="mt-2 inline-block rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-bold text-aza">
+          {idea.category}
+        </span>
+      )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        {idea.category && (
-          <span className="rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-semibold text-aza">
-            {idea.category}
-          </span>
-        )}
-        <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvoted} isAuthed={!!user} />
-        {/* idea_comments doesn't exist — no comment count chip rendered. */}
-      </div>
-
-      <section className="mt-5 rounded-card bg-surface p-5 shadow-card">
-        <h2 className="text-[15px] font-semibold text-ink">About this idea</h2>
-        <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{idea.description}</p>
+      <section className="mt-5 rounded-card border border-line-strong bg-surface p-5 shadow-card">
+        <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{idea.description}</p>
       </section>
 
       {idea.tags?.length > 0 && (
-        <section className="mt-3 rounded-card bg-surface p-5 shadow-card">
-          <h2 className="text-[15px] font-semibold text-ink">Looking for</h2>
-          <div className="mt-2.5 flex flex-wrap gap-2">
+        <div className="mt-4">
+          <p className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Skills needed</p>
+          <div className="mt-2 flex flex-wrap gap-2">
             {idea.tags.map((tag: string) => (
-              <span key={tag} className="rounded-pill bg-paper-dim px-3 py-1.5 text-[12px] font-semibold text-text-secondary">{tag}</span>
+              <span key={tag} className="rounded-lg bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza">{tag}</span>
             ))}
           </div>
-        </section>
+        </div>
       )}
 
-      <section className="mt-3 rounded-card bg-surface p-5 shadow-card">
-        <div className="flex items-center justify-between">
-          <span className="text-[12.5px] font-medium text-text-secondary">Stage</span>
+      <div className="mt-5">
+        <p className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Stage</p>
+        <div className="mt-2">
           <IdeaStageControl ideaId={idea.id} currentStage={idea.stage} canEdit={isOwner} />
         </div>
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-[12.5px] font-medium text-text-secondary">Visibility</span>
-          <span className="text-[12.5px] font-semibold capitalize text-ink">{idea.visibility}</span>
+      </div>
+
+      <p className="mt-5 text-[11.5px] font-medium text-ink/40">
+        Last updated {new Date(idea.updated_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
+      </p>
+
+      <section className="mt-7">
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">
+          Comments {idea.comments_count > 0 ? `(${idea.comments_count})` : ""}
+        </h2>
+
+        <div className="mt-3">
+          <CommentForm ideaId={idea.id} isAuthed={!!user} />
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {commentList.length === 0 && (
+            <p className="text-[12.5px] text-ink/45">No comments yet — be the first to weigh in.</p>
+          )}
+          {commentList.map((comment) => (
+            <div key={comment.id} className="rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
+              <div className="flex items-center justify-between">
+                <p className="text-[12.5px] font-bold text-ink">{commenterNames.get(comment.user_id) ?? "Aza user"}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[11px] font-medium text-ink/40">{relativeTime(comment.created_at)}</p>
+                  {user?.id === comment.user_id && (
+                    <DeleteCommentButton commentId={comment.id} ideaId={idea.id} />
+                  )}
+                </div>
+              </div>
+              <p className="mt-1.5 whitespace-pre-line text-[13px] leading-relaxed text-ink/70">{comment.body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {!isOwner && idea.looking_for_collaborators && (
-        <Link
-          href={`/businesses/team-finder/${idea.id}`}
-          className="mt-5 block rounded-pill bg-aza py-3.5 text-center text-[14.5px] font-semibold text-white shadow-glow-accent"
-        >
-          {openRoleCount > 0 ? `Interested in joining (${openRoleCount} open role${openRoleCount === 1 ? "" : "s"})` : "See open roles"}
-        </Link>
-      )}
-
       {isOwner && (
-        <div className="mt-6 flex items-center justify-between">
-          <Link href={`/businesses/team-finder/${idea.id}`} className="text-[12.5px] font-semibold text-aza">
-            Manage roles ({openRoleCount})
-          </Link>
+        <div className="mt-6">
           <DeleteIdeaButton ideaId={idea.id} />
         </div>
       )}

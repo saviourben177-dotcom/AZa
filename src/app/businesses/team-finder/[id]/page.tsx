@@ -71,7 +71,7 @@ export default async function ProjectDetailPage({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgb(255_255_255/0.18),transparent_45%)]" />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15 shadow-elevated backdrop-blur-sm">
-            <span className="text-[32px] font-semibold text-white">
+            <span className="font-display text-[32px] font-bold text-white">
               {idea.title.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -104,35 +104,35 @@ export default async function ProjectDetailPage({
           </div>
         )}
 
-        <h1 className="mt-5 text-[21px] font-semibold leading-tight text-ink">{idea.title}</h1>
+        <h1 className="mt-5 font-display text-[21px] font-bold leading-tight text-ink">{idea.title}</h1>
 
         <div className="mt-2 flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-aza-light text-[10px] font-semibold text-aza">
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-aza-light font-display text-[10px] font-bold text-aza">
             {(owner?.full_name ?? "?").charAt(0).toUpperCase()}
           </div>
-          <p className="text-[12.5px] text-text-secondary">
+          <p className="text-[12.5px] text-ink/55">
             by <span className="font-semibold text-ink/75">{owner?.full_name ?? "Aza user"}</span>
           </p>
           {isOwner && (
-            <span className="rounded-pill bg-ink px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-paper">
+            <span className="rounded-pill bg-ink px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-paper">
               Founder
             </span>
           )}
         </div>
 
         <div className="mt-3 flex gap-2">
-          <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary">
+          <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-ink/55">
             {IDEA_STAGE_LABELS[idea.stage as keyof typeof IDEA_STAGE_LABELS]}
           </span>
           {idea.category && (
-            <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-semibold text-text-secondary">
+            <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-bold text-ink/55">
               {idea.category}
             </span>
           )}
         </div>
 
         <section className="mt-5">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">About</p>
+          <p className="text-[12px] font-bold uppercase tracking-wide text-ink/40">About</p>
           <p className="mt-2 whitespace-pre-line text-[13.5px] leading-relaxed text-ink/70">
             {idea.description}
           </p>
@@ -140,15 +140,15 @@ export default async function ProjectDetailPage({
 
         {roles.length > 0 && (
           <section className="mt-5">
-            <p className="text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">Skills needed</p>
+            <p className="text-[12px] font-bold uppercase tracking-wide text-ink/40">Skills needed</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {roles.map((r) => {
                 const full = r.slots_filled >= r.slots_needed;
                 return (
                   <span
                     key={r.id}
-                    className={`rounded-lg px-2.5 py-1.5 text-[11.5px] font-semibold ${
-                      full ? "bg-paper-dim text-text-tertiary line-through" : "bg-aza-light text-aza"
+                    className={`rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold ${
+                      full ? "bg-paper-dim text-ink/40 line-through" : "bg-aza-light text-aza"
                     }`}
                   >
                     {r.role_name} ({r.slots_needed - r.slots_filled > 0 ? r.slots_needed - r.slots_filled : 0})
@@ -159,10 +159,10 @@ export default async function ProjectDetailPage({
           </section>
         )}
 
-        <section className="mt-6 rounded-card bg-surface shadow-card p-4 shadow-card">
+        <section className="mt-6 rounded-card border border-line-strong bg-surface p-4 shadow-card">
           <div className="flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-ink">Current Team</p>
-            <p className="text-[12.5px] font-semibold text-text-tertiary tabular">
+            <p className="text-[13px] font-bold text-ink">Current Team</p>
+            <p className="text-[12.5px] font-semibold text-ink/45 tabular">
               {filledSlots} / {totalSlots}
             </p>
           </div>
@@ -190,7 +190,7 @@ export default async function ProjectDetailPage({
           </div>
         </section>
 
-        <section className="mt-2 rounded-card bg-surface shadow-card px-4 shadow-card">
+        <section className="mt-2 rounded-card border border-line-strong bg-surface px-4 shadow-card">
           <DetailAccordion label="Timeline" value="Q3 2025">
             No fixed deadline yet — the team is aiming to have a working version ready within the next few months.
           </DetailAccordion>
@@ -206,25 +206,25 @@ export default async function ProjectDetailPage({
       {/* Sticky CTA */}
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-line bg-paper/95 px-5 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3.5 shadow-elevated backdrop-blur-xl">
         <div className="flex gap-2.5">
-          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-card bg-surface shadow-card py-3 text-[13.5px] font-semibold text-ink shadow-card">
+          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-card border border-line-strong bg-surface py-3 text-[13.5px] font-bold text-ink shadow-card">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18l-6-4-6 4V3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
             Save
           </button>
           {isOwner ? (
             <Link
               href="/businesses/team-finder/requests"
-              className="flex flex-[1.3] items-center justify-center rounded-card bg-aza py-3 text-[13.5px] font-semibold text-white shadow-glow-accent"
+              className="flex flex-[1.3] items-center justify-center rounded-card bg-aza py-3 text-[13.5px] font-bold text-white shadow-glow-accent"
             >
               View Requests
             </Link>
           ) : myRequestStatus ? (
-            <span className="flex flex-[1.3] items-center justify-center rounded-card bg-paper-dim py-3 text-[13.5px] font-semibold capitalize text-text-secondary">
+            <span className="flex flex-[1.3] items-center justify-center rounded-card bg-paper-dim py-3 text-[13.5px] font-bold capitalize text-ink/50">
               Request {myRequestStatus}
             </span>
           ) : (
             <Link
               href={`/businesses/team-finder/${id}/join`}
-              className="flex flex-[1.3] items-center justify-center rounded-card bg-aza py-3 text-[13.5px] font-semibold text-white shadow-glow-accent"
+              className="flex flex-[1.3] items-center justify-center rounded-card bg-aza py-3 text-[13.5px] font-bold text-white shadow-glow-accent"
             >
               I&apos;m Interested
             </Link>
@@ -242,12 +242,12 @@ function TeamMember({ name, avatarUrl, role }: { name: string; avatarUrl?: strin
         // eslint-disable-next-line @next/next/no-img-element
         <img src={avatarUrl} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-aza/25" />
       ) : (
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-[14px] font-semibold text-aza ring-2 ring-aza/15">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-aza-light font-display text-[14px] font-bold text-aza ring-2 ring-aza/15">
           {name.charAt(0).toUpperCase()}
         </div>
       )}
-      <p className="max-w-[64px] truncate text-[11px] font-semibold text-ink">{name.split(" ")[0]}</p>
-      <p className="max-w-[64px] truncate text-[10px] font-medium text-text-tertiary">{role}</p>
+      <p className="max-w-[64px] truncate text-[11px] font-bold text-ink">{name.split(" ")[0]}</p>
+      <p className="max-w-[64px] truncate text-[10px] font-medium text-ink/45">{role}</p>
     </div>
   );
 }
@@ -258,7 +258,7 @@ function OpenSlot({ role }: { role: string }) {
       <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-line-strong text-ink/30">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
       </div>
-      <p className="max-w-[64px] truncate text-[10px] font-semibold text-text-tertiary">{role}</p>
+      <p className="max-w-[64px] truncate text-[10px] font-semibold text-ink/40">{role}</p>
     </div>
   );
 }

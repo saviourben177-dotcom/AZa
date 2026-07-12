@@ -3,6 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+const VALID_SKILL_LEVELS = ["beginner", "intermediate", "advanced"] as const;
+type SkillLevel = (typeof VALID_SKILL_LEVELS)[number];
+
 export async function createSkillResource(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -10,13 +13,18 @@ export async function createSkillResource(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
+  const rawLevel = formData.get("level") as string | null;
+  const level: SkillLevel = (VALID_SKILL_LEVELS as readonly string[]).includes(rawLevel ?? "")
+    ? (rawLevel as SkillLevel)
+    : "beginner";
+
   const { error } = await supabase.from("skill_resources").insert({
     skill_id: formData.get("skill_id") as string,
     title: formData.get("title") as string,
     provider: (formData.get("provider") as string) || null,
     url: formData.get("url") as string,
     resource_type: (formData.get("resource_type") as string) || "course",
-    level: (formData.get("level") as string) || "beginner",
+    level,
     duration_hours: formData.get("duration_hours") ? parseFloat(formData.get("duration_hours") as string) : null,
     is_free: formData.get("is_free") === "on",
     rating: formData.get("rating") ? parseFloat(formData.get("rating") as string) : null,

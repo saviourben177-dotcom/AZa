@@ -11,35 +11,23 @@
 
 :root,
 [data-theme="light"] {
-  --ink: 18 20 26;             /* text-primary #12141A */
-  --paper: 247 248 248;        /* bg-app #F7F8F8 */
-  --paper-dim: 244 245 247;    /* bg-surface-alt #F4F5F7 */
-  --surface: 255 255 255;      /* bg-surface #FFFFFF (cards) */
+  --ink: 15 18 16;            /* near-black text */
+  --paper: 255 255 255;        /* pure white background */
+  --paper-dim: 244 247 245;    /* faint green-gray for subtle fills */
+  --surface: 255 255 255;      /* cards */
   --surface-raised: 255 255 255;
-  --accent: 34 197 110;        /* AZA canonical green #22C56E */
-  --accent-dark: 27 158 90;    /* #1B9E5A */
-  --accent-light: 232 248 238; /* #E8F8EE */
-  --gold: 245 165 36;          /* --color-warning #F5A524 */
+  --accent: 22 163 94;         /* AZA green */
+  --accent-dark: 13 122 68;
+  --accent-light: 219 245 231;
+  --gold: 202 138 4;
   --gold-light: 254 243 199;
-  --urgent: 245 165 36;
+  --urgent: 217 119 6;
   --urgent-light: 254 240 215;
-  --danger: 239 68 68;         /* --color-error #EF4444 */
+  --danger: 220 38 38;
   --danger-light: 254 226 226;
-  --line: 236 237 239;         /* --border-hairline #ECEDEF */
-  --line-strong: 218 220 223;  /* --border-strong #DADCDF */
-  --shadow-color: 16 24 32;
-
-  /* AZA design-system additions (design-system spec §1-4) */
-  --text-secondary: 107 114 128;
-  --text-tertiary: 156 163 175;
-  --bg-elevated: 11 13 16;
-  --divider: 240 241 242;
-  --color-info: 74 134 232;
-  --tag-purple-bg: 241 237 252;   --tag-purple-fg: 124 92 252;
-  --tag-blue-bg: 234 241 254;     --tag-blue-fg: 74 134 232;
-  --tag-teal-bg: 230 247 245;     --tag-teal-fg: 20 184 166;
-  --tag-orange-bg: 253 238 227;   --tag-orange-fg: 249 115 22;
-  --tag-pink-bg: 252 234 241;     --tag-pink-fg: 236 72 153;
+  --line: 228 232 229;
+  --line-strong: 214 220 216;
+  --shadow-color: 15 23 20;
 }
 
 [data-theme="dark"] {
@@ -60,18 +48,6 @@
   --line: 38 42 40;
   --line-strong: 54 60 57;
   --shadow-color: 0 0 0;
-
-  /* AZA design-system additions — dark equivalents */
-  --text-secondary: 156 163 175;
-  --text-tertiary: 107 114 128;
-  --bg-elevated: 0 0 0;
-  --divider: 32 36 34;
-  --color-info: 74 134 232;
-  --tag-purple-bg: 32 27 51;      --tag-purple-fg: 158 133 255;
-  --tag-blue-bg: 20 30 46;        --tag-blue-fg: 110 160 245;
-  --tag-teal-bg: 15 36 33;        --tag-teal-fg: 45 212 191;
-  --tag-orange-bg: 41 27 15;      --tag-orange-fg: 251 146 60;
-  --tag-pink-bg: 41 20 32;        --tag-pink-fg: 244 114 182;
 }
 
 @layer base {
@@ -103,27 +79,23 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Elevation system — spec §5 (--shadow-card, --shadow-elevated, --shadow-glow-accent) */
+/* Elevation system — replaces flat shadow-sm/shadow-md everywhere */
 .shadow-card {
-  box-shadow: 0 1px 3px rgb(var(--shadow-color) / 0.06), 0 1px 2px rgb(var(--shadow-color) / 0.04);
+  box-shadow: 0 10px 26px -10px rgb(var(--shadow-color) / 0.14);
 }
 [data-theme="dark"] .shadow-card {
-  box-shadow: 0 1px 3px rgb(var(--shadow-color) / 0.45), 0 1px 2px rgb(var(--shadow-color) / 0.3);
+  box-shadow: 0 14px 30px -12px rgb(var(--shadow-color) / 0.55);
 }
 
 .shadow-elevated {
-  box-shadow: 0 8px 24px rgb(var(--shadow-color) / 0.12);
+  box-shadow: 0 24px 48px -18px rgb(var(--shadow-color) / 0.18), 0 2px 8px -2px rgb(var(--shadow-color) / 0.08);
 }
 [data-theme="dark"] .shadow-elevated {
-  box-shadow: 0 8px 24px rgb(var(--shadow-color) / 0.6), 0 2px 0 rgb(255 255 255 / 0.03) inset;
+  box-shadow: 0 30px 60px -20px rgb(var(--shadow-color) / 0.65), 0 2px 0 rgb(255 255 255 / 0.03) inset;
 }
 
 .shadow-glow-accent {
-  box-shadow: 0 0 0 1px rgb(var(--accent) / 0.15), 0 4px 16px rgb(var(--accent) / 0.35);
-}
-
-.shadow-inset {
-  box-shadow: inset 0 1px 2px rgb(var(--shadow-color) / 0.04);
+  box-shadow: 0 16px 28px -10px rgb(var(--accent) / 0.38);
 }
 
 .bg-ambient {

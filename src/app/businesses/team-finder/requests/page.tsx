@@ -19,9 +19,9 @@ export default async function JoinRequestsPage({
 
   if (!user) {
     return (
-      <div className="px-4 pt-6 text-center">
-        <p className="mt-10 text-[13.5px] text-text-secondary">Log in to manage join requests.</p>
-        <Link href="/login?next=/businesses/team-finder/requests" className="mt-4 inline-block text-[13px] font-semibold text-aza">
+      <div className="px-5 pt-7 text-center">
+        <p className="mt-10 text-[13.5px] text-ink/55">Log in to manage join requests.</p>
+        <Link href="/login?next=/businesses/team-finder/requests" className="mt-4 inline-block text-[13px] font-bold text-aza">
           Log in
         </Link>
       </div>
@@ -69,12 +69,12 @@ export default async function JoinRequestsPage({
   }
 
   return (
-    <div className="px-4 pt-6 pb-8">
+    <div className="px-5 pt-7 pb-8">
       <div className="flex items-center gap-3">
-        <Link href="/businesses/team-finder" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-card text-ink/60 shadow-card">
+        <Link href="/businesses/team-finder" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
-        <h1 className="text-[19px] font-semibold text-ink">Join Requests</h1>
+        <h1 className="font-display text-[19px] font-bold text-ink">Join Requests</h1>
       </div>
 
       <div className="mt-5 flex gap-2">
@@ -85,8 +85,8 @@ export default async function JoinRequestsPage({
 
       <div className="mt-5 space-y-3">
         {requests.length === 0 && (
-          <div className="rounded-card bg-surface shadow-card p-8 text-center shadow-card">
-            <p className="text-[13px] text-text-secondary">No {activeTab} requests right now.</p>
+          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+            <p className="text-[13px] text-ink/55">No {activeTab} requests right now.</p>
           </div>
         )}
 
@@ -114,8 +114,8 @@ function TabButton({ label, count, tab, active }: { label: string; count: number
   return (
     <Link
       href={`/businesses/team-finder/requests?tab=${tab}`}
-      className={`flex items-center gap-1.5 rounded-pill border px-4 py-2 text-[12.5px] font-semibold ${
-        active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-text-secondary"
+      className={`flex items-center gap-1.5 rounded-pill border px-4 py-2 text-[12.5px] font-bold ${
+        active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/55"
       }`}
     >
       {label}

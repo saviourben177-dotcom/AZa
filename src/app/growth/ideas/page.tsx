@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import UpvoteButton from "@/components/growth/upvote-button";
+import SaveIdeaButton from "@/components/save-idea-button";
 
 export const dynamic = "force-dynamic";
 
@@ -15,34 +16,38 @@ export default async function IdeasPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Added a profiles join (existing table/column, not a schema change) so
-  // cards can show a real author name instead of omitting it, matching the
-  // mockup's "Daniel O." byline.
-  let query = supabase
-    .from("ideas")
-    .select("*, profiles(full_name)")
-    .order("created_at", { ascending: false });
+  let query = supabase.from("ideas").select("*").order("created_at", { ascending: false });
   if (filter === "mine" && user) query = query.eq("user_id", user.id);
   if (filter === "trending") query = query.order("upvotes_count", { ascending: false });
 
   const { data: ideas } = await query.limit(50);
 
   let upvotedIds = new Set<string>();
+  let savedIds = new Set<string>();
   if (user) {
-    const { data: upvotes } = await supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id);
+    const [{ data: upvotes }, { data: savedIdeas }] = await Promise.all([
+      supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id),
+      supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id),
+    ]);
     upvotedIds = new Set((upvotes ?? []).map((u) => u.idea_id));
+    savedIds = new Set((savedIdeas ?? []).map((s) => s.idea_id));
   }
 
   return (
-    <div className="px-4 pt-6">
+    <div className="px-5 pt-7">
       <div className="flex items-center justify-between">
-        <h1 className="text-[22px] font-bold leading-tight text-ink">Ideas</h1>
-        <Link href="/growth/ideas/new" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-semibold text-white shadow-glow-accent">
-          + New Idea
+        <div className="flex items-center gap-3">
+          <Link href="/growth" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </Link>
+          <h1 className="font-display text-[19px] font-bold text-ink">Ideas</h1>
+        </div>
+        <Link href="/growth/ideas/new" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent">
+          + New
         </Link>
       </div>
 
-      <div className="mt-4 flex rounded-pill bg-paper-dim p-1">
+      <div className="mt-5 flex gap-2">
         <TabLink label="For You" active={!filter} filter={null} />
         <TabLink label="Trending" active={filter === "trending"} filter="trending" />
         {user && <TabLink label="My Ideas" active={filter === "mine"} filter="mine" />}
@@ -50,37 +55,34 @@ export default async function IdeasPage({
 
       <div className="mt-4 space-y-3">
         {(ideas ?? []).length === 0 && (
-          <div className="rounded-card bg-surface p-8 text-center shadow-card">
+          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">💡</div>
-            <p className="text-[13px] text-text-secondary">No ideas here yet — be the first to share one.</p>
+            <p className="text-[13px] text-ink/55">No ideas here yet — be the first to share one.</p>
           </div>
         )}
-        {ideas?.map((idea) => {
-          const author = (idea.profiles as unknown as { full_name: string | null } | null)?.full_name;
-          return (
-            <Link key={idea.id} href={`/growth/ideas/${idea.id}`} className="block rounded-card bg-surface p-4 shadow-card">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-card-sm bg-aza-light text-lg">
-                  💡
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14.5px] font-semibold text-ink">{idea.title}</p>
-                  <p className="mt-0.5 text-[11.5px] font-medium text-text-tertiary">
-                    {author ?? "Aza member"}
-                    {idea.category ? ` · ${idea.category}` : ""}
-                  </p>
-                </div>
+        {ideas?.map((idea) => (
+          <Link key={idea.id} href={`/growth/ideas/${idea.id}`} className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[14px] font-bold text-ink">{idea.title}</p>
+                {idea.category && <p className="mt-1 text-[11px] font-semibold text-ink/45">{idea.category}</p>}
               </div>
-              <p className="mt-2.5 line-clamp-2 text-[13px] leading-relaxed text-ink/65">{idea.description}</p>
-              <div className="mt-3 flex items-center gap-3">
+              <div className="flex shrink-0 items-center gap-1">
                 <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvotedIds.has(idea.id)} isAuthed={!!user} />
-                {/* idea_comments table doesn't exist — no comment-count chip
-                    is rendered rather than showing a fabricated "0" or icon
-                    that implies a feature which isn't there yet. */}
+                <SaveIdeaButton ideaId={idea.id} initialSaved={savedIds.has(idea.id)} isAuthed={!!user} />
               </div>
-            </Link>
-          );
-        })}
+            </div>
+            <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-ink/65">{idea.description}</p>
+            {idea.comments_count > 0 && (
+              <p className="mt-2 flex items-center gap-1 text-[11.5px] font-semibold text-ink/45">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 4h16v12H8l-4 4V4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                </svg>
+                {idea.comments_count} comment{idea.comments_count === 1 ? "" : "s"}
+              </p>
+            )}
+          </Link>
+        ))}
       </div>
     </div>
   );
@@ -90,8 +92,8 @@ function TabLink({ label, active, filter }: { label: string; active: boolean; fi
   return (
     <Link
       href={filter ? `/growth/ideas?filter=${filter}` : "/growth/ideas"}
-      className={`flex-1 rounded-pill py-2 text-center text-[13px] font-semibold ${
-        active ? "bg-aza text-white" : "text-text-secondary"
+      className={`rounded-pill border px-4 py-2 text-[13px] font-bold ${
+        active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"
       }`}
     >
       {label}

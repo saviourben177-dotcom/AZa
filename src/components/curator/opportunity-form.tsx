@@ -114,6 +114,101 @@ export default function OpportunityForm({
         defaultChecked={opportunity?.curator_verified}
       />
 
+      <div className="border-t border-line pt-3">
+        <p className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Display details (optional)</p>
+        <p className="mt-1 text-[11.5px] text-ink/45">
+          Leave blank to hide the corresponding badge/detail on the opportunity page rather than showing a guess.
+        </p>
+      </div>
+
+      <Field label="Logo URL" name="logo_url" type="url" defaultValue={opportunity?.logo_url ?? ""} />
+
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Job type</label>
+        <select
+          name="job_type"
+          defaultValue={opportunity?.job_type ?? ""}
+          className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+        >
+          <option value="">Not specified</option>
+          <option value="full_time">Full-time</option>
+          <option value="part_time">Part-time</option>
+          <option value="internship">Internship</option>
+          <option value="contract">Contract</option>
+          <option value="freelance">Freelance</option>
+          <option value="volunteer">Volunteer</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Level</label>
+        <select
+          name="level"
+          defaultValue={opportunity?.level ?? ""}
+          className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+        >
+          <option value="">Not specified</option>
+          <option value="entry">Entry</option>
+          <option value="junior">Junior</option>
+          <option value="mid">Mid</option>
+          <option value="senior">Senior</option>
+          <option value="any">Any level</option>
+        </select>
+      </div>
+
+      <Field
+        label="Salary range (display text, e.g. ₦70,000 – ₦120,000 / Month)"
+        name="salary_range"
+        defaultValue={opportunity?.salary_range ?? ""}
+      />
+      <Field
+        label="Experience required (display text, e.g. 0 – 2 Years)"
+        name="experience_required"
+        defaultValue={opportunity?.experience_required ?? ""}
+      />
+      <Field
+        label="Applicants count (manually set, no live tracking yet)"
+        name="applicants_count"
+        type="number"
+        defaultValue={opportunity?.applicants_count?.toString() ?? ""}
+      />
+
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Paid?</label>
+        <div className="mt-1.5 flex gap-4">
+          <label className="flex items-center gap-1.5 text-[13px] text-ink/70">
+            <input
+              type="radio"
+              name="paid"
+              value="unknown"
+              defaultChecked={opportunity?.paid === undefined || opportunity?.paid === null}
+              className="h-3.5 w-3.5 accent-aza"
+            />
+            Not specified
+          </label>
+          <label className="flex items-center gap-1.5 text-[13px] text-ink/70">
+            <input
+              type="radio"
+              name="paid"
+              value="yes"
+              defaultChecked={opportunity?.paid === true}
+              className="h-3.5 w-3.5 accent-aza"
+            />
+            Yes
+          </label>
+          <label className="flex items-center gap-1.5 text-[13px] text-ink/70">
+            <input
+              type="radio"
+              name="paid"
+              value="no"
+              defaultChecked={opportunity?.paid === false}
+              className="h-3.5 w-3.5 accent-aza"
+            />
+            No
+          </label>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={isPending}

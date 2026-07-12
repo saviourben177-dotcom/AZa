@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { extractCredentialFromImage } from "@/lib/groq";
-import type { CvDocumentType } from "@/lib/cv-types";
+import type { CvDocumentType, CvDocument, CvDocumentStatus, ExtractedCredentialData } from "@/lib/cv-types";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -88,7 +88,7 @@ export async function uploadAndExtractDocument(formData: FormData) {
   revalidatePath("/profile/cv");
 }
 
-export async function listCvDocuments() {
+export async function listCvDocuments(): Promise<CvDocument[]> {
   const { supabase, user } = await requireUser();
   const { data, error } = await supabase
     .from("cv_documents")
@@ -96,7 +96,17 @@ export async function listCvDocuments() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data;
+
+  // doc_type/status are plain `text` columns in Postgres (not DB-level enums), so the generated
+  // types widen them to `string`. This app only ever writes the values below, so the cast is
+  // safe; if an unexpected value somehow landed in the DB we fall back to sensible defaults
+  // rather than letting a bad row crash the whole documents list.
+  return (data ?? []).map((row) => ({
+    ...row,
+    doc_type: (row.doc_type === "credential" || row.doc_type === "passport" ? row.doc_type : "credential") as CvDocumentType,
+    status: (["pending", "processed", "failed"].includes(row.status) ? row.status : "pending") as CvDocumentStatus,
+    extracted_data: row.extracted_data as unknown as ExtractedCredentialData | null,
+  }));
 }
 
 export async function deleteCvDocument(documentId: string, storagePath: string) {

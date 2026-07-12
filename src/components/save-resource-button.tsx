@@ -4,12 +4,12 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SaveButton({
-  opportunityId,
+export default function SaveResourceButton({
+  resourceId,
   initialSaved,
   isAuthed,
 }: {
-  opportunityId: string;
+  resourceId: string;
   initialSaved: boolean;
   isAuthed: boolean;
 }) {
@@ -18,9 +18,12 @@ export default function SaveButton({
   const router = useRouter();
   const supabase = createClient();
 
-  function toggle() {
+  function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!isAuthed) {
-      router.push(`/login?next=/`);
+      router.push(`/login?next=/growth/courses`);
       return;
     }
 
@@ -29,21 +32,21 @@ export default function SaveButton({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        router.push(`/login?next=/`);
+        router.push(`/login?next=/growth/courses`);
         return;
       }
 
       if (saved) {
         await supabase
-          .from("saved_opportunities")
+          .from("saved_resources")
           .delete()
           .eq("user_id", user.id)
-          .eq("opportunity_id", opportunityId);
+          .eq("resource_id", resourceId);
         setSaved(false);
       } else {
         await supabase
-          .from("saved_opportunities")
-          .insert({ user_id: user.id, opportunity_id: opportunityId });
+          .from("saved_resources")
+          .insert({ user_id: user.id, resource_id: resourceId });
         setSaved(true);
       }
     });
@@ -54,12 +57,12 @@ export default function SaveButton({
       onClick={toggle}
       disabled={isPending}
       aria-pressed={saved}
-      aria-label={saved ? "Remove from saved" : "Save this opportunity"}
-      className="rounded-full p-1.5 transition-colors disabled:opacity-50"
+      aria-label={saved ? "Remove from saved" : "Save this resource"}
+      className="shrink-0 rounded-full p-1.5 transition-colors disabled:opacity-50"
     >
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill={saved ? "rgb(var(--accent))" : "none"}
       >

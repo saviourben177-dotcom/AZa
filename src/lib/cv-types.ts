@@ -80,3 +80,12 @@ export interface CvTailoring {
 export function emptyCvProfile(): Pick<CvProfile, "education" | "experience" | "certifications" | "skills"> {
   return { education: [], experience: [], certifications: [], skills: [] };
 }
+
+// cv_profiles.education/experience/certifications are stored as jsonb in Postgres, which the
+// Supabase type generator maps to the generic `Json` type (there's no way to encode "array of
+// EducationEntry" in the DB schema itself). These columns are only ever written by this app's
+// own CV actions, in the shapes defined above, so casting at the read/write boundary is safe
+// and keeps the loose `Json` type from leaking into callers.
+export function asJsonEntryArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}

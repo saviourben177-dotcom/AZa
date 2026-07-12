@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import SaveResourceButton from "@/components/save-resource-button";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,10 @@ export default async function CoursesPage({
   const { category } = await searchParams;
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const query = supabase.from("skill_resources").select("*, skills(name, category)").order("created_at", { ascending: false });
   const { data: resources } = await query.limit(50);
 
@@ -20,6 +25,12 @@ export default async function CoursesPage({
 
   const { data: skillRows } = await supabase.from("skills").select("category");
   const categories = Array.from(new Set((skillRows ?? []).map((s) => s.category))).sort();
+
+  let savedIds = new Set<string>();
+  if (user) {
+    const { data: savedResources } = await supabase.from("saved_resources").select("resource_id").eq("user_id", user.id);
+    savedIds = new Set((savedResources ?? []).map((s) => s.resource_id));
+  }
 
   return (
     <div className="px-5 pt-7">
@@ -40,29 +51,30 @@ export default async function CoursesPage({
       <div className="mt-4 space-y-3">
         {filtered.length === 0 && <p className="text-[13px] text-ink/50">No courses yet in this category.</p>}
         {filtered.map((r) => (
-          <a
-            key={r.id}
-            href={r.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[14px] font-bold text-ink">{r.title}</p>
-              {r.curator_verified && (
-                <span className="shrink-0 rounded-pill bg-aza-light px-2 py-0.5 text-[10px] font-bold text-aza">✓</span>
-              )}
+          <div key={r.id} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+            <a href={r.url} target="_blank" rel="noopener noreferrer" className="block">
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 flex-1 text-[14px] font-bold text-ink">{r.title}</p>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {r.curator_verified && (
+                    <span className="rounded-pill bg-aza-light px-2 py-0.5 text-[10px] font-bold text-aza">✓</span>
+                  )}
+                </div>
+              </div>
+              <p className="mt-1 text-[11.5px] font-medium text-ink/50">
+                {(r.skills as unknown as { name: string })?.name} · {r.provider ?? "Unknown provider"}
+              </p>
+              <p className="mt-2 text-[11px] font-bold text-ink/45">
+                <span className="capitalize">{r.level}</span>
+                {r.duration_hours ? ` · ${r.duration_hours}hrs` : ""}
+                {r.rating ? ` · ★${r.rating}` : ""}
+                {r.is_free ? " · Free" : " · Paid"}
+              </p>
+            </a>
+            <div className="mt-2 flex justify-end">
+              <SaveResourceButton resourceId={r.id} initialSaved={savedIds.has(r.id)} isAuthed={!!user} />
             </div>
-            <p className="mt-1 text-[11.5px] font-medium text-ink/50">
-              {(r.skills as unknown as { name: string })?.name} · {r.provider ?? "Unknown provider"}
-            </p>
-            <p className="mt-2 text-[11px] font-bold text-ink/45">
-              <span className="capitalize">{r.level}</span>
-              {r.duration_hours ? ` · ${r.duration_hours}hrs` : ""}
-              {r.rating ? ` · ★${r.rating}` : ""}
-              {r.is_free ? " · Free" : " · Paid"}
-            </p>
-          </a>
+          </div>
         ))}
       </div>
     </div>

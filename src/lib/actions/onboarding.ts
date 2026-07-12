@@ -3,10 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+export type EmploymentStatusOption = "student" | "employed" | "self_employed" | "unemployed" | "freelancer" | "other";
+
 export interface OnboardingData {
   full_name?: string;
   age?: number;
-  status?: string[];
+  status?: EmploymentStatusOption[];
   status_other?: string;
   field_of_interest?: string;
   job_title?: string;

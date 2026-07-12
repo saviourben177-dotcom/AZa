@@ -58,6 +58,13 @@ export interface Opportunity {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  logo_url: string | null;
+  job_type: string | null;
+  salary_range: string | null;
+  experience_required: string | null;
+  level: string | null;
+  applicants_count: number | null;
+  paid: boolean | null;
 }
 
 export interface Price {
@@ -169,6 +176,7 @@ export interface Idea {
   stage: "idea" | "validation" | "building" | "launched";
   visibility: "public" | "private";
   upvotes_count: number;
+  comments_count: number;
   looking_for_collaborators: boolean;
   created_at: string;
   updated_at: string;
@@ -221,6 +229,62 @@ export const IDEA_STAGE_LABELS: Record<Idea["stage"], string> = {
   validation: "Validation",
   building: "Building",
   launched: "Launched",
+};
+
+export interface SkillResource {
+  id: string;
+  skill_id: string;
+  title: string;
+  provider: string | null;
+  url: string;
+  resource_type: string;
+  level: "beginner" | "intermediate" | "advanced";
+  duration_hours: number | null;
+  is_free: boolean;
+  rating: number | null;
+  curator_verified: boolean;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface IdeaComment {
+  id: string;
+  idea_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type NotificationType =
+  | "join_request_received"
+  | "join_request_accepted"
+  | "join_request_declined"
+  | "new_message"
+  | "deadline_reminder"
+  | "opportunity_match"
+  | "idea_upvote"
+  | "system";
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  link_path: string | null;
+  read_at: string | null;
+  created_at: string;
+}
+
+export type ApplicationStatus = "saved" | "applied" | "interviewing" | "rejected" | "accepted";
+
+export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  saved: "Saved",
+  applied: "Applied",
+  interviewing: "Interviewing",
+  rejected: "Rejected",
+  accepted: "Accepted",
 };
 
 export type MarketplaceListingType = "sell" | "buy" | "collaborate" | "service";

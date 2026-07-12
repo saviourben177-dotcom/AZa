@@ -2,7 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { EducationEntry, ExperienceEntry, CertificationEntry } from "@/lib/cv-types";
+import type { EducationEntry, ExperienceEntry, CertificationEntry, CvProfile } from "@/lib/cv-types";
+import { asJsonEntryArray } from "@/lib/cv-types";
+import type { Json } from "@/lib/supabase/database.types";
+
+function toJsonArray<T>(entries: T[]): Json {
+  return entries as unknown as Json;
+}
 
 async function requireUser() {
   const supabase = await createClient();
@@ -14,7 +20,7 @@ async function requireUser() {
 }
 
 /** Ensures a cv_profiles row exists for the user and returns it. */
-export async function getOrCreateCvProfile() {
+export async function getOrCreateCvProfile(): Promise<CvProfile> {
   const { supabase, user } = await requireUser();
 
   const { data: existing } = await supabase
@@ -23,16 +29,24 @@ export async function getOrCreateCvProfile() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (existing) return existing;
+  const row =
+    existing ??
+    (await (async () => {
+      const { data: created, error } = await supabase
+        .from("cv_profiles")
+        .insert({ user_id: user.id })
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return created;
+    })());
 
-  const { data: created, error } = await supabase
-    .from("cv_profiles")
-    .insert({ user_id: user.id })
-    .select("*")
-    .single();
-
-  if (error) throw new Error(error.message);
-  return created;
+  return {
+    ...row,
+    education: asJsonEntryArray<EducationEntry>(row.education),
+    experience: asJsonEntryArray<ExperienceEntry>(row.experience),
+    certifications: asJsonEntryArray<CertificationEntry>(row.certifications),
+  };
 }
 
 export async function updateCvSummary(summary: string) {
@@ -64,11 +78,11 @@ export async function upsertEducationEntry(entry: EducationEntry) {
     .eq("user_id", user.id)
     .single();
 
-  const current: EducationEntry[] = profile?.education ?? [];
+  const current = asJsonEntryArray<EducationEntry>(profile?.education);
   const idx = current.findIndex((e) => e.id === entry.id);
   const next = idx >= 0 ? current.map((e, i) => (i === idx ? entry : e)) : [...current, entry];
 
-  const { error } = await supabase.from("cv_profiles").update({ education: next }).eq("user_id", user.id);
+  const { error } = await supabase.from("cv_profiles").update({ education: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }
@@ -80,8 +94,8 @@ export async function removeEducationEntry(entryId: string) {
     .select("education")
     .eq("user_id", user.id)
     .single();
-  const next = (profile?.education ?? []).filter((e: EducationEntry) => e.id !== entryId);
-  const { error } = await supabase.from("cv_profiles").update({ education: next }).eq("user_id", user.id);
+  const next = asJsonEntryArray<EducationEntry>(profile?.education).filter((e) => e.id !== entryId);
+  const { error } = await supabase.from("cv_profiles").update({ education: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }
@@ -94,11 +108,11 @@ export async function upsertExperienceEntry(entry: ExperienceEntry) {
     .eq("user_id", user.id)
     .single();
 
-  const current: ExperienceEntry[] = profile?.experience ?? [];
+  const current = asJsonEntryArray<ExperienceEntry>(profile?.experience);
   const idx = current.findIndex((e) => e.id === entry.id);
   const next = idx >= 0 ? current.map((e, i) => (i === idx ? entry : e)) : [...current, entry];
 
-  const { error } = await supabase.from("cv_profiles").update({ experience: next }).eq("user_id", user.id);
+  const { error } = await supabase.from("cv_profiles").update({ experience: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }
@@ -110,8 +124,8 @@ export async function removeExperienceEntry(entryId: string) {
     .select("experience")
     .eq("user_id", user.id)
     .single();
-  const next = (profile?.experience ?? []).filter((e: ExperienceEntry) => e.id !== entryId);
-  const { error } = await supabase.from("cv_profiles").update({ experience: next }).eq("user_id", user.id);
+  const next = asJsonEntryArray<ExperienceEntry>(profile?.experience).filter((e) => e.id !== entryId);
+  const { error } = await supabase.from("cv_profiles").update({ experience: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }
@@ -124,11 +138,11 @@ export async function upsertCertificationEntry(entry: CertificationEntry) {
     .eq("user_id", user.id)
     .single();
 
-  const current: CertificationEntry[] = profile?.certifications ?? [];
+  const current = asJsonEntryArray<CertificationEntry>(profile?.certifications);
   const idx = current.findIndex((e) => e.id === entry.id);
   const next = idx >= 0 ? current.map((e, i) => (i === idx ? entry : e)) : [...current, entry];
 
-  const { error } = await supabase.from("cv_profiles").update({ certifications: next }).eq("user_id", user.id);
+  const { error } = await supabase.from("cv_profiles").update({ certifications: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }
@@ -140,8 +154,8 @@ export async function removeCertificationEntry(entryId: string) {
     .select("certifications")
     .eq("user_id", user.id)
     .single();
-  const next = (profile?.certifications ?? []).filter((e: CertificationEntry) => e.id !== entryId);
-  const { error } = await supabase.from("cv_profiles").update({ certifications: next }).eq("user_id", user.id);
+  const next = asJsonEntryArray<CertificationEntry>(profile?.certifications).filter((e) => e.id !== entryId);
+  const { error } = await supabase.from("cv_profiles").update({ certifications: toJsonArray(next) }).eq("user_id", user.id);
   if (error) throw new Error(error.message);
   revalidatePath("/profile/cv");
 }

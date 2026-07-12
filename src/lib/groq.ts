@@ -132,14 +132,81 @@ ${JSON.stringify(input, null, 2)}`;
 }
 
 /**
+ * Growth Hub's "Ask me anything" assistant. This is retrieval-grounded, not a raw chat: we
+ * search real opportunities/skill_resources/ideas for the query first, then ask the model to
+ * answer using ONLY that retrieved context. This deliberately avoids letting the model invent
+ * opportunities, deadlines, or resources that don't exist in AZA's own data — a raw ungrounded
+ * chat would eventually hallucinate a scholarship or deadline that sounds plausible but isn't
+ * real, which is a serious trust problem for a platform whose whole purpose is real listings.
+ */
+export async function askGrowthAssistant(
+  question: string,
+  context: {
+    opportunities: { id: string; title: string; org: string; category: string; deadline: string | null }[];
+    resources: { id: string; title: string; provider: string | null; skill: string }[];
+    ideas: { id: string; title: string; description: string }[];
+  }
+): Promise<{ answer: string; hasResults: boolean }> {
+  const hasResults =
+    context.opportunities.length > 0 || context.resources.length > 0 || context.ideas.length > 0;
+
+  if (!hasResults) {
+    // Nothing relevant found in AZA's own data — say so honestly rather than asking the
+    // model to answer from general knowledge, which would break the grounding guarantee.
+    return {
+      answer:
+        "I couldn't find anything in AZA matching that right now. Try browsing Discover or Skills directly, or rephrase your question.",
+      hasResults: false,
+    };
+  }
+
+  const contextBlock = [
+    context.opportunities.length > 0
+      ? `Opportunities:\n${context.opportunities
+          .map((o) => `- [${o.id}] "${o.title}" at ${o.org} (${o.category})${o.deadline ? `, deadline ${o.deadline}` : ""}`)
+          .join("\n")}`
+      : "",
+    context.resources.length > 0
+      ? `Skill resources:\n${context.resources
+          .map((r) => `- [${r.id}] "${r.title}" (${r.skill})${r.provider ? ` by ${r.provider}` : ""}`)
+          .join("\n")}`
+      : "",
+    context.ideas.length > 0
+      ? `Ideas:\n${context.ideas.map((i) => `- [${i.id}] "${i.title}": ${i.description.slice(0, 120)}`).join("\n")}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const prompt = `You are AZA's Growth Hub assistant, helping a Nigerian youth user find opportunities, skills resources, and ideas within the AZA app. Answer the user's question using ONLY the items listed below — these are real items that exist in AZA right now. Do not mention or invent anything not in this list. If nothing below actually answers the question, say so honestly instead of stretching an unrelated item to fit. Keep the answer short (2-4 sentences), warm, and direct. Refer to items by name, not by their [id].
+
+User's question: ${question}
+
+Available AZA items:
+${contextBlock}`;
+
+  const answer = await groqChat({
+    model: TEXT_MODEL,
+    temperature: 0.3,
+    max_completion_tokens: 400,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  return { answer, hasResults: true };
+}
+
+/**
  * Tailors an existing base CV toward a specific opportunity's eligibility/description,
  * re-ordering and re-emphasizing content. Does not fabricate new facts.
+ * Also produces a 0-100 match score in the same call (single API cost, single round trip).
  */
 export async function tailorCvForOpportunity(
   baseCvMarkdown: string,
   opportunity: { title: string; org: string; description: string; eligibility: string | null }
-): Promise<string> {
+): Promise<{ content: string; matchScore: number | null }> {
   const prompt = `You are tailoring an existing CV for a specific opportunity application. Re-order and re-emphasize existing content so the most relevant skills/experience/education appear first and are framed in language that matches the opportunity's eligibility criteria and description. You may rephrase bullet points for relevance and tone. You must NOT invent new facts, employers, dates, or qualifications that are not in the original CV.
+
+Also assess how well the ORIGINAL (untailored) CV's actual experience/education/skills match this opportunity's stated eligibility and description, as a 0-100 integer. Base this strictly on genuine overlap between what's in the CV and what the opportunity asks for — do not inflate it just because you rephrased the CV. If eligibility is not specified, judge based on the description alone.
 
 Opportunity:
 Title: ${opportunity.title}
@@ -150,12 +217,29 @@ Eligibility: ${opportunity.eligibility ?? "Not specified"}
 Original CV (Markdown):
 ${baseCvMarkdown}
 
-Output the tailored CV as clean Markdown, same overall structure as the original.`;
+Respond with JSON only, in this exact shape:
+{"content": "<the tailored CV as clean Markdown, same overall structure as the original>", "match_score": <integer 0-100>}`;
 
-  return groqChat({
+  const raw = await groqChat({
     model: TEXT_MODEL,
     temperature: 0.4,
-    max_completion_tokens: 1800,
+    max_completion_tokens: 2200,
+    response_format: { type: "json_object" },
     messages: [{ role: "user", content: prompt }],
   });
+
+  try {
+    const parsed = JSON.parse(raw);
+    const content = typeof parsed.content === "string" ? parsed.content : raw;
+    const scoreRaw = parsed.match_score;
+    const matchScore =
+      typeof scoreRaw === "number" && Number.isFinite(scoreRaw)
+        ? Math.max(0, Math.min(100, Math.round(scoreRaw)))
+        : null;
+    return { content, matchScore };
+  } catch {
+    // Model didn't return valid JSON — fall back to treating the whole response as
+    // the CV content with no score, rather than losing the tailoring output entirely.
+    return { content: raw, matchScore: null };
+  }
 }

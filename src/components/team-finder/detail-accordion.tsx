@@ -22,14 +22,14 @@ export default function DetailAccordion({
         <span className="text-[13.5px] font-semibold text-ink">{label}</span>
         <span className="flex items-center gap-2">
           {value !== undefined && (
-            <span className="text-[12.5px] font-medium text-text-tertiary">{value}</span>
+            <span className="text-[12.5px] font-medium text-ink/45">{value}</span>
           )}
           <svg
             width="15"
             height="15"
             viewBox="0 0 24 24"
             fill="none"
-            className={`text-text-tertiary transition-transform ${open ? "rotate-90" : ""}`}
+            className={`text-ink/40 transition-transform ${open ? "rotate-90" : ""}`}
           >
             <path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>

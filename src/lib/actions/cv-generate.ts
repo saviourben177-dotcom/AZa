@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateBaseCv, tailorCvForOpportunity } from "@/lib/groq";
 import type { Profile, Opportunity } from "@/lib/types";
+import { asJsonEntryArray } from "@/lib/cv-types";
 
 async function requireUser() {
   const supabase = await createClient();
@@ -31,10 +32,14 @@ export async function generateMyBaseCv() {
 
   const p = profile as Profile;
 
+  const cvEducation = asJsonEntryArray<unknown>(cv.education);
+  const cvExperience = asJsonEntryArray<unknown>(cv.experience);
+  const cvCertifications = asJsonEntryArray<unknown>(cv.certifications);
+
   const hasAnyContent =
-    (cv.education?.length ?? 0) > 0 ||
-    (cv.experience?.length ?? 0) > 0 ||
-    (cv.certifications?.length ?? 0) > 0 ||
+    cvEducation.length > 0 ||
+    cvExperience.length > 0 ||
+    cvCertifications.length > 0 ||
     (cv.skills?.length ?? 0) > 0 ||
     !!cv.summary;
 
@@ -48,9 +53,9 @@ export async function generateMyBaseCv() {
     highestQualification: p?.highest_qualification ?? null,
     region: p?.region ?? null,
     summary: cv.summary,
-    education: cv.education ?? [],
-    experience: cv.experience ?? [],
-    certifications: cv.certifications ?? [],
+    education: cvEducation,
+    experience: cvExperience,
+    certifications: cvCertifications,
     skills: cv.skills ?? [],
   });
 
@@ -82,7 +87,7 @@ export async function tailorCvForOpportunityId(opportunityId: string) {
   if (!opportunity) throw new Error("Opportunity not found");
 
   const opp = opportunity as Opportunity;
-  const tailored = await tailorCvForOpportunity(cv.generated_content, {
+  const { content: tailored, matchScore } = await tailorCvForOpportunity(cv.generated_content, {
     title: opp.title,
     org: opp.org,
     description: opp.description,
@@ -92,7 +97,7 @@ export async function tailorCvForOpportunityId(opportunityId: string) {
   const { error } = await supabase
     .from("cv_tailorings")
     .upsert(
-      { user_id: user.id, opportunity_id: opportunityId, content: tailored },
+      { user_id: user.id, opportunity_id: opportunityId, content: tailored, match_score: matchScore },
       { onConflict: "user_id,opportunity_id" }
     );
   if (error) throw new Error(error.message);

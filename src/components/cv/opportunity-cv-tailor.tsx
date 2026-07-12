@@ -5,13 +5,17 @@ import { tailorCvForOpportunityId, getTailoredCv } from "@/lib/actions/cv-genera
 
 export default function OpportunityCvTailor({ opportunityId }: { opportunityId: string }) {
   const [content, setContent] = useState<string | null>(null);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     getTailoredCv(opportunityId)
-      .then((row) => setContent(row?.content ?? null))
+      .then((row) => {
+        setContent(row?.content ?? null);
+        setMatchScore(row?.match_score ?? null);
+      })
       .finally(() => setLoaded(true));
   }, [opportunityId]);
 
@@ -21,6 +25,9 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
       try {
         const result = await tailorCvForOpportunityId(opportunityId);
         setContent(result);
+        // Re-fetch to pick up the persisted match_score from this tailoring pass
+        const row = await getTailoredCv(opportunityId);
+        setMatchScore(row?.match_score ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not tailor CV");
       }
@@ -30,13 +37,20 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
   if (!loaded) return null;
 
   return (
-    <div className="rounded-card bg-surface p-4 shadow-card">
+    <div className="mt-5 rounded-card border border-line bg-surface p-3.5">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-semibold text-ink">CV for this opportunity</p>
+        <div className="flex items-center gap-2">
+          <p className="text-[13px] font-bold text-ink">CV for this opportunity</p>
+          {content && matchScore !== null && (
+            <span className="rounded-pill bg-aza-light px-2.5 py-0.5 text-[11px] font-bold text-aza">
+              {matchScore}% Match
+            </span>
+          )}
+        </div>
         {content && (
           <a
             href={`/api/cv/export?opportunityId=${opportunityId}`}
-            className="text-[11.5px] font-semibold text-aza"
+            className="text-[11.5px] font-bold text-aza"
           >
             Download .docx
           </a>
@@ -44,7 +58,7 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
       </div>
 
       {!content && (
-        <p className="mt-1.5 text-[12px] text-text-secondary">
+        <p className="mt-1.5 text-[12px] text-ink/55">
           Tailor your base CV to highlight what matters for this opportunity.
         </p>
       )}
@@ -52,7 +66,7 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
       <button
         onClick={handleTailor}
         disabled={isPending}
-        className="mt-2.5 w-full rounded-card bg-paper-dim py-2.5 text-[12.5px] font-semibold text-ink/70 disabled:opacity-60"
+        className="mt-2.5 w-full rounded-card bg-paper-dim py-2.5 text-[12.5px] font-bold text-ink/70 disabled:opacity-60"
       >
         {isPending ? "Tailoring..." : content ? "Re-tailor for this opportunity" : "Tailor my CV for this"}
       </button>

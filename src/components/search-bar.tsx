@@ -27,12 +27,12 @@ export default function SearchBar({ placeholder }: { placeholder: string }) {
         height="18"
         viewBox="0 0 24 24"
         fill="none"
-        className="absolute left-4 top-1/2 -translate-y-1/2"
+        className="absolute left-3.5 top-1/2 -translate-y-1/2"
       >
-        <circle cx="11" cy="11" r="7" stroke="rgb(var(--text-secondary))" strokeWidth="1.8" />
+        <circle cx="11" cy="11" r="7" stroke="rgb(var(--ink) / 0.4)" strokeWidth="1.8" />
         <path
           d="M20 20l-3.5-3.5"
-          stroke="rgb(var(--text-secondary))"
+          stroke="rgb(var(--ink) / 0.4)"
           strokeWidth="1.8"
           strokeLinecap="round"
         />
@@ -41,7 +41,7 @@ export default function SearchBar({ placeholder }: { placeholder: string }) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
-        className="h-12 w-full rounded-pill bg-paper-dim pl-11 pr-4 text-[14px] text-ink placeholder:text-text-tertiary focus:outline-none focus-visible:outline-2 focus-visible:outline-aza"
+        className="w-full rounded-pill border border-line-strong bg-surface py-3.5 pl-11 pr-4 text-[14px] text-ink shadow-card placeholder:text-ink/40"
       />
     </form>
   );
