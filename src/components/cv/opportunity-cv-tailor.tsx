@@ -30,13 +30,13 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
   if (!loaded) return null;
 
   return (
-    <div className="mt-5 rounded-card border border-line bg-surface p-3.5">
+    <div className="rounded-card bg-surface p-4 shadow-card">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-bold text-ink">CV for this opportunity</p>
+        <p className="text-[13px] font-semibold text-ink">CV for this opportunity</p>
         {content && (
           <a
             href={`/api/cv/export?opportunityId=${opportunityId}`}
-            className="text-[11.5px] font-bold text-aza"
+            className="text-[11.5px] font-semibold text-aza"
           >
             Download .docx
           </a>
@@ -44,7 +44,7 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
       </div>
 
       {!content && (
-        <p className="mt-1.5 text-[12px] text-ink/55">
+        <p className="mt-1.5 text-[12px] text-text-secondary">
           Tailor your base CV to highlight what matters for this opportunity.
         </p>
       )}
@@ -52,7 +52,7 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
       <button
         onClick={handleTailor}
         disabled={isPending}
-        className="mt-2.5 w-full rounded-card bg-paper-dim py-2.5 text-[12.5px] font-bold text-ink/70 disabled:opacity-60"
+        className="mt-2.5 w-full rounded-card bg-paper-dim py-2.5 text-[12.5px] font-semibold text-ink/70 disabled:opacity-60"
       >
         {isPending ? "Tailoring..." : content ? "Re-tailor for this opportunity" : "Tailor my CV for this"}
       </button>

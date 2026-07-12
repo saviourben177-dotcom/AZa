@@ -2,8 +2,8 @@ import type { Business } from "@/lib/types";
 
 export default function BusinessCard({ business }: { business: Business }) {
   return (
-    <div className="flex gap-3.5 rounded-card border border-line-strong bg-surface p-4 shadow-card">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-card-sm bg-aza-light">
+    <div className="flex gap-3.5 rounded-card bg-surface p-4 shadow-card">
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card-sm bg-aza-light">
         {business.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -12,17 +12,17 @@ export default function BusinessCard({ business }: { business: Business }) {
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center font-display text-lg font-bold text-aza">
+          <div className="flex h-full w-full items-center justify-center text-lg font-bold text-aza">
             {business.name.charAt(0)}
           </div>
         )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[15px] font-bold text-ink">
+        <p className="truncate text-[14.5px] font-semibold text-ink">
           {business.name}
         </p>
-        <p className="text-[11.5px] font-medium text-ink/50">
+        <p className="text-[11.5px] font-medium text-text-tertiary">
           {business.category}
           {business.location ? ` · ${business.location}` : ""}
         </p>
@@ -38,20 +38,20 @@ export default function BusinessCard({ business }: { business: Business }) {
               href={`https://wa.me/${business.whatsapp.replace(/[^0-9]/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-pill bg-aza-light px-2.5 py-1 text-[11.5px] font-bold text-aza"
+              className="rounded-pill bg-aza-light px-2.5 py-1 text-[11.5px] font-semibold text-aza"
             >
               WhatsApp
             </a>
           )}
           {business.phone && (
-            <a href={`tel:${business.phone}`} className="rounded-pill bg-paper-dim px-2.5 py-1 text-[11.5px] font-bold text-ink/70">
+            <a href={`tel:${business.phone}`} className="rounded-pill bg-paper-dim px-2.5 py-1 text-[11.5px] font-semibold text-text-secondary">
               Call
             </a>
           )}
           {business.email && (
             <a
               href={`mailto:${business.email}`}
-              className="rounded-pill bg-paper-dim px-2.5 py-1 text-[11.5px] font-bold text-ink/70"
+              className="rounded-pill bg-paper-dim px-2.5 py-1 text-[11.5px] font-semibold text-text-secondary"
             >
               Email
             </a>

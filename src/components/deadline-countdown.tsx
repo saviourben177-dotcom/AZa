@@ -32,11 +32,11 @@ export default function DeadlineCountdown({
   return (
     <Link
       href={`/opportunities/${opportunityId}`}
-      className="flex items-center justify-between rounded-card border border-line bg-surface p-4"
+      className="flex items-center justify-between rounded-card bg-surface p-4 shadow-card"
     >
       <div>
-        <p className="line-clamp-1 text-[13px] font-bold text-ink">{title}</p>
-        <p className="mt-0.5 text-[11.5px] text-ink/55">Application closes in</p>
+        <p className="line-clamp-1 text-[13px] font-semibold text-ink">{title}</p>
+        <p className="mt-0.5 text-[11.5px] text-text-secondary">Application closes in</p>
         {remaining && (
           <div className="mt-2 flex items-center gap-3 tabular">
             <CountUnit value={remaining.days} label="Days" />
@@ -56,8 +56,8 @@ export default function DeadlineCountdown({
 function CountUnit({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-center">
-      <p className="font-display text-[16px] font-extrabold text-aza">{String(value).padStart(2, "0")}</p>
-      <p className="text-[9.5px] font-medium text-ink/45">{label}</p>
+      <p className="font-display text-[16px] font-bold text-aza">{String(value).padStart(2, "0")}</p>
+      <p className="text-[10px] font-medium text-text-tertiary">{label}</p>
     </div>
   );
 }

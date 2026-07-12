@@ -34,7 +34,7 @@ export default function MessageThread({
     <div className="flex flex-1 flex-col">
       <div className="flex-1 space-y-3 px-5 py-5">
         {messages.length === 0 && (
-          <p className="mt-10 text-center text-[12.5px] text-ink/40">
+          <p className="mt-10 text-center text-[12.5px] text-text-tertiary">
             No messages yet — say hello to get started.
           </p>
         )}
@@ -44,11 +44,11 @@ export default function MessageThread({
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div
                 className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
-                  mine ? "bg-aza text-white" : "border border-line-strong bg-surface text-ink"
+                  mine ? "bg-aza text-white" : "bg-surface shadow-card text-ink"
                 }`}
               >
                 <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
-                <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>
+                <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-text-tertiary"}`}>
                   {relativeTime(m.created_at)}
                 </p>
               </div>
@@ -67,7 +67,7 @@ export default function MessageThread({
           required
           placeholder="Type a message..."
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-pill border border-line-strong bg-surface px-4 py-2.5 text-[13.5px] text-ink placeholder:text-ink/35 shadow-card focus:outline-none"
+          className="min-w-0 flex-1 rounded-pill bg-surface shadow-card px-4 py-2.5 text-[13.5px] text-ink placeholder:text-text-tertiary shadow-card focus:outline-none"
         />
         <button
           type="submit"

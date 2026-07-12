@@ -41,11 +41,11 @@ export default async function RequestToJoinPage({
 
   if (roles.length === 0) {
     return (
-      <div className="px-5 pt-7 text-center">
-        <p className="mt-10 text-[13.5px] text-ink/55">
+      <div className="px-4 pt-6 text-center">
+        <p className="mt-10 text-[13.5px] text-text-secondary">
           This project has no open roles right now.
         </p>
-        <Link href={`/businesses/team-finder/${id}`} className="mt-4 inline-block text-[13px] font-bold text-aza">
+        <Link href={`/businesses/team-finder/${id}`} className="mt-4 inline-block text-[13px] font-semibold text-aza">
           Back to project
         </Link>
       </div>
@@ -53,11 +53,11 @@ export default async function RequestToJoinPage({
   }
 
   return (
-    <div className="px-5 pt-7 pb-8">
+    <div className="px-4 pt-6 pb-8">
       <Link
         href={`/businesses/team-finder/${id}`}
         aria-label="Back"
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-surface shadow-card text-ink/60 shadow-card"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </Link>
@@ -70,10 +70,10 @@ export default async function RequestToJoinPage({
             <path d="M3 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M15 20c0-2.2-1-4-2.5-5.1a5.2 5.2 0 0 1 8 4.3" stroke="rgb(var(--accent))" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
-        <h1 className="mt-4 font-display text-[20px] font-bold text-ink">Request to Join</h1>
-        <p className="mt-1 font-display text-[16px] font-bold text-ink">{idea.title}</p>
-        <p className="text-[12.5px] text-ink/50">by {owner?.full_name ?? "Aza user"}</p>
-        <p className="mt-3 max-w-[280px] text-[12.5px] leading-relaxed text-ink/55">
+        <h1 className="mt-4 text-[20px] font-semibold text-ink">Request to Join</h1>
+        <p className="mt-1 text-[16px] font-semibold text-ink">{idea.title}</p>
+        <p className="text-[12.5px] text-text-secondary">by {owner?.full_name ?? "Aza user"}</p>
+        <p className="mt-3 max-w-[280px] text-[12.5px] leading-relaxed text-text-secondary">
           Let the project owner know why you&apos;re a great fit for this project.
         </p>
       </div>

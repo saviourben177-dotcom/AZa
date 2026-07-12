@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 
 function greeting(): string {
   const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
 }
 
 export default async function HomePage({
@@ -96,36 +96,37 @@ export default async function HomePage({
   )[0];
 
   return (
-    <div className="px-5 pt-7">
+    <div className="px-4 pt-6">
       {profile?.onboarding_completed && !profile?.has_seen_app_guide && (
         <AppGuideGate shouldShow />
       )}
+
       <header className="flex items-start justify-between">
         <div>
-          {firstName ? (
-            <>
-              <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Welcome back</p>
-              <h1 className="mt-1 font-display text-[24px] font-bold leading-tight text-ink">{greeting()}, {firstName} 👋</h1>
-              <p className="mt-1 text-[13px] text-ink/55">Let&apos;s make today count.</p>
-            </>
-          ) : (
-            <>
-              <h1 className="font-display text-[28px] font-bold leading-tight text-aza">Aza</h1>
-              <p className="mt-1 text-[13px] text-ink/55">Find your next big opportunity</p>
-            </>
-          )}
+          <p className="font-display text-[22px] font-bold leading-tight text-ink">
+            {firstName ? (
+              <>
+                {greeting()}, {firstName} <span aria-hidden="true">👋</span>
+              </>
+            ) : (
+              "AZA"
+            )}
+          </p>
+          <p className="mt-1 text-[13px] text-text-secondary">
+            {firstName ? "Let's make today count." : "Find your next big opportunity"}
+          </p>
         </div>
         {user && <NotificationBell />}
       </header>
 
       <div className="mt-5">
-        <SearchBar placeholder="Search opportunities..." />
+        <SearchBar placeholder="Search opportunities, skills, ideas..." />
       </div>
 
       {isFiltering ? (
-        <div className="mt-5 space-y-4">
-          <Link href="/" className="text-[12.5px] font-bold text-ink/50">← Clear filters</Link>
-          {(filteredList ?? []).length === 0 && <p className="text-[13px] text-ink/50">No matches found.</p>}
+        <div className="mt-6 space-y-3">
+          <Link href="/" className="text-[12.5px] font-semibold text-text-secondary">← Clear filters</Link>
+          {(filteredList ?? []).length === 0 && <p className="text-[13px] text-text-secondary">No matches found.</p>}
           {filteredList?.map((opp: Opportunity) => (
             <OpportunityCard key={opp.id} opportunity={opp} isSaved={savedIds.has(opp.id)} isAuthed={!!user} />
           ))}
@@ -133,7 +134,7 @@ export default async function HomePage({
       ) : (
         <>
           {profile && personalized.wasFiltered && personalized.hiddenCount > 0 && (
-            <div className="mt-5 flex items-center justify-between rounded-card-sm bg-aza-light px-4 py-3 shadow-card">
+            <div className="mt-5 flex items-center justify-between rounded-card-sm bg-aza-light px-4 py-3">
               <p className="text-[12px] font-semibold text-aza-dark">
                 Matched to your profile ({personalized.hiddenCount} hidden)
               </p>
@@ -143,24 +144,21 @@ export default async function HomePage({
             </div>
           )}
 
-          <section className="mt-7">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-[16px] font-bold text-ink">
-                {profile ? "Recommended for you" : "Latest Opportunities"}
-              </h2>
-              <Link href="/discover" className="text-[12.5px] font-bold text-aza">See all</Link>
-            </div>
-            <div className="mt-3 space-y-4">
-              {personalized.opportunities.length === 0 && <EmptyState />}
-              {personalized.opportunities.slice(0, 3).map((opp: Opportunity) => (
-                <OpportunityCard key={opp.id} opportunity={opp} isSaved={savedIds.has(opp.id)} isAuthed={!!user} />
-              ))}
-            </div>
+          <section className="mt-6">
+            <QuickActions />
           </section>
+
+          <SectionHeader title="Recommended for you" href="/discover" />
+          <div className="mt-3 space-y-3">
+            {personalized.opportunities.length === 0 && <EmptyState />}
+            {personalized.opportunities.slice(0, 3).map((opp: Opportunity) => (
+              <OpportunityCard key={opp.id} opportunity={opp} isSaved={savedIds.has(opp.id)} isAuthed={!!user} />
+            ))}
+          </div>
 
           {upcoming && (
             <section className="mt-7">
-              <h2 className="font-display text-[16px] font-bold text-ink">Upcoming deadline</h2>
+              <h2 className="text-[16px] font-semibold text-ink">Upcoming deadline</h2>
               <div className="mt-3">
                 <DeadlineCountdown
                   opportunityId={upcoming.id}
@@ -173,17 +171,14 @@ export default async function HomePage({
 
           {user && savedRows.length > 0 && (
             <section className="mt-7">
-              <div className="flex items-center justify-between">
-                <h2 className="font-display text-[16px] font-bold text-ink">Recent activity</h2>
-                <Link href="/profile" className="text-[12.5px] font-bold text-aza">See all</Link>
-              </div>
-              <div className="mt-3 space-y-2.5">
+              <SectionHeader title="Recent activity" href="/profile" />
+              <div className="mt-3 space-y-2">
                 {savedRows.slice(0, 3).map((s) => (
-                  <div key={s.opportunity_id} className="rounded-card-sm border border-line-strong bg-surface px-4 py-3.5 shadow-card">
-                    <p className="text-[13px] text-ink/75">
-                      You saved <span className="font-bold text-ink">{s.opportunities?.title}</span>
+                  <div key={s.opportunity_id} className="rounded-card-sm bg-surface px-4 py-3.5 shadow-card">
+                    <p className="text-[13px] text-ink/80">
+                      You saved <span className="font-semibold text-ink">{s.opportunities?.title}</span>
                     </p>
-                    <p className="mt-1 text-[11px] font-medium text-ink/40">{relativeTime(s.saved_at)}</p>
+                    <p className="mt-1 text-[11px] font-medium text-text-tertiary">{relativeTime(s.saved_at)}</p>
                   </div>
                 ))}
               </div>
@@ -192,6 +187,79 @@ export default async function HomePage({
         </>
       )}
     </div>
+  );
+}
+
+function SectionHeader({ title, href }: { title: string; href: string }) {
+  return (
+    <div className="mt-7 flex items-center justify-between">
+      <h2 className="text-[16px] font-semibold text-ink">{title}</h2>
+      <Link href={href} className="text-[12.5px] font-semibold text-aza">See all</Link>
+    </div>
+  );
+}
+
+const QUICK_ACTIONS = [
+  { href: "/discover", label: "Discover", icon: DiscoverGlyph },
+  { href: "/growth/skills", label: "My Skills", icon: SkillsGlyph },
+  { href: "/growth/ideas", label: "Ideas", icon: IdeasGlyph },
+  { href: "/profile/cv", label: "CV Studio", icon: CvGlyph },
+] as const;
+
+function QuickActions() {
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-[16px] font-semibold text-ink">Quick actions</h2>
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-3">
+        {QUICK_ACTIONS.map((action) => (
+          <Link
+            key={action.href}
+            href={action.href}
+            className="flex flex-col items-center gap-2 rounded-card bg-paper-dim py-4"
+          >
+            <action.icon />
+            <span className="text-center text-[11px] font-medium leading-tight text-ink/80">
+              {action.label}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DiscoverGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="rgb(var(--accent))" strokeWidth="1.7" />
+      <path d="m15.5 8.5-2 5-5 2 2-5 5-2Z" stroke="rgb(var(--accent))" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function SkillsGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3v6M12 3l-3.5 3.5M12 3l3.5 3.5" stroke="rgb(var(--accent))" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <rect x="5" y="12" width="14" height="8" rx="2" stroke="rgb(var(--accent))" strokeWidth="1.7" />
+    </svg>
+  );
+}
+function IdeasGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.2 11.1c.5.35.7.9.7 1.4v.3h5v-.3c0-.5.2-1.05.7-1.4A6 6 0 0 0 12 3Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function CvGlyph() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <path d="M7 3.5h7L18.5 8V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M14 3.5V8h4.5" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M8.5 12.5h7M8.5 15.5h7M8.5 18h4" stroke="rgb(var(--accent))" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   );
 }
 
@@ -208,10 +276,10 @@ function relativeTime(iso: string): string {
 
 function EmptyState() {
   return (
-    <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+    <div className="rounded-card bg-surface p-8 text-center shadow-card">
       <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">✨</div>
-      <p className="font-display text-[15px] font-bold text-ink">Nothing here yet</p>
-      <p className="mt-1 text-[13px] text-ink/55">New opportunities are added regularly — check back soon.</p>
+      <p className="text-[15px] font-semibold text-ink">Nothing here yet</p>
+      <p className="mt-1 text-[13px] text-text-secondary">New opportunities are added regularly — check back soon.</p>
     </div>
   );
 }

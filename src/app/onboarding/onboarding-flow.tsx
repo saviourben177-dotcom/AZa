@@ -114,7 +114,7 @@ export default function OnboardingFlow() {
     <div className="flex min-h-screen flex-col px-5 pb-8 pt-6">
       <div className="flex items-center gap-3">
         {stepIndex > 0 && (
-          <button onClick={back} aria-label="Back" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+          <button onClick={back} aria-label="Back" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border bg-surface shadow-card text-text-secondary shadow-card">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -123,7 +123,7 @@ export default function OnboardingFlow() {
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-paper-dim">
           <div className="h-full rounded-full bg-aza transition-all" style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }} />
         </div>
-        <span className="shrink-0 text-[11px] font-bold text-ink/40 tabular">{stepIndex + 1}/{totalSteps}</span>
+        <span className="shrink-0 text-[11px] font-semibold text-text-tertiary tabular">{stepIndex + 1}/{totalSteps}</span>
       </div>
 
       <div className="mt-8 flex-1">
@@ -134,7 +134,7 @@ export default function OnboardingFlow() {
               placeholder="Enter your full name"
               value={data.full_name ?? ""}
               onChange={(e) => setData({ ...data, full_name: e.target.value })}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[15px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[15px]"
             />
           </StepShell>
         )}
@@ -143,10 +143,10 @@ export default function OnboardingFlow() {
           <StepShell title="How old are you?" subtitle="This helps us personalize your experience.">
             <div className="mt-8 flex items-center justify-center gap-6">
               <RoundButton onClick={() => setData((d) => ({ ...d, age: Math.max(13, (d.age ?? 18) - 1) }))}>−</RoundButton>
-              <span className="font-display text-4xl font-extrabold text-ink tabular">{data.age ?? 18}</span>
+              <span className="text-4xl font-extrabold text-ink tabular">{data.age ?? 18}</span>
               <RoundButton onClick={() => setData((d) => ({ ...d, age: Math.min(99, (d.age ?? 18) + 1) }))}>+</RoundButton>
             </div>
-            <p className="mt-2 text-center text-[13px] text-ink/50">years old</p>
+            <p className="mt-2 text-center text-[13px] text-text-secondary">years old</p>
           </StepShell>
         )}
 
@@ -161,7 +161,7 @@ export default function OnboardingFlow() {
                   placeholder="Please specify"
                   value={data.status_other ?? ""}
                   onChange={(e) => setData({ ...data, status_other: e.target.value })}
-                  className="w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3 text-[14px]"
+                  className="w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3 text-[14px]"
                 />
               )}
             </div>
@@ -200,9 +200,9 @@ export default function OnboardingFlow() {
               placeholder="Job title (e.g. Software Engineer)"
               value={data.job_title ?? ""}
               onChange={(e) => setData({ ...data, job_title: e.target.value })}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]"
             />
-            <p className="mt-5 text-[12px] font-semibold uppercase tracking-wide text-ink/40">Industry</p>
+            <p className="mt-5 text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">Industry</p>
             <FieldPicker
               query={fieldQuery}
               setQuery={setFieldQuery}
@@ -222,7 +222,7 @@ export default function OnboardingFlow() {
               value={data.business_description ?? ""}
               onChange={(e) => setData({ ...data, business_description: e.target.value })}
               rows={4}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]"
             />
           </StepShell>
         )}
@@ -233,7 +233,7 @@ export default function OnboardingFlow() {
               placeholder="Your main skill or service"
               value={data.freelance_skill ?? ""}
               onChange={(e) => setData({ ...data, freelance_skill: e.target.value })}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]"
             />
           </StepShell>
         )}
@@ -250,7 +250,7 @@ export default function OnboardingFlow() {
                 value={data.disability_or_health_note?.trim() ?? ""}
                 onChange={(e) => setData({ ...data, disability_or_health_note: e.target.value })}
                 rows={3}
-                className="mt-3 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3 text-[14px]"
+                className="mt-3 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3 text-[14px]"
               />
             )}
           </StepShell>
@@ -278,7 +278,7 @@ export default function OnboardingFlow() {
 
         {currentKey === "region" && (
           <StepShell title="Which region are you in?" subtitle="This helps us show local opportunities.">
-            <select value={data.region ?? ""} onChange={(e) => setData({ ...data, region: e.target.value })} className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]">
+            <select value={data.region ?? ""} onChange={(e) => setData({ ...data, region: e.target.value })} className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]">
               <option value="">Select your region</option>
               {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
@@ -300,7 +300,7 @@ export default function OnboardingFlow() {
                     navigator.geolocation.getCurrentPosition(() => next(), () => next());
                   } else next();
                 }}
-                className="mt-8 w-full rounded-pill bg-aza py-3.5 text-[15px] font-bold text-white shadow-glow-accent"
+                className="mt-8 w-full rounded-pill bg-aza py-3.5 text-[15px] font-semibold text-white shadow-glow-accent"
               >
                 Allow Location Access
               </button>
@@ -314,7 +314,7 @@ export default function OnboardingFlow() {
               placeholder="Enter your city or area"
               value={data.exact_location ?? ""}
               onChange={(e) => setData({ ...data, exact_location: e.target.value })}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]"
             />
           </StepShell>
         )}
@@ -336,21 +336,21 @@ export default function OnboardingFlow() {
               value={data.additional_notes ?? ""}
               onChange={(e) => setData({ ...data, additional_notes: e.target.value })}
               rows={5}
-              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+              className="mt-6 w-full rounded-card-sm border bg-surface shadow-card shadow-card px-4 py-3.5 text-[14px]"
             />
           </StepShell>
         )}
       </div>
 
       <div className="mt-6 space-y-3">
-        <button onClick={next} disabled={saving} className="w-full rounded-pill bg-aza py-3.5 text-[15px] font-bold text-white shadow-glow-accent disabled:opacity-60">
+        <button onClick={next} disabled={saving} className="w-full rounded-pill bg-aza py-3.5 text-[15px] font-semibold text-white shadow-glow-accent disabled:opacity-60">
           {saving ? "Saving..." : stepIndex === totalSteps - 1 ? "Finish" : "Continue"}
         </button>
         {stepIndex < totalSteps - 1 && (
-          <button onClick={next} className="w-full text-center text-[13px] font-bold text-ink/40">Skip for now</button>
+          <button onClick={next} className="w-full text-center text-[13px] font-semibold text-text-tertiary">Skip for now</button>
         )}
         {stepIndex === 0 && (
-          <button onClick={skipAll} className="w-full text-center text-[12px] text-ink/30">Skip onboarding entirely</button>
+          <button onClick={skipAll} className="w-full text-center text-[12px] text-text-tertiary">Skip onboarding entirely</button>
         )}
       </div>
     </div>
@@ -369,21 +369,21 @@ function FieldPicker({
         placeholder={placeholder}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className={`${hideLabel ? "mt-2" : "mt-6"} w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card`}
+        className={`${hideLabel ? "mt-2" : "mt-6"} w-full rounded-card-sm border bg-surface shadow-card px-4 py-3 text-[14px] shadow-card`}
       />
-      {!hideLabel && <p className="mt-4 text-[12px] font-bold uppercase tracking-wide text-ink/40">Popular</p>}
+      {!hideLabel && <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-text-tertiary">Popular</p>}
       <div className={`${hideLabel ? "mt-2" : "mt-2"} space-y-1.5`}>
         {options.map((f) => (
           <button
             key={f}
             onClick={() => { onSelect(f); setQuery(f); }}
-            className={`block w-full rounded-card-sm px-4 py-2.5 text-left text-[14px] ${selected === f ? "bg-aza-light font-bold text-aza" : "text-ink/75"}`}
+            className={`block w-full rounded-card-sm px-4 py-2.5 text-left text-[14px] ${selected === f ? "bg-aza-light font-semibold text-aza" : "text-ink/80"}`}
           >
             {f}
           </button>
         ))}
         {query && !options.includes(query) && (
-          <button onClick={() => onSelect(query)} className="block w-full rounded-card-sm px-4 py-2.5 text-left text-[14px] font-bold text-aza">
+          <button onClick={() => onSelect(query)} className="block w-full rounded-card-sm px-4 py-2.5 text-left text-[14px] font-semibold text-aza">
             + Add &quot;{query}&quot;
           </button>
         )}
@@ -395,8 +395,8 @@ function FieldPicker({
 function StepShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div>
-      <h1 className="font-display text-[22px] font-bold leading-tight text-ink">{title}</h1>
-      <p className="mt-1.5 text-[13.5px] text-ink/55">{subtitle}</p>
+      <h1 className="text-[22px] font-semibold leading-tight text-ink">{title}</h1>
+      <p className="mt-1.5 text-[13.5px] text-text-secondary">{subtitle}</p>
       {children}
     </div>
   );
@@ -404,9 +404,9 @@ function StepShell({ title, subtitle, children }: { title: string; subtitle: str
 
 function CheckRow({ label, checked, onClick }: { label: string; checked: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-card-sm border px-4 py-3.5 text-left shadow-card transition-colors ${checked ? "border-aza bg-aza-light" : "border-line-strong bg-surface"}`}>
+    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-card-sm border px-4 py-3.5 text-left shadow-card transition-colors ${checked ? "border-aza bg-aza-light" : "bg-surface shadow-card"}`}>
       <span className="text-[14px] font-semibold text-ink">{label}</span>
-      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${checked ? "border-aza bg-aza" : "border-line-strong"}`}>
+      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${checked ? "border-aza bg-aza" : "shadow-card"}`}>
         {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </span>
     </button>
@@ -415,9 +415,9 @@ function CheckRow({ label, checked, onClick }: { label: string; checked: boolean
 
 function RadioRow({ label, checked, onClick }: { label: string; checked: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-card-sm border px-4 py-3.5 text-left shadow-card transition-colors ${checked ? "border-aza bg-aza-light" : "border-line-strong bg-surface"}`}>
+    <button onClick={onClick} className={`flex w-full items-center justify-between rounded-card-sm border px-4 py-3.5 text-left shadow-card transition-colors ${checked ? "border-aza bg-aza-light" : "bg-surface shadow-card"}`}>
       <span className="text-[14px] font-semibold text-ink">{label}</span>
-      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${checked ? "border-aza" : "border-line-strong"}`}>
+      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${checked ? "border-aza" : "shadow-card"}`}>
         {checked && <span className="h-2.5 w-2.5 rounded-full bg-aza" />}
       </span>
     </button>
@@ -426,7 +426,7 @@ function RadioRow({ label, checked, onClick }: { label: string; checked: boolean
 
 function RoundButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} className="flex h-12 w-12 items-center justify-center rounded-full border border-line-strong bg-surface text-xl font-bold text-ink/60 shadow-card">
+    <button onClick={onClick} className="flex h-12 w-12 items-center justify-center rounded-full border bg-surface shadow-card text-xl font-semibold text-text-secondary shadow-card">
       {children}
     </button>
   );

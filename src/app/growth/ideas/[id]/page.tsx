@@ -4,6 +4,7 @@ import Link from "next/link";
 import UpvoteButton from "@/components/growth/upvote-button";
 import IdeaStageControl from "@/components/growth/idea-stage-control";
 import DeleteIdeaButton from "@/components/growth/delete-idea-button";
+import ShareButton from "@/components/share-button";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,11 @@ export default async function IdeaDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: idea, error } = await supabase.from("ideas").select("*").eq("id", id).single();
+  const { data: idea, error } = await supabase
+    .from("ideas")
+    .select("*, profiles(full_name), idea_roles(id)")
+    .eq("id", id)
+    .single();
   if (error || !idea) notFound();
 
   const {
@@ -34,51 +39,79 @@ export default async function IdeaDetailPage({
   }
 
   const isOwner = user?.id === idea.user_id;
+  const author = (idea.profiles as unknown as { full_name: string | null } | null)?.full_name;
+  const openRoleCount = (idea.idea_roles as unknown[] | null)?.length ?? 0;
 
   return (
-    <div className="px-5 pt-7">
+    <div className="px-4 pt-6">
       <div className="flex items-center justify-between">
-        <Link href="/growth/ideas" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+        <Link href="/growth/ideas" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-dim text-ink/70">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </Link>
-        <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvoted} isAuthed={!!user} />
+        <div className="flex items-center gap-2">
+          <ShareButton title={idea.title} />
+          {/* Bookmark/save icon from the mockup is intentionally omitted —
+              saved_ideas table doesn't exist yet (screen-mapping doc §15),
+              so there's nowhere real to persist a save. */}
+        </div>
       </div>
 
-      <h1 className="mt-4 font-display text-[21px] font-bold leading-tight text-ink">{idea.title}</h1>
-      {idea.category && (
-        <span className="mt-2 inline-block rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-bold text-aza">
-          {idea.category}
-        </span>
-      )}
+      <h1 className="mt-4 text-[21px] font-bold leading-tight text-ink">{idea.title}</h1>
+      <p className="mt-1 text-[12.5px] font-medium text-text-secondary">
+        {author ?? "Aza member"} · {new Date(idea.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
+      </p>
 
-      <section className="mt-5 rounded-card border border-line-strong bg-surface p-5 shadow-card">
-        <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{idea.description}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {idea.category && (
+          <span className="rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-semibold text-aza">
+            {idea.category}
+          </span>
+        )}
+        <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvoted} isAuthed={!!user} />
+        {/* idea_comments doesn't exist — no comment count chip rendered. */}
+      </div>
+
+      <section className="mt-5 rounded-card bg-surface p-5 shadow-card">
+        <h2 className="text-[15px] font-semibold text-ink">About this idea</h2>
+        <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{idea.description}</p>
       </section>
 
       {idea.tags?.length > 0 && (
-        <div className="mt-4">
-          <p className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Skills needed</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+        <section className="mt-3 rounded-card bg-surface p-5 shadow-card">
+          <h2 className="text-[15px] font-semibold text-ink">Looking for</h2>
+          <div className="mt-2.5 flex flex-wrap gap-2">
             {idea.tags.map((tag: string) => (
-              <span key={tag} className="rounded-lg bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza">{tag}</span>
+              <span key={tag} className="rounded-pill bg-paper-dim px-3 py-1.5 text-[12px] font-semibold text-text-secondary">{tag}</span>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="mt-5">
-        <p className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Stage</p>
-        <div className="mt-2">
+      <section className="mt-3 rounded-card bg-surface p-5 shadow-card">
+        <div className="flex items-center justify-between">
+          <span className="text-[12.5px] font-medium text-text-secondary">Stage</span>
           <IdeaStageControl ideaId={idea.id} currentStage={idea.stage} canEdit={isOwner} />
         </div>
-      </div>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[12.5px] font-medium text-text-secondary">Visibility</span>
+          <span className="text-[12.5px] font-semibold capitalize text-ink">{idea.visibility}</span>
+        </div>
+      </section>
 
-      <p className="mt-5 text-[11.5px] font-medium text-ink/40">
-        Last updated {new Date(idea.updated_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
-      </p>
+      {!isOwner && idea.looking_for_collaborators && (
+        <Link
+          href={`/businesses/team-finder/${idea.id}`}
+          className="mt-5 block rounded-pill bg-aza py-3.5 text-center text-[14.5px] font-semibold text-white shadow-glow-accent"
+        >
+          {openRoleCount > 0 ? `Interested in joining (${openRoleCount} open role${openRoleCount === 1 ? "" : "s"})` : "See open roles"}
+        </Link>
+      )}
 
       {isOwner && (
-        <div className="mt-6">
+        <div className="mt-6 flex items-center justify-between">
+          <Link href={`/businesses/team-finder/${idea.id}`} className="text-[12.5px] font-semibold text-aza">
+            Manage roles ({openRoleCount})
+          </Link>
           <DeleteIdeaButton ideaId={idea.id} />
         </div>
       )}

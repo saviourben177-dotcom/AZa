@@ -10,7 +10,7 @@ export default function AddSkillButton({ skillId, name }: { skillId: string; nam
     <button
       onClick={() => startTransition(() => addUserSkill(skillId))}
       disabled={isPending}
-      className="rounded-full border border-line bg-surface px-3 py-1.5 text-[12px] font-semibold text-ink/70 disabled:opacity-50"
+      className="rounded-pill bg-paper-dim px-3.5 py-2 text-[12.5px] font-semibold text-text-secondary disabled:opacity-50"
     >
       + {name}
     </button>

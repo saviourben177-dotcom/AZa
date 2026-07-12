@@ -14,12 +14,12 @@ export default function SkillProgressBar({ skillId, progress }: { skillId: strin
 
   return (
     <div>
-      <div className="flex items-center justify-between text-[11px] text-ink/50">
-        <span>{value}% complete</span>
+      <div className="flex items-center justify-between text-[11px] text-text-tertiary">
+        <span>Drag to update</span>
         <button
           onClick={() => startTransition(() => removeUserSkill(skillId))}
           disabled={isPending}
-          className="text-ink/35"
+          className="font-semibold text-danger/70"
         >
           Remove
         </button>

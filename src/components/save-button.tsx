@@ -55,17 +55,17 @@ export default function SaveButton({
       disabled={isPending}
       aria-pressed={saved}
       aria-label={saved ? "Remove from saved" : "Save this opportunity"}
-      className="rounded-full p-1.5 transition-colors disabled:opacity-50"
+      className="flex h-9 w-9 items-center justify-center rounded-full transition-colors disabled:opacity-50"
     >
       <svg
-        width="20"
-        height="20"
+        width="18"
+        height="18"
         viewBox="0 0 24 24"
         fill={saved ? "rgb(var(--accent))" : "none"}
       >
         <path
           d="M6 4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21l-6-4-6 4V4.5Z"
-          stroke="rgb(var(--accent))"
+          stroke={saved ? "rgb(var(--accent))" : "rgb(var(--text-secondary))"}
           strokeWidth="1.8"
           strokeLinejoin="round"
         />

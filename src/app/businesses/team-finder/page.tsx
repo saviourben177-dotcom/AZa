@@ -4,7 +4,7 @@ import { relativeTime } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-const ROLE_FILTERS = ["All", "Developer", "Designer", "Marketing", "AI/ML", "Finance"];
+const ROLE_FILTERS = ["All Roles", "Developer", "Designer", "Marketing", "AI/ML", "Finance"];
 
 export default async function TeamFinderHomePage({
   searchParams,
@@ -26,7 +26,7 @@ export default async function TeamFinderHomePage({
   const { data: ideasRaw } = await query.limit(50);
 
   let ideas = ideasRaw ?? [];
-  if (role && role !== "All") {
+  if (role && role !== "All Roles") {
     ideas = ideas.filter((idea) =>
       (idea.idea_roles ?? []).some((r: { role_name: string }) =>
         r.role_name.toLowerCase().includes(role.toLowerCase())
@@ -35,38 +35,39 @@ export default async function TeamFinderHomePage({
   }
 
   return (
-    <div className="px-5 pt-7 pb-4">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
-          <TeamIcon />
-        </div>
-        <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
-      </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-ink/50">
-        Find people. Build together. Grow your ideas.
-      </p>
+    <div className="px-4 pt-6">
+      <h1 className="text-[22px] font-bold leading-tight text-ink">Team Finder</h1>
+      <p className="mt-1 text-[13px] text-text-secondary">Find people. Build together.</p>
 
-      <form className="mt-5 flex items-center gap-2.5 rounded-card-sm border border-line-strong bg-surface px-4 py-3 shadow-card">
+      <div className="mt-4 flex rounded-pill bg-paper-dim p-1">
+        <span className="flex-1 rounded-pill bg-aza py-2 text-center text-[13px] font-semibold text-white">Open Roles</span>
+        <Link href="/businesses/team-finder/my-requests" className="flex-1 rounded-pill py-2 text-center text-[13px] font-semibold text-text-secondary">
+          My Requests
+        </Link>
+        <Link href="/businesses/team-finder/requests" className="flex-1 rounded-pill py-2 text-center text-[13px] font-semibold text-text-secondary">
+          Inbox
+        </Link>
+      </div>
+
+      <form className="mt-4 flex items-center gap-2.5 rounded-pill bg-paper-dim px-4 py-1">
         <SearchIcon />
         <input
           name="q"
           defaultValue={q}
           placeholder="Search projects, skills or keywords..."
-          className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-ink/35 focus:outline-none"
+          className="h-11 min-w-0 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-text-tertiary focus:outline-none"
         />
       </form>
 
-      <div className="mt-4 -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {ROLE_FILTERS.map((r) => {
-          const active = (role ?? "All") === r;
+          const active = (role ?? "All Roles") === r;
           return (
             <Link
               key={r}
-              href={r === "All" ? "/businesses/team-finder" : `/businesses/team-finder?role=${encodeURIComponent(r)}`}
-              className={`shrink-0 rounded-pill border px-4 py-2 text-[12.5px] font-bold transition-colors ${
-                active
-                  ? "border-aza bg-aza text-white shadow-glow-accent"
-                  : "border-line-strong bg-surface text-ink/60"
+              href={r === "All Roles" ? "/businesses/team-finder" : `/businesses/team-finder?role=${encodeURIComponent(r)}`}
+              className={`shrink-0 rounded-pill px-4 py-2 text-[12.5px] font-semibold transition-colors ${
+                active ? "bg-aza text-white" : "bg-paper-dim text-text-secondary"
               }`}
             >
               {r}
@@ -77,11 +78,11 @@ export default async function TeamFinderHomePage({
 
       <div className="mt-5 space-y-3">
         {ideas.length === 0 && (
-          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+          <div className="rounded-card bg-surface p-8 text-center shadow-card">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light">
               <TeamIcon />
             </div>
-            <p className="text-[13px] text-ink/55">
+            <p className="text-[13px] text-text-secondary">
               No open projects match yet — check back soon or post your own idea.
             </p>
           </div>
@@ -96,42 +97,37 @@ export default async function TeamFinderHomePage({
             <Link
               key={idea.id}
               href={`/businesses/team-finder/${idea.id}`}
-              className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card transition-transform active:scale-[0.98]"
+              className="block rounded-card bg-surface p-4 shadow-card transition-transform active:scale-[0.98]"
             >
               <div className="flex gap-3.5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-aza to-aza-dark shadow-glow-accent">
-                  <span className="font-display text-[19px] font-bold text-white">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-card-sm bg-gradient-to-br from-aza to-aza-dark">
+                  <span className="text-[17px] font-bold text-white">
                     {idea.title.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-[14px] font-bold text-ink">{idea.title}</p>
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-ink/55">
+                  <p className="truncate text-[14.5px] font-semibold text-ink">{idea.title}</p>
+                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-text-secondary">
                     {idea.description}
                   </p>
                 </div>
               </div>
 
               {openRoles.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink/40">Needs:</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {openRoles.slice(0, 3).map((r) => (
-                      <span
-                        key={r.id}
-                        className="rounded-lg bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza"
-                      >
-                        {r.role_name} ({r.slots_needed - r.slots_filled})
-                      </span>
-                    ))}
-                  </div>
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {openRoles.slice(0, 3).map((r) => (
+                    <span
+                      key={r.id}
+                      className="rounded-pill bg-aza-light px-2.5 py-1 text-[11px] font-semibold text-aza"
+                    >
+                      {r.role_name} · {r.slots_filled}/{r.slots_needed} filled
+                    </span>
+                  ))}
                 </div>
               )}
 
-              <div className="mt-3 flex items-center gap-3 border-t border-line pt-2.5 text-[11px] font-medium text-ink/45">
-                <span className="rounded-md bg-paper-dim px-2 py-0.5 font-bold uppercase tracking-wide text-ink/50">
+              <div className="mt-3 flex items-center gap-3 border-t border-divider pt-2.5 text-[11px] font-medium text-text-tertiary">
+                <span className="rounded-card-sm bg-paper-dim px-2 py-0.5 font-semibold capitalize">
                   {idea.stage}
                 </span>
                 <span className="flex items-center gap-1">
@@ -161,7 +157,7 @@ function TeamIcon() {
 }
 function SearchIcon() {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-ink/35">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-text-tertiary">
       <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
       <path d="m20 20-3.2-3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>

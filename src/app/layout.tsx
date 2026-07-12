@@ -46,7 +46,7 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme={theme} className={`${sora.variable} ${inter.variable}`}>
       <body className="font-body antialiased">
-        <div className="bg-ambient mx-auto flex min-h-screen max-w-md flex-col bg-paper">
+        <div className="mx-auto flex min-h-screen max-w-md flex-col bg-paper">
           <main className="flex-1 pb-20">{children}</main>
           <BottomNav />
         </div>

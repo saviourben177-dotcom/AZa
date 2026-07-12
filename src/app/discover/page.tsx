@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDiscoverQueue } from "@/lib/actions/discover";
 import DiscoverDeck from "@/components/discover-deck";
 import DiscoverFilters from "@/components/discover-filters";
@@ -13,11 +14,15 @@ export default async function DiscoverPage({
   const { opportunities, isAuthed } = await getDiscoverQueue(category);
 
   return (
-    <div className="px-5 pt-7">
-      <header>
-        <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Discover</p>
-        <h1 className="mt-1 font-display text-[24px] font-bold leading-tight text-ink">Find your next move</h1>
-        <p className="mt-1 text-[13px] text-ink/55">Swipe through opportunities picked for you</p>
+    <div className="px-4 pt-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-[22px] font-bold leading-tight text-ink">Discover</h1>
+        <Link href="/search" aria-label="Search" className="flex h-9 w-9 items-center justify-center rounded-full bg-paper-dim text-ink/70">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
+            <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+        </Link>
       </header>
 
       <div className="mt-4">

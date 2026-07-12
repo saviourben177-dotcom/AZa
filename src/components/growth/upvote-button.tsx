@@ -31,11 +31,11 @@ export default function UpvoteButton({
     <button
       onClick={handleClick}
       disabled={isPending}
-      className={`flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold ${
-        localUpvoted ? "bg-aza-light text-aza" : "bg-paper-dim text-ink/50"
+      className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3 py-1.5 text-[12px] font-semibold ${
+        localUpvoted ? "bg-aza-light text-aza" : "bg-paper-dim text-text-secondary"
       }`}
     >
-      <svg width="12" height="12" viewBox="0 0 24 24" fill={localUpvoted ? "currentColor" : "none"}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill={localUpvoted ? "currentColor" : "none"}>
         <path d="M12 20s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
       </svg>
       {localCount}
