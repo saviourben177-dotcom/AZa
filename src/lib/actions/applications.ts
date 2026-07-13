@@ -23,7 +23,7 @@ export async function updateApplicationStatus(opportunityId: string, status: App
 
   if (error) throw new Error(error.message);
 
-  revalidatePath("/profile/saved");
+  revalidatePath("/profile");
   revalidatePath("/profile");
   revalidatePath("/growth");
 }
