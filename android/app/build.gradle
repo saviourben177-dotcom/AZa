@@ -4,7 +4,7 @@ android {
     namespace = "com.yangatechnologies.aza"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.yangatechnologies.aza"
+        applicationId "com.azatechnologies.aza"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

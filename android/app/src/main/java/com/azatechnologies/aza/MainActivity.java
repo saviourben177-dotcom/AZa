@@ -1,4 +1,4 @@
-package com.yangatechnologies.aza;
+package com.azatechnologies.aza;
 
 import com.getcapacitor.BridgeActivity;
 
