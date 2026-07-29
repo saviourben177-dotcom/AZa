@@ -132,7 +132,7 @@ export default function DiscoverDeck({
 
   return (
     <div>
-      <div className="relative mt-2 h-[520px] select-none">
+      <div className="relative mt-2 h-[min(520px,62vh)] select-none">
         {nextCard && (
           <div className="absolute inset-x-3 top-4 h-full scale-[0.96] rounded-card border border-line-strong bg-surface opacity-50 shadow-card" />
         )}
@@ -142,7 +142,7 @@ export default function DiscoverDeck({
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
           style={cardStyle}
-          className={`absolute inset-0 cursor-grab touch-none overflow-hidden rounded-card border border-line-strong bg-surface shadow-elevated active:cursor-grabbing ${
+          className={`absolute inset-x-2 inset-y-0 cursor-grab touch-none overflow-hidden rounded-card border border-line-strong bg-surface shadow-elevated active:cursor-grabbing ${
             exitAnim === "left" ? "anim-swipe-left" : exitAnim === "right" ? "anim-swipe-right" : exitAnim === "up" ? "anim-swipe-up" : ""
           }`}
         >
