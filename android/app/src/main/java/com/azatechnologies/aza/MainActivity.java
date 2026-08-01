@@ -1,5 +1,7 @@
 package com.azatechnologies.aza;
 
+import com.azatechnologies.aza.R;
+
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Build;
