@@ -2,11 +2,15 @@ package com.azatechnologies.aza;
 
 import com.yangatechnologies.aza.R;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -22,25 +26,35 @@ public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
 
-    private LinearLayout errorOverlay;
+    private LinearLayout loadingOverlay;
+    private LinearLayout errorState;
     private Button retryButton;
     private ProgressBar loadingBar;
     private TextView errorMessage;
+    private View logoView;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        View overlay = getLayoutInflater().inflate(R.layout.overlay_error, null);
-        errorOverlay = overlay.findViewById(R.id.errorOverlay);
+        View overlay = getLayoutInflater().inflate(R.layout.overlay_loading, null);
+        loadingOverlay = overlay.findViewById(R.id.loadingOverlay);
+        errorState = overlay.findViewById(R.id.errorState);
         retryButton = overlay.findViewById(R.id.retryButton);
         loadingBar = overlay.findViewById(R.id.loadingBar);
         errorMessage = overlay.findViewById(R.id.errorMessage);
+        logoView = overlay.findViewById(R.id.logoImage);
 
         addContentView(overlay, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT
         ));
+
+        logoView.setAlpha(0f);
+        ObjectAnimator fadeIn = ObjectAnimator.ofFloat(logoView, "alpha", 0f, 1f);
+        fadeIn.setDuration(600);
+        fadeIn.setInterpolator(new DecelerateInterpolator());
+        fadeIn.start();
 
         retryButton.setOnClickListener(v -> loadAppUrl());
 
@@ -48,8 +62,7 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                errorOverlay.setVisibility(View.GONE);
-                loadingBar.setVisibility(View.GONE);
+                hideLoadingOverlay();
             }
 
             @Override
@@ -73,10 +86,25 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
+        errorState.setVisibility(View.GONE);
         loadingBar.setVisibility(View.VISIBLE);
-        errorOverlay.setVisibility(View.GONE);
+        loadingOverlay.setVisibility(View.VISIBLE);
+        loadingOverlay.setAlpha(1f);
 
         bridge.getWebView().loadUrl(APP_URL);
+    }
+
+    private void hideLoadingOverlay() {
+        ObjectAnimator fadeOut = ObjectAnimator.ofFloat(loadingOverlay, "alpha", 1f, 0f);
+        fadeOut.setDuration(400);
+        fadeOut.setInterpolator(new DecelerateInterpolator());
+        fadeOut.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                loadingOverlay.setVisibility(View.GONE);
+            }
+        });
+        fadeOut.start();
     }
 
     private boolean isNetworkAvailable() {
@@ -96,7 +124,7 @@ public class MainActivity extends BridgeActivity {
 
     private void showError(String msg) {
         loadingBar.setVisibility(View.GONE);
-        errorOverlay.setVisibility(View.VISIBLE);
+        errorState.setVisibility(View.VISIBLE);
         errorMessage.setText(msg);
     }
 }
