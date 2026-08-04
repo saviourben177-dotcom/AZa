@@ -1,6 +1,5 @@
 package com.azatechnologies.aza;
 
-import com.yangatechnologies.aza.R;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
