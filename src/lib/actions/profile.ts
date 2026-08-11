@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-export async function updateProfile(formData: FormData) {
+export async function updateProfile(formData: FormData): Promise<{ success: true }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -55,5 +55,5 @@ export async function updateProfile(formData: FormData) {
   if (error) throw new Error(error.message);
 
   revalidatePath("/profile");
-  redirect("/profile");
+  return { success: true };
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import OpportunityCard from "@/components/opportunity-card";
 import SearchBar from "@/components/search-bar";
@@ -36,6 +37,9 @@ export default async function HomePage({
   if (user) {
     const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
     profile = data;
+    if (profile && !profile.onboarding_completed) {
+      redirect("/onboarding");
+    }
   }
   const firstName = profile?.full_name?.split(" ")[0] ?? null;
 

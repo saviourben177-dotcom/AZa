@@ -47,7 +47,7 @@ type StepKey =
   | "disability" | "qualification" | "skilled" | "region" | "location_access"
   | "exact_location" | "learning" | "notes";
 
-function buildSteps(status: string[]): StepKey[] {
+function buildSteps(status: string[], hasName: boolean): StepKey[] {
   const branch: StepKey[] = [];
   if (status.includes("student")) branch.push("field_student");
   if (status.includes("employed")) branch.push("job_employed");
@@ -58,21 +58,27 @@ function buildSteps(status: string[]): StepKey[] {
   if (branch.length === 0) branch.push("field_unemployed");
 
   return [
-    "name", "age", "status",
+    ...(hasName ? [] : (["name"] as StepKey[])),
+    "age", "status",
     ...branch,
     "disability", "qualification", "skilled", "region", "location_access",
     "exact_location", "learning", "notes",
   ];
 }
 
-export default function OnboardingFlow() {
+export default function OnboardingFlow({ initialFullName }: { initialFullName: string | null }) {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [data, setData] = useState<OnboardingData>({ status: [], learning_context: [] });
+  const [data, setData] = useState<OnboardingData>({
+    status: [],
+    learning_context: [],
+    full_name: initialFullName ?? undefined,
+  });
   const [fieldQuery, setFieldQuery] = useState("");
 
-  const steps = useMemo(() => buildSteps(data.status ?? []), [data.status]);
+  const hasName = Boolean(initialFullName && initialFullName.trim().length > 0);
+  const steps = useMemo(() => buildSteps(data.status ?? [], hasName), [data.status, hasName]);
   const totalSteps = steps.length;
   const currentKey = steps[stepIndex];
 

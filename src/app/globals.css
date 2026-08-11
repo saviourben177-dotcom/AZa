@@ -56,6 +56,19 @@
     color: rgb(var(--ink));
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  [role="button"],
+  [role="switch"],
+  input[type="submit"] {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
   a:focus-visible,
   button:focus-visible,
   input:focus-visible,
@@ -77,6 +90,45 @@
 
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Skeleton loading shimmer */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background-color: rgb(var(--paper-dim));
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--paper-dim)) 0px,
+    rgb(var(--line-strong) / 0.7) 40px,
+    rgb(var(--paper-dim)) 80px
+  );
+  background-size: 400px 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+[data-theme="dark"] .skeleton {
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--paper-dim)) 0px,
+    rgb(var(--surface-raised)) 40px,
+    rgb(var(--paper-dim)) 80px
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+  }
 }
 
 /* Elevation system — replaces flat shadow-sm/shadow-md everywhere */

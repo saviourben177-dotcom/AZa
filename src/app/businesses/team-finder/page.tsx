@@ -36,11 +36,16 @@ export default async function TeamFinderHomePage({
 
   return (
     <div className="px-5 pt-7 pb-4">
-      <div className="flex items-center gap-2">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
-          <TeamIcon />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
+            <TeamIcon />
+          </div>
+          <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
         </div>
-        <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
+        <Link href="/growth/ideas/new?team=1" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent">
+          + Post
+        </Link>
       </div>
       <p className="mt-1 text-[12.5px] leading-relaxed text-ink/50">
         Find people. Build together. Grow your ideas.
@@ -82,7 +87,11 @@ export default async function TeamFinderHomePage({
               <TeamIcon />
             </div>
             <p className="text-[13px] text-ink/55">
-              No open projects match yet — check back soon or post your own idea.
+              No open projects match yet — check back soon or{" "}
+              <Link href="/growth/ideas/new?team=1" className="font-bold text-aza underline">
+                post your own idea
+              </Link>
+              .
             </p>
           </div>
         )}

@@ -12,5 +12,11 @@ export default async function OnboardingPage() {
 
   if (!user) redirect("/login?next=/onboarding");
 
-  return <OnboardingFlow />;
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
+  return <OnboardingFlow initialFullName={profile?.full_name ?? null} />;
 }

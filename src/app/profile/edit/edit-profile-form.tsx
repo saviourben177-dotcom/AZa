@@ -40,6 +40,7 @@ export default function EditProfileForm({
     startTransition(async () => {
       try {
         await updateProfile(formData);
+        router.push("/profile");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
       }

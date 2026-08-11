@@ -18,9 +18,9 @@ interface RoleRow {
   slots: number;
 }
 
-export default function NewIdeaForm() {
+export default function NewIdeaForm({ defaultLookingForCollaborators = false }: { defaultLookingForCollaborators?: boolean }) {
   const [isPending, startTransition] = useTransition();
-  const [lookingForCollaborators, setLookingForCollaborators] = useState(false);
+  const [lookingForCollaborators, setLookingForCollaborators] = useState(defaultLookingForCollaborators);
   const [roles, setRoles] = useState<RoleRow[]>([{ key: 0, name: "", slots: 1 }]);
   const [nextKey, setNextKey] = useState(1);
   const [stage, setStage] = useState("idea");
