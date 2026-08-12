@@ -1,4 +1,4 @@
-export type UserRole = "user" | "curator" | "admin";
+export type UserRole = "user" | "curator" | "admin" | "editorial";
 
 export type OpportunityCategory =
   | "scholarship"
@@ -89,6 +89,17 @@ export interface Business {
   email: string | null;
   location: string | null;
   created_by: string | null;
+  curator_verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BusinessRating {
+  id: string;
+  business_id: string;
+  user_id: string;
+  stars: number;
+  comment: string | null;
   created_at: string;
   updated_at: string;
 }

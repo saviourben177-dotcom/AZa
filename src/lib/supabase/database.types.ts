@@ -7,13 +7,49 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
+      business_ratings: {
+        Row: {
+          business_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          stars: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          stars: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          stars?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_ratings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_tools: {
         Row: {
           category: string | null
@@ -67,6 +103,7 @@ export type Database = {
           category: string
           created_at: string
           created_by: string | null
+          curator_verified: boolean
           description: string | null
           email: string | null
           id: string
@@ -81,6 +118,7 @@ export type Database = {
           category: string
           created_at?: string
           created_by?: string | null
+          curator_verified?: boolean
           description?: string | null
           email?: string | null
           id?: string
@@ -95,6 +133,7 @@ export type Database = {
           category?: string
           created_at?: string
           created_by?: string | null
+          curator_verified?: boolean
           description?: string | null
           email?: string | null
           id?: string
@@ -368,6 +407,124 @@ export type Database = {
           },
         ]
       }
+      idea_library: {
+        Row: {
+          capital_required: Database["public"]["Enums"]["impact_level"] | null
+          category: string
+          competitors: string[]
+          confidence:
+            | Database["public"]["Enums"]["idea_confidence_level"]
+            | null
+          confidence_rationale: string | null
+          created_at: string
+          created_by: string | null
+          curator_verified: boolean
+          description: string
+          difficulty: number | null
+          funding_options: string[]
+          id: string
+          is_novel_flag: boolean
+          market_competition: Database["public"]["Enums"]["impact_level"] | null
+          mvp_features: string[]
+          platform_integration_note: string | null
+          related_courses: string[]
+          resources: string[]
+          revenue_potential: Database["public"]["Enums"]["impact_level"] | null
+          suitable_for: Database["public"]["Enums"]["skill_level"] | null
+          summary: string | null
+          tags: string[]
+          tech_stack: string[]
+          time_to_mvp: string | null
+          title: string
+          updated_at: string
+          validation_checklist: string[]
+          validation_risk: Database["public"]["Enums"]["impact_level"] | null
+        }
+        Insert: {
+          capital_required?: Database["public"]["Enums"]["impact_level"] | null
+          category: string
+          competitors?: string[]
+          confidence?:
+            | Database["public"]["Enums"]["idea_confidence_level"]
+            | null
+          confidence_rationale?: string | null
+          created_at?: string
+          created_by?: string | null
+          curator_verified?: boolean
+          description: string
+          difficulty?: number | null
+          funding_options?: string[]
+          id?: string
+          is_novel_flag?: boolean
+          market_competition?:
+            | Database["public"]["Enums"]["impact_level"]
+            | null
+          mvp_features?: string[]
+          platform_integration_note?: string | null
+          related_courses?: string[]
+          resources?: string[]
+          revenue_potential?: Database["public"]["Enums"]["impact_level"] | null
+          suitable_for?: Database["public"]["Enums"]["skill_level"] | null
+          summary?: string | null
+          tags?: string[]
+          tech_stack?: string[]
+          time_to_mvp?: string | null
+          title: string
+          updated_at?: string
+          validation_checklist?: string[]
+          validation_risk?: Database["public"]["Enums"]["impact_level"] | null
+        }
+        Update: {
+          capital_required?: Database["public"]["Enums"]["impact_level"] | null
+          category?: string
+          competitors?: string[]
+          confidence?:
+            | Database["public"]["Enums"]["idea_confidence_level"]
+            | null
+          confidence_rationale?: string | null
+          created_at?: string
+          created_by?: string | null
+          curator_verified?: boolean
+          description?: string
+          difficulty?: number | null
+          funding_options?: string[]
+          id?: string
+          is_novel_flag?: boolean
+          market_competition?:
+            | Database["public"]["Enums"]["impact_level"]
+            | null
+          mvp_features?: string[]
+          platform_integration_note?: string | null
+          related_courses?: string[]
+          resources?: string[]
+          revenue_potential?: Database["public"]["Enums"]["impact_level"] | null
+          suitable_for?: Database["public"]["Enums"]["skill_level"] | null
+          summary?: string | null
+          tags?: string[]
+          tech_stack?: string[]
+          time_to_mvp?: string | null
+          title?: string
+          updated_at?: string
+          validation_checklist?: string[]
+          validation_risk?: Database["public"]["Enums"]["impact_level"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_library_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_library_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idea_roles: {
         Row: {
           created_at: string
@@ -624,6 +781,105 @@ export type Database = {
             columns: ["role_id"]
             isOneToOne: false
             referencedRelation: "idea_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_articles: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          created_by: string | null
+          curator_verified: boolean
+          difficulty: Database["public"]["Enums"]["skill_level"]
+          edition_year: number | null
+          estimated_time: string | null
+          id: string
+          is_dated: boolean
+          last_reviewed: string | null
+          learning_curve:
+            | Database["public"]["Enums"]["learning_curve_type"]
+            | null
+          level: Database["public"]["Enums"]["article_level"]
+          outcome: string | null
+          path: string
+          potential_careers: string[]
+          prerequisites: string[]
+          read_time_min: number | null
+          summary: string | null
+          tags: string[]
+          title: string
+          updated_at: string
+          why_learn_this: string[]
+        }
+        Insert: {
+          body: string
+          category: string
+          created_at?: string
+          created_by?: string | null
+          curator_verified?: boolean
+          difficulty?: Database["public"]["Enums"]["skill_level"]
+          edition_year?: number | null
+          estimated_time?: string | null
+          id?: string
+          is_dated?: boolean
+          last_reviewed?: string | null
+          learning_curve?:
+            | Database["public"]["Enums"]["learning_curve_type"]
+            | null
+          level: Database["public"]["Enums"]["article_level"]
+          outcome?: string | null
+          path: string
+          potential_careers?: string[]
+          prerequisites?: string[]
+          read_time_min?: number | null
+          summary?: string | null
+          tags?: string[]
+          title: string
+          updated_at?: string
+          why_learn_this?: string[]
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          curator_verified?: boolean
+          difficulty?: Database["public"]["Enums"]["skill_level"]
+          edition_year?: number | null
+          estimated_time?: string | null
+          id?: string
+          is_dated?: boolean
+          last_reviewed?: string | null
+          learning_curve?:
+            | Database["public"]["Enums"]["learning_curve_type"]
+            | null
+          level?: Database["public"]["Enums"]["article_level"]
+          outcome?: string | null
+          path?: string
+          potential_careers?: string[]
+          prerequisites?: string[]
+          read_time_min?: number | null
+          summary?: string | null
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          why_learn_this?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_articles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_articles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1022,6 +1278,57 @@ export type Database = {
         }
         Relationships: []
       }
+      rejected_opportunities: {
+        Row: {
+          category: string
+          could_revisit_if: string | null
+          created_at: string
+          created_by: string | null
+          evidence: string[] | null
+          hypothesis: string
+          id: string
+          rejection_reason: string
+          title: string
+        }
+        Insert: {
+          category: string
+          could_revisit_if?: string | null
+          created_at?: string
+          created_by?: string | null
+          evidence?: string[] | null
+          hypothesis: string
+          id?: string
+          rejection_reason: string
+          title: string
+        }
+        Update: {
+          category?: string
+          could_revisit_if?: string | null
+          created_at?: string
+          created_by?: string | null
+          evidence?: string[] | null
+          hypothesis?: string
+          id?: string
+          rejection_reason?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rejected_opportunities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rejected_opportunities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_businesses: {
         Row: {
           business_id: string
@@ -1316,13 +1623,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "user_skills_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
@@ -1358,6 +1658,12 @@ export type Database = {
         | "interviewing"
         | "rejected"
         | "accepted"
+      article_level:
+        | "welcome"
+        | "beginner"
+        | "intermediate"
+        | "advanced"
+        | "practical"
       employment_status:
         | "student"
         | "employed"
@@ -1365,6 +1671,9 @@ export type Database = {
         | "unemployed"
         | "freelancer"
         | "other"
+      idea_confidence_level: "high" | "medium" | "low"
+      impact_level: "low" | "medium" | "high"
+      learning_curve_type: "beginner_friendly" | "moderate" | "steep"
       marketplace_listing_type: "sell" | "buy" | "collaborate" | "service"
       notification_type:
         | "join_request_received"
@@ -1385,7 +1694,7 @@ export type Database = {
         | "job_gig"
       product_category: "food" | "fuel_energy" | "building_materials"
       skill_level: "beginner" | "intermediate" | "advanced"
-      user_role: "user" | "curator" | "admin"
+      user_role: "user" | "curator" | "admin" | "editorial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1520,6 +1829,13 @@ export const Constants = {
         "rejected",
         "accepted",
       ],
+      article_level: [
+        "welcome",
+        "beginner",
+        "intermediate",
+        "advanced",
+        "practical",
+      ],
       employment_status: [
         "student",
         "employed",
@@ -1528,6 +1844,9 @@ export const Constants = {
         "freelancer",
         "other",
       ],
+      idea_confidence_level: ["high", "medium", "low"],
+      impact_level: ["low", "medium", "high"],
+      learning_curve_type: ["beginner_friendly", "moderate", "steep"],
       marketplace_listing_type: ["sell", "buy", "collaborate", "service"],
       notification_type: [
         "join_request_received",
@@ -1550,7 +1869,7 @@ export const Constants = {
       ],
       product_category: ["food", "fuel_energy", "building_materials"],
       skill_level: ["beginner", "intermediate", "advanced"],
-      user_role: ["user", "curator", "admin"],
+      user_role: ["user", "curator", "admin", "editorial"],
     },
   },
 } as const

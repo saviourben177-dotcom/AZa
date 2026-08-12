@@ -36,13 +36,36 @@ export default async function BusinessDirectoryPage({
     savedIds = new Set((savedBusinesses ?? []).map((s) => s.business_id));
   }
 
+  const businessIds = (businesses ?? []).map((b) => b.id);
+  const ratingsByBusiness = new Map<string, { average: number; count: number }>();
+  if (businessIds.length > 0) {
+    const { data: ratingRows } = await supabase
+      .from("business_ratings")
+      .select("business_id, stars")
+      .in("business_id", businessIds);
+    const grouped = new Map<string, number[]>();
+    for (const r of ratingRows ?? []) {
+      const arr = grouped.get(r.business_id) ?? [];
+      arr.push(r.stars);
+      grouped.set(r.business_id, arr);
+    }
+    for (const [id, stars] of Array.from(grouped)) {
+      ratingsByBusiness.set(id, { average: stars.reduce((a: number, b: number) => a + b, 0) / stars.length, count: stars.length });
+    }
+  }
+
   return (
     <div className="px-5 pt-7">
-      <div className="flex items-center gap-3">
-        <Link href="/businesses" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <Link href="/businesses" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          </Link>
+          <h1 className="font-display text-[19px] font-bold text-ink">Business Directory</h1>
+        </div>
+        <Link href="/businesses/directory/new" className="rounded-pill bg-aza px-3.5 py-2 text-[12px] font-bold text-white shadow-glow-accent">
+          + Add
         </Link>
-        <h1 className="font-display text-[19px] font-bold text-ink">Business Directory</h1>
       </div>
 
       <div className="mt-5"><SearchBar placeholder="Search businesses..." /></div>
@@ -59,10 +82,20 @@ export default async function BusinessDirectoryPage({
         {!error && (!businesses || businesses.length === 0) && (
           <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
             <p className="text-[13px] text-ink/55">No businesses found.</p>
+            <Link href="/businesses/directory/new" className="mt-3 inline-block text-[12.5px] font-bold text-aza underline">
+              Add the first one
+            </Link>
           </div>
         )}
         {businesses?.map((business) => (
-          <BusinessCard key={business.id} business={business} isSaved={savedIds.has(business.id)} isAuthed={!!user} />
+          <BusinessCard
+            key={business.id}
+            business={business}
+            isSaved={savedIds.has(business.id)}
+            isAuthed={!!user}
+            ratingAverage={ratingsByBusiness.get(business.id)?.average ?? 0}
+            ratingCount={ratingsByBusiness.get(business.id)?.count ?? 0}
+          />
         ))}
       </div>
     </div>

@@ -36,6 +36,7 @@ export async function createBusiness(formData: FormData) {
     location: (formData.get("location") as string) || null,
     logo_url: logoUrl,
     created_by: user.id,
+    curator_verified: false,
   });
 
   if (error) throw new Error(error.message);
@@ -50,4 +51,47 @@ export async function deleteBusiness(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/businesses");
   revalidatePath("/curator/businesses");
+}
+
+export async function submitBusinessRating(businessId: string, stars: number, comment: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  if (stars < 1 || stars > 5) throw new Error("Rating must be between 1 and 5 stars");
+
+  const { error } = await supabase.from("business_ratings").upsert(
+    {
+      business_id: businessId,
+      user_id: user.id,
+      stars,
+      comment: comment.trim() || null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "business_id,user_id" }
+  );
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/businesses/directory/${businessId}`);
+}
+
+export async function deleteBusinessRating(businessId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("business_ratings")
+    .delete()
+    .eq("business_id", businessId)
+    .eq("user_id", user.id);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/businesses/directory/${businessId}`);
 }
