@@ -22,15 +22,28 @@ export default async function BusinessToolsPage() {
             <p className="text-[13px] text-ink/55">No tools added yet — check back soon.</p>
           </div>
         )}
-        {tools?.map((tool) => (
-          <a key={tool.id} href={tool.url} target="_blank" rel="noopener noreferrer" className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[14px] font-bold text-ink">{tool.title}</p>
-              <span className="shrink-0 rounded-pill bg-paper-dim px-2.5 py-1 text-[10px] font-bold capitalize text-ink/55">{tool.tool_type}</span>
-            </div>
-            {tool.description && <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/60">{tool.description}</p>}
-          </a>
-        ))}
+        {tools?.map((tool) => {
+          const isInternal = tool.url.startsWith("/");
+          const content = (
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[14px] font-bold text-ink">{tool.title}</p>
+                <span className="shrink-0 rounded-pill bg-paper-dim px-2.5 py-1 text-[10px] font-bold capitalize text-ink/55">{tool.tool_type}</span>
+              </div>
+              {tool.description && <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/60">{tool.description}</p>}
+            </>
+          );
+
+          return isInternal ? (
+            <Link key={tool.id} href={tool.url} className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+              {content}
+            </Link>
+          ) : (
+            <a key={tool.id} href={tool.url} target="_blank" rel="noopener noreferrer" className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+              {content}
+            </a>
+          );
+        })}
       </div>
     </div>
   );
