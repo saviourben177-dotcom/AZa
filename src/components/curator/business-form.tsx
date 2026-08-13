@@ -2,6 +2,7 @@
 
 import { useTransition, useRef } from "react";
 import { createBusiness } from "@/lib/actions/businesses";
+import { NIGERIA_STATES } from "@/lib/nigeria-locations";
 
 export default function BusinessForm() {
   const [isPending, startTransition] = useTransition();
@@ -43,6 +44,16 @@ export default function BusinessForm() {
         placeholder="Location (optional)"
         className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
       />
+      <select
+        name="state"
+        defaultValue=""
+        className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
+      >
+        <option value="">State (optional, for Near me search)</option>
+        {NIGERIA_STATES.map((s) => (
+          <option key={s.name} value={s.name}>{s.name}</option>
+        ))}
+      </select>
       <div className="flex gap-2">
         <input
           name="phone"

@@ -141,12 +141,14 @@ export async function getNewQueue(category?: string) {
 }
 
 /**
- * Nearby: matches opportunities to the signed-in user's profile.region. Both fields use a
- * small, controlled Nigerian-region vocabulary (Lagos, Middle Belt, Nationwide, etc.), not
- * free-text geocoding, so an exact string match is a real and honest signal rather than
- * approximated precision. If the user has no region set, or isn't signed in, we return an
- * explicit "needsRegion" flag instead of silently falling back to an unrelated list — the
- * caller should show a real prompt to set location, not a mislabeled generic feed.
+ * Nearby: matches opportunities to the signed-in user's profile.region (the geopolitical
+ * zone, one of the 6 official Nigerian zones plus "Nationwide"). profile.region is derived
+ * from profile.state — the state the user picked manually or via GPS-resolved-to-state
+ * during onboarding — via zoneForState() in src/lib/nigeria-locations.ts, so this stays an
+ * exact match against a small controlled vocabulary rather than free-text geocoding. If the
+ * user has no state set, or isn't signed in, we return an explicit "needsRegion" flag instead
+ * of silently falling back to an unrelated list — the caller should show a real prompt to set
+ * location, not a mislabeled generic feed.
  */
 export async function getNearbyQueue(category?: string) {
   const supabase = await createClient();
@@ -158,7 +160,7 @@ export async function getNearbyQueue(category?: string) {
     return { opportunities: [], isAuthed: false, needsRegion: true };
   }
 
-  const { data: profile } = await supabase.from("profiles").select("region").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("region, state").eq("id", user.id).single();
 
   if (!profile?.region) {
     return { opportunities: [], isAuthed: true, needsRegion: true };

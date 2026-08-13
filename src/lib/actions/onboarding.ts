@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { zoneForState, NIGERIA_STATE_NAMES } from "@/lib/nigeria-locations";
 
 export type EmploymentStatusOption = "student" | "employed" | "self_employed" | "unemployed" | "freelancer" | "other";
 
@@ -18,7 +19,8 @@ export interface OnboardingData {
   disability_or_health_note?: string;
   highest_qualification?: string;
   skilled_or_unskilled?: string;
-  region?: string;
+  /** Nigerian state (or "FCT"), selected manually or resolved client-side from GPS. */
+  state?: string;
   exact_location?: string;
   is_currently_learning?: boolean;
   learning_context?: string[];
@@ -32,10 +34,17 @@ export async function saveOnboarding(data: OnboardingData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/onboarding");
 
+  // Only ever trust a state value that's actually in our controlled list —
+  // never persist arbitrary client-supplied text into a column that other
+  // features (Discover Nearby, Business Directory) rely on being clean.
+  const state = data.state && NIGERIA_STATE_NAMES.includes(data.state) ? data.state : undefined;
+  const region = state ? (zoneForState(state) ?? undefined) : undefined;
+
   const { error } = await supabase
     .from("profiles")
     .update({
       ...data,
+      ...(state ? { state, region } : {}),
       onboarding_completed: true,
       updated_at: new Date().toISOString(),
     })

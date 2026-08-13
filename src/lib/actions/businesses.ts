@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { NIGERIA_STATE_NAMES } from "@/lib/nigeria-locations";
 
 export async function createBusiness(formData: FormData) {
   const supabase = await createClient();
@@ -26,6 +27,9 @@ export async function createBusiness(formData: FormData) {
     }
   }
 
+  const rawState = formData.get("state") as string | null;
+  const state = rawState && NIGERIA_STATE_NAMES.includes(rawState) ? rawState : null;
+
   const { error } = await supabase.from("businesses").insert({
     name: formData.get("name") as string,
     description: (formData.get("description") as string) || null,
@@ -34,6 +38,7 @@ export async function createBusiness(formData: FormData) {
     whatsapp: (formData.get("whatsapp") as string) || null,
     email: (formData.get("email") as string) || null,
     location: (formData.get("location") as string) || null,
+    state,
     logo_url: logoUrl,
     created_by: user.id,
     curator_verified: false,

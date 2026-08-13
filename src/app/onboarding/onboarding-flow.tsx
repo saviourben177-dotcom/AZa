@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { saveOnboarding, skipOnboarding, type OnboardingData, type EmploymentStatusOption } from "@/lib/actions/onboarding";
+import { NIGERIA_STATES, nearestStateToCoordinates } from "@/lib/nigeria-locations";
 
 const STATUS_OPTIONS: { value: EmploymentStatusOption; label: string }[] = [
   { value: "student", label: "Student" },
@@ -37,14 +38,12 @@ const LEARNING_CONTEXTS = [
   { value: "other", label: "Other" },
 ];
 
-const REGIONS = ["North Central", "North East", "North West", "South East", "South South", "South West"];
-
 // Each entry is a "virtual step" key. Some are always present; status-branch
 // keys are inserted dynamically based on what was picked in the "status" step.
 type StepKey =
   | "name" | "age" | "status"
   | "field_student" | "job_employed" | "business_self_employed" | "freelance_skill" | "field_unemployed"
-  | "disability" | "qualification" | "skilled" | "region" | "location_access"
+  | "disability" | "qualification" | "skilled" | "location"
   | "exact_location" | "learning" | "notes";
 
 function buildSteps(status: string[], hasName: boolean): StepKey[] {
@@ -61,7 +60,7 @@ function buildSteps(status: string[], hasName: boolean): StepKey[] {
     ...(hasName ? [] : (["name"] as StepKey[])),
     "age", "status",
     ...branch,
-    "disability", "qualification", "skilled", "region", "location_access",
+    "disability", "qualification", "skilled", "location",
     "exact_location", "learning", "notes",
   ];
 }
@@ -76,6 +75,8 @@ export default function OnboardingFlow({ initialFullName }: { initialFullName: s
     full_name: initialFullName ?? undefined,
   });
   const [fieldQuery, setFieldQuery] = useState("");
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const hasName = Boolean(initialFullName && initialFullName.trim().length > 0);
   const steps = useMemo(() => buildSteps(data.status ?? [], hasName), [data.status, hasName]);
@@ -111,6 +112,39 @@ export default function OnboardingFlow({ initialFullName }: { initialFullName: s
       const updated = has ? arr.filter((v) => v !== value) : [...arr, value];
       return { ...d, status: updated };
     });
+  }
+
+  function useMyLocation() {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setLocationError("Location isn't available on this device. Please select your state manually.");
+      return;
+    }
+    setLocating(true);
+    setLocationError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        // Resolve to the nearest state entirely on-device, then discard the
+        // coordinate immediately — only the resolved state name is ever
+        // kept in component state (and later sent to the server).
+        const { latitude, longitude } = position.coords;
+        const nearest = nearestStateToCoordinates(latitude, longitude);
+        setLocating(false);
+        if (nearest) {
+          setData((d) => ({ ...d, state: nearest.name }));
+        } else {
+          setLocationError("Couldn't determine your state from your location. Please select it manually.");
+        }
+      },
+      (err) => {
+        setLocating(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationError("Location access denied. Please select your state manually below.");
+        } else {
+          setLocationError("Couldn't get your location. Please select your state manually.");
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
   }
 
   function toggleLearningContextValue(value: string) {
@@ -291,42 +325,39 @@ export default function OnboardingFlow({ initialFullName }: { initialFullName: s
           </StepShell>
         )}
 
-        {currentKey === "region" && (
-          <StepShell title="Which region are you in?" subtitle="This helps us show local opportunities.">
-            <select value={data.region ?? ""} onChange={(e) => setData({ ...data, region: e.target.value })} className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]">
-              <option value="">Select your region</option>
-              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+        {currentKey === "location" && (
+          <StepShell title="Which state are you in?" subtitle="This helps us show opportunities, businesses and resources near you.">
+            <button
+              onClick={useMyLocation}
+              disabled={locating}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-pill border border-aza/30 bg-aza-light py-3 text-[14px] font-bold text-aza disabled:opacity-60"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                <circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+              </svg>
+              {locating ? "Finding your state..." : "Use my current location"}
+            </button>
+            {locationError && (
+              <p className="mt-2 text-center text-[12px] text-danger">{locationError}</p>
+            )}
+
+            <p className="mt-6 text-[12px] font-bold uppercase tracking-wide text-ink/40">Or select manually</p>
+            <select
+              value={data.state ?? ""}
+              onChange={(e) => setData({ ...data, state: e.target.value })}
+              className="mt-2 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+            >
+              <option value="">Select your state</option>
+              {NIGERIA_STATES.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}
             </select>
           </StepShell>
         )}
 
-        {currentKey === "location_access" && (
-          <StepShell title="Allow location access" subtitle="We use your location to show nearby opportunities, events and resources.">
-            <div className="mt-6 flex flex-col items-center">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-aza-light shadow-card">
-                <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7Z" stroke="rgb(var(--accent))" strokeWidth="1.8" strokeLinejoin="round" />
-                  <circle cx="12" cy="9" r="2.5" stroke="rgb(var(--accent))" strokeWidth="1.8" />
-                </svg>
-              </div>
-              <button
-                onClick={() => {
-                  if (typeof navigator !== "undefined" && navigator.geolocation) {
-                    navigator.geolocation.getCurrentPosition(() => next(), () => next());
-                  } else next();
-                }}
-                className="mt-8 w-full rounded-pill bg-aza py-3.5 text-[15px] font-bold text-white shadow-glow-accent"
-              >
-                Allow Location Access
-              </button>
-            </div>
-          </StepShell>
-        )}
-
         {currentKey === "exact_location" && (
-          <StepShell title="What's your exact location? (Optional)" subtitle="Add your city or area for better recommendations.">
+          <StepShell title="Any specific city or area? (Optional)" subtitle="Add more detail beyond your state for better recommendations.">
             <input
-              placeholder="Enter your city or area"
+              placeholder="E.g. Ikeja, or Wuse 2"
               value={data.exact_location ?? ""}
               onChange={(e) => setData({ ...data, exact_location: e.target.value })}
               className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"

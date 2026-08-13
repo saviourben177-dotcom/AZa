@@ -8,17 +8,26 @@ export const dynamic = "force-dynamic";
 export default async function BusinessDirectoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string; location?: string; q?: string }>;
+  searchParams: Promise<{ category?: string; location?: string; q?: string; near?: string }>;
 }) {
-  const { category, location, q } = await searchParams;
+  const { category, location, q, near } = await searchParams;
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let userState: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("state").eq("id", user.id).single();
+    userState = profile?.state ?? null;
+  }
+
+  const nearActive = near === "1" && !!userState;
+
   let query = supabase.from("businesses").select("*").order("name");
   if (category) query = query.eq("category", category);
+  if (nearActive) query = query.eq("state", userState!);
   if (location) query = query.ilike("location", `%${location}%`);
   if (q) {
     const term = q.replace(/[%,]/g, "");
@@ -70,11 +79,27 @@ export default async function BusinessDirectoryPage({
 
       <div className="mt-5"><SearchBar placeholder="Search businesses..." /></div>
 
-      {categories.length > 0 && (
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <CategoryLink label="All" active={!category} category={null} />
-          {categories.map((cat) => <CategoryLink key={cat} label={cat} active={category === cat} category={cat} />)}
-        </div>
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {userState ? (
+          <NearMeLink active={nearActive} userState={userState} category={category} />
+        ) : user ? (
+          <Link
+            href="/onboarding"
+            className="shrink-0 rounded-pill border border-line-strong bg-surface px-4 py-2 text-[13px] font-bold text-ink/50"
+          >
+            Set your state to see nearby
+          </Link>
+        ) : null}
+        {categories.length > 0 && (
+          <>
+            <CategoryLink label="All" active={!category} category={null} near={nearActive} />
+            {categories.map((cat) => <CategoryLink key={cat} label={cat} active={category === cat} category={cat} near={nearActive} />)}
+          </>
+        )}
+      </div>
+
+      {nearActive && (
+        <p className="mt-3 text-[12px] text-ink/45">Showing businesses in {userState}. <Link href="/businesses/directory" className="font-bold text-aza underline">Clear</Link></p>
       )}
 
       <div className="mt-4 space-y-3">
@@ -102,13 +127,36 @@ export default async function BusinessDirectoryPage({
   );
 }
 
-function CategoryLink({ label, active, category }: { label: string; active: boolean; category: string | null }) {
+function CategoryLink({ label, active, category, near }: { label: string; active: boolean; category: string | null; near: boolean }) {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (near) params.set("near", "1");
+  const qs = params.toString();
   return (
     <a
-      href={category ? `/businesses/directory?category=${encodeURIComponent(category)}` : "/businesses/directory"}
+      href={`/businesses/directory${qs ? `?${qs}` : ""}`}
       className={`shrink-0 rounded-pill border px-4 py-2 text-[13px] font-bold ${active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"}`}
     >
       {label}
+    </a>
+  );
+}
+
+function NearMeLink({ active, userState, category }: { active: boolean; userState: string; category?: string }) {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (!active) params.set("near", "1");
+  const qs = params.toString();
+  return (
+    <a
+      href={`/businesses/directory${qs ? `?${qs}` : ""}`}
+      className={`flex shrink-0 items-center gap-1.5 rounded-pill border px-4 py-2 text-[13px] font-bold ${active ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"}`}
+    >
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+        <path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="12" cy="9" r="2.3" stroke="currentColor" strokeWidth="2" />
+      </svg>
+      Near me{active ? ` · ${userState}` : ""}
     </a>
   );
 }

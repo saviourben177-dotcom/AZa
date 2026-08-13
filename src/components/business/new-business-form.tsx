@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBusiness } from "@/lib/actions/businesses";
+import { NIGERIA_STATES } from "@/lib/nigeria-locations";
 
 const CATEGORIES = [
   "Retail / Trade", "Food & Beverage", "Fashion & Beauty", "Technology",
@@ -41,6 +42,17 @@ export default function NewBusinessForm() {
       <div>
         <label className="text-[13px] font-semibold text-ink/70">Description</label>
         <textarea name="description" rows={4} placeholder="What does this business do?" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]" />
+      </div>
+
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">State</label>
+        <select name="state" defaultValue="" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]">
+          <option value="">Select a state</option>
+          {NIGERIA_STATES.map((s) => (
+            <option key={s.name} value={s.name}>{s.name}</option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-ink/40">Used for &quot;Near me&quot; search — separate from the address below.</p>
       </div>
 
       <div>

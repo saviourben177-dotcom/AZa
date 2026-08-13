@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -111,6 +113,7 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          state: string | null
           updated_at: string
           whatsapp: string | null
         }
@@ -126,6 +129,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
+          state?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -141,6 +145,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          state?: string | null
           updated_at?: string
           whatsapp?: string | null
         }
@@ -1218,6 +1223,7 @@ export type Database = {
           role: Database["public"]["Enums"]["user_role"]
           show_business_hub: boolean
           skilled_or_unskilled: string | null
+          state: string | null
           status: Database["public"]["Enums"]["employment_status"][]
           status_other: string | null
           updated_at: string
@@ -1245,6 +1251,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           show_business_hub?: boolean
           skilled_or_unskilled?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["employment_status"][]
           status_other?: string | null
           updated_at?: string
@@ -1272,6 +1279,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["user_role"]
           show_business_hub?: boolean
           skilled_or_unskilled?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["employment_status"][]
           status_other?: string | null
           updated_at?: string
@@ -1623,6 +1631,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_skills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1816,7 +1831,7 @@ export type CompositeTypes<
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    ? DefaultSchema["CompositeTypes"][CompositeTypeName]
     : never
 
 export const Constants = {

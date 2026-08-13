@@ -26,6 +26,9 @@ export interface Profile {
   disability_or_health_note: string | null;
   highest_qualification: string | null;
   skilled_or_unskilled: string | null;
+  /** Nigerian state (or "FCT"), from src/lib/nigeria-locations.ts NIGERIA_STATE_NAMES. */
+  state: string | null;
+  /** Geopolitical zone, derived from state at save time. */
   region: string | null;
   exact_location: string | null;
   is_currently_learning: boolean | null;
@@ -88,6 +91,8 @@ export interface Business {
   whatsapp: string | null;
   email: string | null;
   location: string | null;
+  /** Nigerian state (or "FCT"), used for "Near me" filtering. Separate from the free-text location display string. */
+  state: string | null;
   created_by: string | null;
   curator_verified: boolean;
   created_at: string;
