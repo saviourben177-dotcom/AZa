@@ -4,8 +4,11 @@ package com.azatechnologies.aza;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkCapabilities;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -18,12 +21,16 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
+    private static final long EXIT_CONFIRM_WINDOW_MS = 2000;
 
     private LinearLayout loadingOverlay;
     private LinearLayout errorState;
@@ -31,6 +38,7 @@ public class MainActivity extends BridgeActivity {
     private ProgressBar loadingBar;
     private TextView errorMessage;
     private View logoView;
+    private long lastBackPressTime = 0;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -72,7 +80,41 @@ public class MainActivity extends BridgeActivity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return false;
+                String scheme = request.getUrl().getScheme();
+                if (scheme == null) {
+                    return false;
+                }
+                boolean isWebScheme = scheme.equals("http") || scheme.equals("https");
+                if (isWebScheme) {
+                    return false;
+                }
+                try {
+                    Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
+                    startActivity(intent);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(MainActivity.this, "No app found to handle this link.", Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            }
+        });
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView webView = bridge.getWebView();
+                if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                    return;
+                }
+
+                long now = System.currentTimeMillis();
+                if (now - lastBackPressTime < EXIT_CONFIRM_WINDOW_MS) {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                } else {
+                    lastBackPressTime = now;
+                    Toast.makeText(MainActivity.this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+                }
             }
         });
 

@@ -16,11 +16,20 @@ export async function updateProfile(formData: FormData): Promise<{ success: true
     throw new Error("Display name can't be empty.");
   }
 
-  const { data: currentProfile } = await supabase
+  const { data: currentProfile, error: fetchError } = await supabase
     .from("profiles")
     .select("avatar_url")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
+
+  if (fetchError) {
+    console.error("updateProfile: failed to load current profile", {
+      userId: user.id,
+      code: fetchError.code,
+      message: fetchError.message,
+    });
+    throw new Error("Could not load your profile. Please try again.");
+  }
 
   let avatarUrl = currentProfile?.avatar_url ?? null;
 
@@ -35,7 +44,13 @@ export async function updateProfile(formData: FormData): Promise<{ success: true
       .from("avatars")
       .upload(path, avatarFile, { upsert: true });
 
-    if (uploadError) throw new Error(uploadError.message);
+    if (uploadError) {
+      console.error("updateProfile: avatar upload failed", {
+        userId: user.id,
+        message: uploadError.message,
+      });
+      throw new Error(uploadError.message || "Could not upload your photo. Please try again.");
+    }
 
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     avatarUrl = data.publicUrl;
@@ -52,7 +67,16 @@ export async function updateProfile(formData: FormData): Promise<{ success: true
     })
     .eq("id", user.id);
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("updateProfile failed", {
+      userId: user.id,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    throw new Error(error.message || "Could not save your profile. Please try again.");
+  }
 
   revalidatePath("/profile");
   return { success: true };

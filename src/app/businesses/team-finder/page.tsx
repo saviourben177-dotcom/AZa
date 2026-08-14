@@ -36,12 +36,17 @@ export default async function TeamFinderHomePage({
 
   return (
     <div className="px-5 pt-7 pb-4">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-3">
+        <Link href="/businesses" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </Link>
+        <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
             <TeamIcon />
           </div>
-          <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
         </div>
         <Link href="/growth/ideas/new?team=1" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent">
           + Post
