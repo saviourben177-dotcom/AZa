@@ -78,8 +78,8 @@ export default function WelcomeFlow() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-paper px-6 pb-[calc(env(safe-area-inset-bottom)+28px)] pt-[calc(env(safe-area-inset-top)+20px)]">
-      <div className="flex items-center gap-1.5">
+    <div className="flex min-h-screen flex-col bg-paper px-6 pb-[calc(env(safe-area-inset-bottom)+20px)] pt-[calc(env(safe-area-inset-top)+16px)]">
+      <div className="flex shrink-0 items-center gap-1.5">
         {STEPS.map((s, i) => (
           <span
             key={s.key}
@@ -101,23 +101,23 @@ export default function WelcomeFlow() {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col justify-center">
+      <div className="flex flex-1 flex-col justify-center overflow-y-auto py-4">
         <div className="flex items-center justify-center">{step.illustration}</div>
 
-        <div className="mt-10 text-center">
-          <h2 className="font-display text-[27px] font-bold leading-[1.15] text-ink">
+        <div className="mt-6 text-center">
+          <h2 className="font-display text-[24px] font-bold leading-[1.15] text-ink">
             {step.titleLine1}
             <br />
             <span className="text-aza">{step.titleLine2}</span>
           </h2>
-          <p className="mx-auto mt-3 max-w-[280px] text-[14px] leading-relaxed text-ink/55">
+          <p className="mx-auto mt-2.5 max-w-[280px] text-[13.5px] leading-relaxed text-ink/55">
             {step.body}
           </p>
         </div>
       </div>
 
       {!isLast ? (
-        <div className="mt-8 flex items-center justify-between">
+        <div className="mt-4 flex shrink-0 items-center justify-between">
           {index > 0 ? (
             <button
               onClick={goBack}
@@ -138,7 +138,7 @@ export default function WelcomeFlow() {
           </button>
         </div>
       ) : (
-        <div className="mt-8 space-y-2.5">
+        <div className="mt-4 shrink-0 space-y-2.5">
           <button
             onClick={getStarted}
             disabled={isPending}
