@@ -9,6 +9,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,12 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (!agreedToTerms) {
+      setError("Please agree to the Privacy Policy to continue.");
+      return;
+    }
+
     setLoading(true);
     const supabase = createClient();
     const { error, data } = await supabase.auth.signUp({
@@ -96,6 +103,21 @@ export default function SignupPage() {
           />
         </div>
 
+        <label className="flex items-start gap-2.5 pt-1">
+          <input
+            type="checkbox"
+            checked={agreedToTerms}
+            onChange={(e) => setAgreedToTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded border-line-strong accent-aza"
+          />
+          <span className="text-[12.5px] leading-relaxed text-ink/60">
+            I agree to the{" "}
+            <Link href="/privacy" target="_blank" className="font-bold text-aza">
+              Privacy Policy
+            </Link>
+          </span>
+        </label>
+
         {error && (
           <p className="rounded-card-sm bg-danger-light p-3 text-[13px] font-medium text-danger">
             {error}
@@ -104,7 +126,7 @@ export default function SignupPage() {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !agreedToTerms}
           className="w-full rounded-pill bg-aza py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent disabled:opacity-60"
         >
           {loading ? "Creating account..." : "Create account"}
