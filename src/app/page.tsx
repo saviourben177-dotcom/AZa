@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { INTRO_COOKIE } from "@/lib/intro/cookie";
 import OpportunityCard from "@/components/opportunity-card";
 import SearchBar from "@/components/search-bar";
 import NotificationBell from "@/components/notification-bell";
@@ -32,6 +34,14 @@ export default async function HomePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // First-time, unauthenticated visitor: show the pre-auth intro before
+  // anything else. Returning/authenticated users skip straight past this.
+  if (!user) {
+    const cookieStore = await cookies();
+    const hasSeenIntro = cookieStore.get(INTRO_COOKIE)?.value === "1";
+    if (!hasSeenIntro) redirect("/welcome");
+  }
 
   let profile: Profile | null = null;
   if (user) {
