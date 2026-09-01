@@ -1,58 +1,152 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
 
-function GoogleGlyph() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#FFC107"
-        d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.5 0 10.4-2.1 14.1-5.6l-6.5-5.5C29.6 34.7 26.9 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.5 39.6 16.2 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.5C40.9 36.5 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z"
-      />
-    </svg>
-  );
+// Google One Tap: tap once, get signed in immediately — no email typing,
+// no separate consent page. This replaces the old signInWithOAuth
+// redirect flow, which always sent people to Google's full account
+// chooser/consent screen.
+//
+// Requires NEXT_PUBLIC_GOOGLE_CLIENT_ID to be set to a Google Cloud
+// "Web application" OAuth Client ID that has your Supabase project's
+// domain (and localhost, for local dev) added under
+// "Authorized JavaScript origins" — see the deployment notes for setup.
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: Record<string, unknown>) => void;
+          prompt: (cb?: (notification: unknown) => void) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+          cancel: () => void;
+        };
+      };
+    };
+  }
+}
+
+interface CredentialResponse {
+  credential: string;
+}
+
+async function generateNonce() {
+  // Google requires the ID token's nonce to be a SHA-256 hash of a
+  // random value; Supabase verifies against the raw value.
+  const raw = crypto.randomUUID();
+  const encoder = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoder.encode(raw));
+  const hashed = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  return { raw, hashed };
 }
 
 export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [loading, setLoading] = useState(false);
+  const [scriptReady, setScriptReady] = useState(false);
+  const [fallbackNeeded, setFallbackNeeded] = useState(false);
+  const buttonDivRef = useRef<HTMLDivElement>(null);
+  const initialized = useRef(false);
+  const router = useRouter();
 
-  async function handleGoogleSignIn() {
-    setLoading(true);
-    const supabase = createClient();
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-    if (error) {
+  const handleCredential = useCallback(
+    async (nonce: string, response: CredentialResponse) => {
+      setLoading(true);
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: response.credential,
+        nonce,
+      });
       setLoading(false);
+      if (error) {
+        console.error("Google sign-in failed:", error);
+        setFallbackNeeded(true);
+        return;
+      }
+      router.push(next);
+      router.refresh();
+    },
+    [next, router]
+  );
+
+  useEffect(() => {
+    if (!scriptReady || initialized.current) return;
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId || !window.google) {
+      setFallbackNeeded(true);
+      return;
     }
-    // On success the browser is redirected to Google, so no further
-    // state update is needed here.
-  }
+
+    let cancelled = false;
+
+    (async () => {
+      const { raw, hashed } = await generateNonce();
+      if (cancelled || !window.google) return;
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response: CredentialResponse) => handleCredential(raw, response),
+        nonce: hashed,
+        auto_select: false,
+        use_fedcm_for_prompt: true,
+      });
+      initialized.current = true;
+
+      // Try the One Tap prompt first (the tap-and-you're-in bubble).
+      window.google.accounts.id.prompt((notification) => {
+        const n = notification as {
+          isNotDisplayed?: () => boolean;
+          isSkippedMoment?: () => boolean;
+        };
+        // If One Tap can't show (browser blocked it, user dismissed it
+        // before, etc.), fall back to a rendered Google button so
+        // sign-in is never a dead end.
+        if (n.isNotDisplayed?.() || n.isSkippedMoment?.()) {
+          setFallbackNeeded(true);
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scriptReady, handleCredential]);
+
+  useEffect(() => {
+    if (!fallbackNeeded || !buttonDivRef.current || !window.google) return;
+    buttonDivRef.current.innerHTML = "";
+    window.google.accounts.id.renderButton(buttonDivRef.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      width: 343,
+      text: "continue_with",
+      shape: "pill",
+    });
+  }, [fallbackNeeded]);
 
   return (
-    <button
-      type="button"
-      onClick={handleGoogleSignIn}
-      disabled={loading}
-      className="flex w-full items-center justify-center gap-2.5 rounded-pill border border-line-strong bg-surface py-3.5 text-[14.5px] font-bold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60"
-    >
-      <GoogleGlyph />
-      {loading ? "Connecting..." : "Continue with Google"}
-    </button>
+    <>
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={() => setScriptReady(true)}
+      />
+      {/* Google's rendered button only appears if One Tap couldn't show
+          itself; otherwise this stays empty and the One Tap bubble
+          floats in from Google's own UI. */}
+      <div ref={buttonDivRef} className="w-full" />
+      {loading && (
+        <p className="mt-2 text-center text-[12.5px] font-medium text-ink/50">
+          Signing you in…
+        </p>
+      )}
+    </>
   );
 }
