@@ -19,6 +19,7 @@ export async function createIncubator(formData: FormData) {
     application_url: (formData.get("application_url") as string) || null,
     deadline: (formData.get("deadline") as string) || null,
     curator_verified: formData.get("curator_verified") === "on",
+    logo_url: (formData.get("logo_url") as string) || null,
     created_by: user.id,
   });
 

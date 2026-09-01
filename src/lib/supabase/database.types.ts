@@ -679,6 +679,7 @@ export type Database = {
           focus_area: string | null
           id: string
           location: string | null
+          logo_url: string | null
           name: string
           remote: boolean
         }
@@ -692,6 +693,7 @@ export type Database = {
           focus_area?: string | null
           id?: string
           location?: string | null
+          logo_url?: string | null
           name: string
           remote?: boolean
         }
@@ -705,6 +707,7 @@ export type Database = {
           focus_area?: string | null
           id?: string
           location?: string | null
+          logo_url?: string | null
           name?: string
           remote?: boolean
         }
@@ -1074,6 +1077,7 @@ export type Database = {
           relevant_status: Database["public"]["Enums"]["employment_status"][]
           remote: boolean
           salary_range: string | null
+          source_ref: string | null
           tags: string[]
           title: string
           updated_at: string
@@ -1102,6 +1106,7 @@ export type Database = {
           relevant_status?: Database["public"]["Enums"]["employment_status"][]
           remote?: boolean
           salary_range?: string | null
+          source_ref?: string | null
           tags?: string[]
           title: string
           updated_at?: string
@@ -1130,6 +1135,7 @@ export type Database = {
           relevant_status?: Database["public"]["Enums"]["employment_status"][]
           remote?: boolean
           salary_range?: string | null
+          source_ref?: string | null
           tags?: string[]
           title?: string
           updated_at?: string
@@ -1831,7 +1837,7 @@ export type CompositeTypes<
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][CompositeTypeName & keyof DefaultSchema["CompositeTypes"]]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {

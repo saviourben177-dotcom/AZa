@@ -28,7 +28,26 @@ export default async function IncubatorsPage() {
         {incubators?.map((inc) => (
           <div key={inc.id} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-[14px] font-bold text-ink">{inc.name}</p>
+              <div className="flex items-center gap-2.5">
+                {inc.logo_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={inc.logo_url}
+                    alt={`${inc.name} logo`}
+                    width={32}
+                    height={32}
+                    className="h-8 w-8 shrink-0 rounded-full border border-line object-contain bg-white p-0.5"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                    }}
+                  />
+                ) : null}
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-aza-light text-[12px] font-bold text-aza ${inc.logo_url ? "hidden" : ""}`}>
+                  {inc.name.slice(0, 2).toUpperCase()}
+                </div>
+                <p className="text-[14px] font-bold text-ink">{inc.name}</p>
+              </div>
               {inc.curator_verified && <span className="shrink-0 rounded-pill bg-aza-light px-2.5 py-1 text-[10px] font-bold text-aza">✓ Verified</span>}
             </div>
             {inc.focus_area && <p className="mt-1 text-[11.5px] font-medium text-ink/50">{inc.focus_area}</p>}

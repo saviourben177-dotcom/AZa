@@ -24,6 +24,7 @@ export default function IncubatorForm() {
         <input name="deadline" type="date" className="flex-1 rounded-card border border-line px-3 py-2 text-[13.5px]" />
       </div>
       <input name="application_url" type="url" placeholder="Application URL (optional)" className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]" />
+      <input name="logo_url" type="url" placeholder="Logo URL (optional, e.g. https://logo.clearbit.com/example.com)" className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]" />
       <div className="flex gap-4 text-[12.5px] text-ink/70">
         <label className="flex items-center gap-1.5"><input type="checkbox" name="remote" className="accent-aza" /> Remote</label>
         <label className="flex items-center gap-1.5"><input type="checkbox" name="curator_verified" className="accent-aza" /> Verified</label>
