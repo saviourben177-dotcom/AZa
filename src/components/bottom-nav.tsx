@@ -11,8 +11,18 @@ const TABS = [
   { href: "/profile", label: "Profile", icon: ProfileIcon },
 ];
 
+// Routes that are pre-auth / auth-only screens. The tab bar links to
+// authenticated-only sections, so it has no business showing here — and on
+// /welcome specifically, its ~140px of reserved height was what pushed the
+// nav controls below the fold, forcing an unwanted scroll.
+const HIDDEN_ON = ["/welcome", "/login", "/signup"];
+
 export default function BottomNav() {
   const pathname = usePathname();
+
+  if (HIDDEN_ON.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+    return null;
+  }
 
   return (
     <nav
