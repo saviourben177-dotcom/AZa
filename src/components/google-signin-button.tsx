@@ -2,18 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Script from "next/script";
 import { createClient } from "@/lib/supabase/client";
 
 // Google One Tap: tap once, get signed in immediately — no email typing,
-// no separate consent page. This replaces the old signInWithOAuth
-// redirect flow, which always sent people to Google's full account
-// chooser/consent screen.
+// no separate consent page. Falls back to a custom-styled "Continue
+// with Google" button whenever One Tap can't show (blocked by the
+// browser, dismissed recently, no FedCM support in an embedded
+// WebView, slow network, etc.) so sign-in is never a dead end.
 //
 // Requires NEXT_PUBLIC_GOOGLE_CLIENT_ID to be set to a Google Cloud
 // "Web application" OAuth Client ID that has your Supabase project's
 // domain (and localhost, for local dev) added under
-// "Authorized JavaScript origins" — see the deployment notes for setup.
+// "Authorized JavaScript origins".
 
 declare global {
   interface Window {
@@ -46,11 +48,12 @@ async function generateNonce() {
   return { raw, hashed };
 }
 
+type Status = "idle" | "one-tap-pending" | "fallback" | "unavailable";
+
 export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [loading, setLoading] = useState(false);
-  const [scriptReady, setScriptReady] = useState(false);
-  const [fallbackNeeded, setFallbackNeeded] = useState(false);
-  const buttonDivRef = useRef<HTMLDivElement>(null);
+  const [status, setStatus] = useState<Status>("idle");
+  const nonceRef = useRef<{ raw: string; hashed: string } | null>(null);
   const initialized = useRef(false);
   const router = useRouter();
 
@@ -66,7 +69,7 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
       setLoading(false);
       if (error) {
         console.error("Google sign-in failed:", error);
-        setFallbackNeeded(true);
+        setStatus("fallback");
         return;
       }
       router.push(next);
@@ -75,73 +78,107 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
     [next, router]
   );
 
-  useEffect(() => {
-    if (!scriptReady || initialized.current) return;
+  const initGoogle = useCallback(async () => {
+    if (initialized.current || !window.google) return false;
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId || !window.google) {
-      setFallbackNeeded(true);
-      return;
+    if (!clientId) {
+      setStatus("unavailable");
+      return false;
     }
 
-    let cancelled = false;
+    const { raw, hashed } = await generateNonce();
+    if (!window.google) return false;
+    nonceRef.current = { raw, hashed };
 
-    (async () => {
-      const { raw, hashed } = await generateNonce();
-      if (cancelled || !window.google) return;
-
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: (response: CredentialResponse) => handleCredential(raw, response),
-        nonce: hashed,
-        auto_select: false,
-        use_fedcm_for_prompt: true,
-      });
-      initialized.current = true;
-
-      // Try the One Tap prompt first (the tap-and-you're-in bubble).
-      window.google.accounts.id.prompt((notification) => {
-        const n = notification as {
-          isNotDisplayed?: () => boolean;
-          isSkippedMoment?: () => boolean;
-        };
-        // If One Tap can't show (browser blocked it, user dismissed it
-        // before, etc.), fall back to a rendered Google button so
-        // sign-in is never a dead end.
-        if (n.isNotDisplayed?.() || n.isSkippedMoment?.()) {
-          setFallbackNeeded(true);
-        }
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [scriptReady, handleCredential]);
-
-  useEffect(() => {
-    if (!fallbackNeeded || !buttonDivRef.current || !window.google) return;
-    buttonDivRef.current.innerHTML = "";
-    window.google.accounts.id.renderButton(buttonDivRef.current, {
-      type: "standard",
-      theme: "outline",
-      size: "large",
-      width: 343,
-      text: "continue_with",
-      shape: "pill",
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response: CredentialResponse) => handleCredential(raw, response),
+      nonce: hashed,
+      auto_select: false,
+      use_fedcm_for_prompt: true,
     });
-  }, [fallbackNeeded]);
+    initialized.current = true;
+    return true;
+  }, [handleCredential]);
+
+  // Init One Tap once the GSI script has loaded, and try the prompt.
+  const handleScriptLoad = useCallback(async () => {
+    if (!window.google) {
+      setStatus("unavailable");
+      return;
+    }
+    const ok = await initGoogle();
+    if (!ok) {
+      setStatus((s) => (s === "unavailable" ? s : "fallback"));
+      return;
+    }
+    setStatus("one-tap-pending");
+    window.google.accounts.id.prompt((notification) => {
+      const n = notification as {
+        isNotDisplayed?: () => boolean;
+        isSkippedMoment?: () => boolean;
+      };
+      if (n.isNotDisplayed?.() || n.isSkippedMoment?.()) {
+        setStatus("fallback");
+      }
+    });
+  }, [initGoogle]);
+
+  // Safety net: if One Tap hasn't resolved within 2.5s — WebViews
+  // without FedCM support can just hang instead of calling back —
+  // force the fallback button so the page never sits there empty.
+  useEffect(() => {
+    if (status !== "one-tap-pending") return;
+    const timer = setTimeout(() => {
+      setStatus((current) => (current === "one-tap-pending" ? "fallback" : current));
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  async function handleFallbackClick() {
+    setLoading(true);
+    if (!window.google) {
+      setLoading(false);
+      setStatus("unavailable");
+      return;
+    }
+    const ready = initialized.current || (await initGoogle());
+    if (!ready || !window.google) {
+      setLoading(false);
+      setStatus("unavailable");
+      return;
+    }
+    setLoading(false);
+    // Re-prompt One Tap on explicit tap; if it still can't display
+    // (e.g. no FedCM), this simply no-ops and the button stays usable.
+    window.google.accounts.id.prompt();
+  }
+
+  if (status === "unavailable") return null;
 
   return (
     <>
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
-        onLoad={() => setScriptReady(true)}
+        onLoad={handleScriptLoad}
+        onError={() => setStatus("unavailable")}
       />
-      {/* Google's rendered button only appears if One Tap couldn't show
-          itself; otherwise this stays empty and the One Tap bubble
-          floats in from Google's own UI. */}
-      <div ref={buttonDivRef} className="w-full" />
+      <button
+        type="button"
+        onClick={handleFallbackClick}
+        disabled={loading}
+        className="flex w-full items-center justify-center gap-2.5 rounded-pill border border-line-strong bg-surface py-3.5 text-[14.5px] font-bold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60"
+      >
+        <Image
+          src="/icons/google-icon.png"
+          alt=""
+          width={18}
+          height={18}
+          className="h-[18px] w-[18px]"
+        />
+        {loading ? "Connecting…" : "Continue with Google"}
+      </button>
       {loading && (
         <p className="mt-2 text-center text-[12.5px] font-medium text-ink/50">
           Signing you in…
