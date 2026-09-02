@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { Share2, Heart, Users } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -45,18 +46,18 @@ export default async function IdeaPostedPage({
         <p className="text-[12px] font-bold uppercase tracking-wide text-ink/40">What&apos;s next?</p>
         <div className="mt-3 space-y-3">
           <NextStep
-            icon={<ShareIcon />}
+            icon={<Share2 size={16} strokeWidth={1.7} className="text-aza" />}
             title="Share your idea"
             subtitle="Invite more people to give feedback."
           />
           <NextStep
-            icon={<HeartIcon />}
+            icon={<Heart size={16} strokeWidth={1.6} className="text-aza" />}
             title="Engage with your audience"
             subtitle="Reply to comments and build momentum."
           />
           {listedInTeamFinder && (
             <NextStep
-              icon={<TeamIcon />}
+              icon={<Users size={16} strokeWidth={1.6} className="text-aza" />}
               title="Find your team"
               subtitle="Collaborators can discover and request to join your project."
             />
@@ -96,12 +97,3 @@ function NextStep({ icon, title, subtitle }: { icon: React.ReactNode; title: str
   );
 }
 
-function ShareIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 15V3m0 0L7 8m5-5 5 5" stroke="rgb(var(--accent))" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-function HeartIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 20s-7-4.4-9.4-9C1 8 2.6 4.8 6 4.2c2-.4 3.8.6 6 3 2.2-2.4 4-3.4 6-3 3.4.6 5 3.8 3.4 6.8C19 15.6 12 20 12 20Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" /></svg>;
-}
-function TeamIcon() {
-  return <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="rgb(var(--accent))" strokeWidth="1.6" /><circle cx="17" cy="9" r="2.3" stroke="rgb(var(--accent))" strokeWidth="1.6" /><path d="M3 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M15 20c0-2.2-1-4-2.5-5.1a5.2 5.2 0 0 1 8 4.3" stroke="rgb(var(--accent))" strokeWidth="1.4" strokeLinecap="round" /></svg>;
-}

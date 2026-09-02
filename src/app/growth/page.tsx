@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BookOpen, Target, Lightbulb, GraduationCap } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import GrowthAssistantInput from "@/components/growth/growth-assistant-input";
 
@@ -62,25 +63,25 @@ export default async function GrowthHubPage() {
           title="Continue Learning"
           subtitle={inProgressSkill ? `${inProgressSkill.name} · ${inProgressSkill.progress_percent}% complete` : "Browse courses to get started"}
           progress={inProgressSkill?.progress_percent}
-          icon={<BookIcon />}
+          icon={<BookOpen size={19} strokeWidth={1.8} className="text-aza" />}
         />
         <HubCard
           href="/growth/skills"
           title="My Skills"
           subtitle={skillCount > 0 ? `${skillCount} skill${skillCount === 1 ? "" : "s"} tracked` : "Manage your skills and track progress"}
-          icon={<TargetIcon />}
+          icon={<Target size={19} strokeWidth={1.8} className="text-aza" />}
         />
         <HubCard
           href="/growth/ideas"
           title="Ideas"
           subtitle={ideaCount > 0 ? `${ideaCount} idea${ideaCount === 1 ? "" : "s"} shared` : "Explore, create and validate ideas"}
-          icon={<BulbIcon />}
+          icon={<Lightbulb size={19} strokeWidth={1.8} className="text-aza" />}
         />
         <HubCard
           href="/growth/courses"
           title="Courses"
           subtitle="Explore courses and paths"
-          icon={<GraduationIcon />}
+          icon={<GraduationCap size={19} strokeWidth={1.8} className="text-aza" />}
         />
       </div>
 
@@ -126,7 +127,7 @@ function HubCard({
 }) {
   return (
     <Link href={href} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card transition-transform active:scale-95">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-aza-light">{icon}</div>
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">{icon}</div>
       <p className="mt-3 font-display text-[14px] font-bold text-ink">{title}</p>
       <p className="mt-1 line-clamp-2 text-[11.5px] leading-relaxed text-ink/55">{subtitle}</p>
       {progress != null && (

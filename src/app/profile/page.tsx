@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
 import OpportunityCard from "@/components/opportunity-card";
 import BusinessCard from "@/components/business-card";
@@ -211,7 +212,7 @@ async function SavedTab({ userId, category, query }: { userId: string; category:
       <form action="/profile" method="get" className="mt-4 flex items-center gap-2.5 rounded-card-sm border border-line-strong bg-surface px-4 py-3 shadow-card">
         <input type="hidden" name="tab" value="saved" />
         <input type="hidden" name="category" value={category} />
-        <SearchIcon />
+        <Search size={16} strokeWidth={1.8} className="shrink-0 text-ink/35" />
         <input
           name="q"
           defaultValue={query ?? ""}
@@ -405,11 +406,3 @@ function ProfileLinkRow({ href, label }: { href: string; label: string }) {
   );
 }
 
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-ink/35">
-      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-      <path d="m20 20-3-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}

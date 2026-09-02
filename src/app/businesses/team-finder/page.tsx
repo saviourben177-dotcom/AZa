@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { relativeTime } from "@/lib/types";
+import { Users, Search, User, Heart } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +46,7 @@ export default async function TeamFinderHomePage({
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
-            <TeamIcon />
+            <Users size={16} strokeWidth={1.8} className="text-aza" />
           </div>
         </div>
         <Link href="/growth/ideas/new?team=1" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent">
@@ -57,7 +58,7 @@ export default async function TeamFinderHomePage({
       </p>
 
       <form className="mt-5 flex items-center gap-2.5 rounded-card-sm border border-line-strong bg-surface px-4 py-3 shadow-card">
-        <SearchIcon />
+        <Search size={16} strokeWidth={1.8} className="shrink-0 text-ink/35" />
         <input
           name="q"
           defaultValue={q}
@@ -89,7 +90,7 @@ export default async function TeamFinderHomePage({
         {ideas.length === 0 && (
           <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light">
-              <TeamIcon />
+              <Users size={22} strokeWidth={1.6} className="text-aza" />
             </div>
             <p className="text-[13px] text-ink/55">
               No open projects match yet — check back soon or{" "}
@@ -149,10 +150,10 @@ export default async function TeamFinderHomePage({
                   {idea.stage}
                 </span>
                 <span className="flex items-center gap-1">
-                  <PeopleIcon /> {requestCount}
+                  <User size={13} strokeWidth={1.7} /> {requestCount}
                 </span>
                 <span className="flex items-center gap-1">
-                  <HeartIcon /> {idea.upvotes_count}
+                  <Heart size={13} strokeWidth={1.6} /> {idea.upvotes_count}
                 </span>
                 <span className="ml-auto">{relativeTime(idea.created_at)}</span>
               </div>
@@ -164,35 +165,3 @@ export default async function TeamFinderHomePage({
   );
 }
 
-function TeamIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="8" r="3" stroke="rgb(var(--accent))" strokeWidth="1.6" />
-      <circle cx="17" cy="9" r="2.4" stroke="rgb(var(--accent))" strokeWidth="1.6" />
-      <path d="M3 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M15 20c0-2.2-1-4-2.5-5.1a5.2 5.2 0 0 1 8 4.3" stroke="rgb(var(--accent))" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="shrink-0 text-ink/35">
-      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.8" />
-      <path d="m20 20-3.2-3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-    </svg>
-  );
-}
-function PeopleIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.7" />
-      <path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-    </svg>
-  );
-}
-function HeartIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-      <path d="M12 20s-7-4.4-9.4-9C1 8 2.6 4.8 6 4.2c2-.4 3.8.6 6 3 2.2-2.4 4-3.4 6-3 3.4.6 5 3.8 3.4 6.8C19 15.6 12 20 12 20Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
