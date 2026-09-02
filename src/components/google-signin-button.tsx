@@ -70,7 +70,7 @@ function describeError(err: unknown): string {
   }
 }
 
-type Status = "idle" | "one-tap-pending" | "fallback" | "init-error" | "no-client-id";
+type Status = "idle" | "one-tap-pending" | "fallback" | "init-error" | "network-error" | "no-client-id";
 
 export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [loading, setLoading] = useState(false);
@@ -178,12 +178,62 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
     return () => clearTimeout(timer);
   }, [status]);
 
+  // Independent ground-truth check: don't rely solely on next/script's
+  // onLoad/onError firing correctly. On a soft-navigated page (the tab
+  // was already open and Next did a client-side route change rather
+  // than a real reload), a <script> tag injected on a prior render can
+  // fail to re-fire its load event, causing onError to report a false
+  // "failed to load" even though the script actually loaded fine
+  // earlier. Poll for window.google directly as a fallback signal.
+  useEffect(() => {
+    if (initialized.current) return;
+    if (window.google) {
+      // Already present — script loaded before this effect ran (e.g.
+      // fast cache hit). Kick off init immediately rather than waiting
+      // on the Script component's onLoad, which may not fire again.
+      handleScriptLoad();
+      return;
+    }
+
+    let attempts = 0;
+    const poll = setInterval(() => {
+      attempts += 1;
+      if (window.google && !initialized.current) {
+        clearInterval(poll);
+        handleScriptLoad();
+        return;
+      }
+      if (attempts >= 20) {
+        // ~6 seconds of polling with nothing — genuinely not there.
+        clearInterval(poll);
+        if (!initialized.current) {
+          setStatus((s) => (s === "no-client-id" ? s : "network-error"));
+          setDebugDetail("window.google still absent after polling — script genuinely did not load");
+        }
+      }
+    }, 300);
+
+    return () => clearInterval(poll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function handleButtonClick() {
     setTapError(null);
 
-    if (status === "init-error") {
+    if (status === "network-error" || status === "init-error") {
+      // Give a real retry instead of just an error: re-check for
+      // window.google right now — the earlier failure may have been
+      // transient or a stale-script false negative.
+      if (window.google && !initialized.current) {
+        setDebugDetail(null);
+        setStatus("idle");
+        await handleScriptLoad();
+        return;
+      }
       setTapError(
-        "Google sign-in isn't set up correctly for this site yet. Please use email instead, or try again shortly."
+        status === "network-error"
+          ? "Couldn't reach Google. Check your connection and try again."
+          : "Google sign-in isn't set up correctly for this site yet. Please use email instead, or try again shortly."
       );
       return;
     }
@@ -217,8 +267,10 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         strategy="afterInteractive"
         onLoad={handleScriptLoad}
         onError={() => {
-          setStatus("init-error");
-          setDebugDetail("GSI script failed to load");
+          // Don't immediately declare network-error here — the polling
+          // effect above is the real source of truth and will confirm
+          // (or, on a false negative, quietly correct) this within ~6s.
+          setDebugDetail((d) => d ?? "Script onError fired — confirming via poll before showing an error");
         }}
       />
       <button
