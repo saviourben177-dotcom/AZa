@@ -17,16 +17,19 @@ import { createClient } from "@/lib/supabase/client";
 // client ID configured (nothing it could possibly do in that case).
 // Every other failure — Google rejecting the origin, the script
 // throwing, One Tap silently hanging — must leave a working, visible
-// button behind. A previous version treated any init failure as
-// "unavailable" and hid the button entirely, which is why it could
-// flash and vanish.
+// button behind.
+//
+// use_fedcm_for_prompt is OFF by default here: FedCM support is
+// inconsistent across Chrome versions/Play Services states on
+// Android, and a FedCM failure can throw during initialize() itself
+// on some devices, which is the leading suspect for intermittent
+// "isn't set up correctly" errors that don't match a real Cloud
+// Console misconfiguration. Classic (non-FedCM) prompting is the
+// safer default; FedCM can be re-enabled once confirmed stable.
 //
 // Requires NEXT_PUBLIC_GOOGLE_CLIENT_ID to be set to a Google Cloud
 // "Web application" OAuth Client ID that has this exact origin listed
-// under "Authorized JavaScript origins" (e.g. https://a-za.vercel.app
-// with no trailing slash, plus http://localhost:3000 for local dev).
-// If the origin isn't listed there, Google's script throws on
-// initialize() — that's the most common cause of a vanishing button.
+// under "Authorized JavaScript origins".
 
 declare global {
   interface Window {
@@ -57,15 +60,23 @@ async function generateNonce() {
   return { raw, hashed };
 }
 
-// "no-client-id" is the ONLY status that hides the button.
-// "init-error" keeps the button visible but disables One Tap/silent
-// init, so a tap goes straight to a clear error rather than a hang.
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    return JSON.stringify(err);
+  } catch {
+    return String(err);
+  }
+}
+
 type Status = "idle" | "one-tap-pending" | "fallback" | "init-error" | "no-client-id";
 
 export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [tapError, setTapError] = useState<string | null>(null);
+  const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const initialized = useRef(false);
   const router = useRouter();
 
@@ -83,6 +94,7 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
       if (error) {
         console.error("Google sign-in failed:", error);
         setTapError("Couldn't sign you in. Please try again.");
+        setDebugDetail(`supabase: ${error.message}`);
         return;
       }
       router.push(next);
@@ -110,17 +122,15 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         callback: (response: CredentialResponse) => handleCredential(raw, response),
         nonce: hashed,
         auto_select: false,
-        use_fedcm_for_prompt: true,
+        use_fedcm_for_prompt: false,
+        itp_support: true,
       });
       initialized.current = true;
       return true;
     } catch (err) {
-      // Google's SDK throws synchronously if it rejects the client ID
-      // or the calling origin isn't authorized. Catching this is what
-      // keeps the button alive instead of the whole component
-      // disappearing.
       console.error("Google Identity Services failed to initialize:", err);
       setStatus("init-error");
+      setDebugDetail(`initialize: ${describeError(err)}`);
       return false;
     }
   }, [handleCredential]);
@@ -128,11 +138,11 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const handleScriptLoad = useCallback(async () => {
     if (!window.google) {
       setStatus("init-error");
+      setDebugDetail("window.google missing after script load");
       return;
     }
     const ok = await initGoogle();
     if (!ok) {
-      // Only escalate to fallback (still visible) — never hide here.
       setStatus((s) => (s === "no-client-id" ? s : "fallback"));
       return;
     }
@@ -142,19 +152,24 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         const n = notification as {
           isNotDisplayed?: () => boolean;
           isSkippedMoment?: () => boolean;
+          getNotDisplayedReason?: () => string;
+          getSkippedReason?: () => string;
         };
-        if (n.isNotDisplayed?.() || n.isSkippedMoment?.()) {
+        if (n.isNotDisplayed?.()) {
+          setDebugDetail(`not displayed: ${n.getNotDisplayedReason?.() ?? "unknown"}`);
+          setStatus("fallback");
+        } else if (n.isSkippedMoment?.()) {
+          setDebugDetail(`skipped: ${n.getSkippedReason?.() ?? "unknown"}`);
           setStatus("fallback");
         }
       });
     } catch (err) {
       console.error("Google One Tap prompt failed:", err);
+      setDebugDetail(`prompt: ${describeError(err)}`);
       setStatus("fallback");
     }
   }, [initGoogle]);
 
-  // Safety net: if One Tap hasn't resolved within 2.5s, fall back to a
-  // plain tappable button rather than leaving it in limbo.
   useEffect(() => {
     if (status !== "one-tap-pending") return;
     const timer = setTimeout(() => {
@@ -177,22 +192,22 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
     if (!window.google) {
       setLoading(false);
       setTapError("Couldn't reach Google. Check your connection and try again.");
+      setDebugDetail("window.google missing on click");
       return;
     }
     const ready = initialized.current || (await initGoogle());
     setLoading(false);
-    if (!ready) return; // initGoogle already set an appropriate status/error state
+    if (!ready) return;
 
     try {
       window.google.accounts.id.prompt();
     } catch (err) {
       console.error("Google One Tap prompt failed on click:", err);
+      setDebugDetail(`prompt on click: ${describeError(err)}`);
       setStatus("fallback");
     }
   }
 
-  // The ONLY case where nothing renders at all: no client ID exists,
-  // so there is genuinely nothing this button could do.
   if (status === "no-client-id") return null;
 
   return (
@@ -201,7 +216,10 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={handleScriptLoad}
-        onError={() => setStatus("init-error")}
+        onError={() => {
+          setStatus("init-error");
+          setDebugDetail("GSI script failed to load");
+        }}
       />
       <button
         type="button"
@@ -226,6 +244,14 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
       {tapError && (
         <p role="alert" className="mt-2 text-center text-[12.5px] font-medium text-danger">
           {tapError}
+        </p>
+      )}
+      {/* TEMPORARY debug line — shows the real error Google/Supabase
+          returned so we can pin down the exact cause instead of
+          guessing. Remove once the button is confirmed working. */}
+      {debugDetail && (
+        <p className="mt-2 break-words text-center text-[10.5px] text-ink/35">
+          debug: {debugDetail}
         </p>
       )}
     </>
