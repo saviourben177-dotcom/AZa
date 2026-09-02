@@ -148,32 +148,3 @@ function GrowthStatBox({ label, value }: { label: string; value: number }) {
   );
 }
 
-function BookIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M4 5a2 2 0 0 1 2-2h5v18H6a2 2 0 0 1-2-2V5ZM20 5a2 2 0 0 0-2-2h-5v18h5a2 2 0 0 0 2-2V5Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function TargetIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="8" stroke="rgb(var(--accent))" strokeWidth="1.6" />
-      <circle cx="12" cy="12" r="3.5" stroke="rgb(var(--accent))" strokeWidth="1.6" />
-    </svg>
-  );
-}
-function BulbIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6h5.4c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-function GraduationIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M12 4 2 9l10 5 8-4.2V15M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  );
-}
