@@ -22,7 +22,7 @@ export default async function CvBuilderPage() {
   if (!user) {
     return (
       <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-aza-light text-2xl shadow-card">📄</div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📄</div>
         <p className="mt-4 font-display text-[17px] font-bold text-ink">Log in to build your CV</p>
         <Link href="/login?next=/profile/cv" className="mt-5 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent">
           Log in

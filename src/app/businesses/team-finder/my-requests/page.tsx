@@ -53,7 +53,7 @@ export default async function MyJoinRequestsPage() {
       <div className="mt-5 space-y-3">
         {requests.length === 0 && (
           <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="rgb(var(--accent))" strokeWidth="1.6" /><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinecap="round" /></svg>
             </div>
             <p className="text-[13px] text-ink/55">You haven&apos;t requested to join any projects yet.</p>

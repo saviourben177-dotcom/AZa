@@ -22,7 +22,7 @@ export default async function CvBuilderEditPage() {
   if (!user) {
     return (
       <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-aza-light text-2xl shadow-card">📄</div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📄</div>
         <p className="mt-4 text-[17px] font-bold text-ink">Log in to build your CV</p>
         <Link href="/login?next=/profile/cv" className="mt-5 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-semibold text-white shadow-glow-accent">
           Log in
@@ -43,18 +43,18 @@ export default async function CvBuilderEditPage() {
         </Link>
         <div>
           <h1 className="text-[19px] font-semibold text-ink">CV Builder</h1>
-          <p className="text-[12px] text-text-secondary">Build once, tailor for any opportunity</p>
+          <p className="text-[12px] text-ink/55">Build once, tailor for any opportunity</p>
         </div>
       </div>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Summary</h2>
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Summary</h2>
         <div className="mt-2.5"><CvSummaryEditor initialSummary={cvProfile.summary} /></div>
       </section>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Scan a document</h2>
-        <p className="mt-1.5 text-[12.5px] leading-relaxed text-text-secondary">
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Scan a document</h2>
+        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
           Upload a photo of a certificate, transcript, or ID. We&apos;ll pull out the details for you to review — nothing is saved to your CV automatically.
         </p>
         <div className="mt-3">
@@ -63,26 +63,26 @@ export default async function CvBuilderEditPage() {
       </section>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Education</h2>
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Education</h2>
         <div className="mt-2.5"><CvEducationList entries={cvProfile.education} /></div>
       </section>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Experience</h2>
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Experience</h2>
         <div className="mt-2.5"><CvExperienceList entries={cvProfile.experience} /></div>
       </section>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Certifications</h2>
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Certifications</h2>
         <div className="mt-2.5"><CvCertificationsList entries={cvProfile.certifications} /></div>
       </section>
 
       <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-text-tertiary">Skills</h2>
+        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Skills</h2>
         <div className="mt-2.5"><CvSkillsEditor initialSkills={cvProfile.skills} /></div>
       </section>
 
-      <section className="mt-8 border-t border-divider pt-6">
+      <section className="mt-8 border-t border-line pt-6">
         <CvGenerateButton hasGenerated={!!cvProfile.generated_content} />
         {cvProfile.generated_content && (
           <div className="mt-4">

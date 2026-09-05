@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { BookOpen, Target, Lightbulb, GraduationCap } from "lucide-react";
+import { BookOpen, Target, Lightbulb, GraduationCap, Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import GrowthAssistantInput from "@/components/growth/growth-assistant-input";
+import { getSkillCategoryIcon } from "@/lib/skill-visuals";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function GrowthHubPage() {
   // a lightweight "recommended for you" pull — most recently added free courses
   const { data: recommended } = await supabase
     .from("skill_resources")
-    .select("*, skills(name)")
+    .select("*, skills(name, category)")
     .order("created_at", { ascending: false })
     .limit(2);
 
@@ -87,9 +88,9 @@ export default async function GrowthHubPage() {
 
       {user && (
         <div className="mt-5 grid grid-cols-3 divide-x divide-line rounded-card border border-line-strong bg-surface shadow-card">
-          <GrowthStatBox label="Skills" value={skillCount} />
-          <GrowthStatBox label="Ideas" value={ideaCount} />
-          <GrowthStatBox label="Applications" value={applicationCount} />
+          <GrowthStatBox label="Skills" value={skillCount} icon={<Target size={16} strokeWidth={1.8} className="text-aza" />} />
+          <GrowthStatBox label="Ideas" value={ideaCount} icon={<Lightbulb size={16} strokeWidth={1.8} className="text-aza" />} />
+          <GrowthStatBox label="Applications" value={applicationCount} icon={<Send size={16} strokeWidth={1.8} className="text-aza" />} />
         </div>
       )}
 
@@ -100,19 +101,23 @@ export default async function GrowthHubPage() {
             <Link href="/growth/courses" className="text-[12.5px] font-bold text-aza">See all</Link>
           </div>
           <div className="mt-3 space-y-2.5">
-            {recommended.map((r) => (
-              <div key={r.id} className="flex items-center gap-3.5 rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-aza-light font-display text-[13px] font-bold text-aza">
-                  {(r.skills as unknown as { name: string })?.name?.charAt(0) ?? "?"}
+            {recommended.map((r) => {
+              const skill = r.skills as unknown as { name: string; category: string } | null;
+              const CategoryIcon = getSkillCategoryIcon(skill?.category ?? "");
+              return (
+                <div key={r.id} className="flex items-center gap-3.5 rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+                    <CategoryIcon size={17} strokeWidth={1.8} className="text-aza" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-[13.5px] font-bold text-ink">{r.title}</p>
+                    <p className="text-[11.5px] font-medium text-ink/50">
+                      {r.level} {r.duration_hours ? `· ${r.duration_hours}hrs` : ""} {r.rating ? `· ★${r.rating}` : ""}
+                    </p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[13.5px] font-bold text-ink">{r.title}</p>
-                  <p className="text-[11.5px] font-medium text-ink/50">
-                    {r.level} {r.duration_hours ? `· ${r.duration_hours}hrs` : ""} {r.rating ? `· ★${r.rating}` : ""}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -139,11 +144,16 @@ function HubCard({
   );
 }
 
-function GrowthStatBox({ label, value }: { label: string; value: number }) {
+function GrowthStatBox({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="py-3.5 text-center">
-      <p className="font-display text-[18px] font-bold text-ink tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[10.5px] font-semibold text-ink/50">{label}</p>
+    <div className="flex flex-col items-center gap-1.5 py-3.5 text-center">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+        {icon}
+      </div>
+      <div>
+        <p className="font-display text-[18px] font-bold text-ink tabular-nums">{value}</p>
+        <p className="text-[10.5px] font-semibold text-ink/50">{label}</p>
+      </div>
     </div>
   );
 }

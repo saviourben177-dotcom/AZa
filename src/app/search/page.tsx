@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import SearchInput from "@/components/search/search-input";
 import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
+import { isOpenOpportunity } from "@/lib/opportunity-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -24,15 +25,16 @@ export default async function SearchPage({
 
   const term = q.trim().replace(/[%,]/g, "");
 
-  const [{ data: opportunities }, { data: ideas }, { data: businesses }, { data: resources }] = await Promise.all([
-    supabase.from("opportunities").select("*").or(`title.ilike.%${term}%,org.ilike.%${term}%`).limit(8),
+  const [{ data: opportunitiesRaw }, { data: ideas }, { data: businesses }, { data: resources }] = await Promise.all([
+    supabase.from("opportunities").select("*").or(`title.ilike.%${term}%,org.ilike.%${term}%`).limit(14),
     supabase.from("ideas").select("id, title, description, category").ilike("title", `%${term}%`).limit(8),
     supabase.from("businesses").select("id, name, category").ilike("name", `%${term}%`).limit(8),
     supabase.from("skill_resources").select("id, title, provider").ilike("title", `%${term}%`).limit(8),
   ]);
+  const opportunities = (opportunitiesRaw ?? []).filter(isOpenOpportunity).slice(0, 8);
 
   const totalResults =
-    (opportunities?.length ?? 0) + (ideas?.length ?? 0) + (businesses?.length ?? 0) + (resources?.length ?? 0);
+    opportunities.length + (ideas?.length ?? 0) + (businesses?.length ?? 0) + (resources?.length ?? 0);
 
   return (
     <div className="px-4 pt-6">
@@ -41,7 +43,7 @@ export default async function SearchPage({
       <div className="mt-5">
         {totalResults === 0 && (
           <div className="rounded-card bg-surface p-8 text-center shadow-card">
-            <p className="text-[13px] text-text-secondary">No results for &quot;{q}&quot;.</p>
+            <p className="text-[13px] text-ink/55">No results for &quot;{q}&quot;.</p>
           </div>
         )}
 
@@ -84,7 +86,7 @@ export default async function SearchPage({
 function ResultSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mb-5">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">{title}</h2>
+      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink/45">{title}</h2>
       <div className="mt-2.5 space-y-2.5">{children}</div>
     </section>
   );
@@ -94,7 +96,7 @@ function ResultRow({ href, title, subtitle }: { href: string; title: string; sub
   return (
     <Link href={href} className="block rounded-card bg-surface p-3.5 shadow-card">
       <p className="truncate text-[13.5px] font-semibold text-ink">{title}</p>
-      <p className="truncate text-[11.5px] font-medium text-text-tertiary">{subtitle}</p>
+      <p className="truncate text-[11.5px] font-medium text-ink/50">{subtitle}</p>
     </Link>
   );
 }
@@ -110,13 +112,13 @@ const EXPLORE = [
 function ExploreLinks() {
   return (
     <section className="mt-7">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-text-tertiary">Explore</h2>
+      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink/45">Explore</h2>
       <div className="mt-2.5 space-y-2.5">
         {EXPLORE.map((e) => (
           <Link key={e.href} href={e.href} className="flex items-center justify-between rounded-card bg-surface px-4 py-3.5 shadow-card">
             <span className="text-[13.5px] font-medium text-ink">{e.label}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="m9 6 6 6-6 6" stroke="rgb(var(--text-tertiary))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="m9 6 6 6-6 6" stroke="rgb(var(--ink) / 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </Link>
         ))}

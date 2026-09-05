@@ -51,7 +51,7 @@ export default function SignupPage() {
   if (success) {
     return (
       <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-aza-light text-2xl shadow-card">📬</div>
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📬</div>
         <h1 className="mt-4 font-display text-[19px] font-bold text-ink">
           Check your email
         </h1>

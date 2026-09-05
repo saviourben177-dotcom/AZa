@@ -29,7 +29,7 @@ export default async function NewIdeaPage({
       </div>
 
       <div className="mt-7 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-aza-light shadow-card">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6h5.4c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
           </svg>

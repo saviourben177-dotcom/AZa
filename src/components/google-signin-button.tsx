@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
+import { Capacitor } from "@capacitor/core";
 import { createClient } from "@/lib/supabase/client";
 
 // Google One Tap: tap once, get signed in immediately — no email typing,
@@ -79,6 +80,32 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const initialized = useRef(false);
   const router = useRouter();
+  const isNative = Capacitor.isNativePlatform();
+
+  // Google blocks its sign-in flow (One Tap + GIS script) from working
+  // inside any embedded WebView (disallowed_useragent policy) — this is
+  // enforced on Google's side and no client-side fix here can work around
+  // it. Inside the native app, skip Google Identity Services entirely and
+  // do a full-page OAuth redirect instead; native code (MainActivity)
+  // intercepts that redirect and routes it to the system browser, then
+  // hands the signed-in session back via a custom-scheme deep link.
+  const handleNativeSignIn = useCallback(async () => {
+    setLoading(true);
+    setTapError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: "com.azatechnologies.aza://auth-callback" },
+    });
+    if (error) {
+      setLoading(false);
+      console.error("Google sign-in (native) failed:", error);
+      setTapError("Couldn't sign you in. Please try again.");
+      setDebugDetail(`supabase: ${error.message}`);
+    }
+    // On success, signInWithOAuth performs a full-page redirect itself —
+    // nothing further to do here.
+  }, []);
 
   const handleCredential = useCallback(
     async (nonce: string, response: CredentialResponse) => {
@@ -186,6 +213,7 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   // "failed to load" even though the script actually loaded fine
   // earlier. Poll for window.google directly as a fallback signal.
   useEffect(() => {
+    if (isNative) return; // native app never loads/polls for the GIS script
     if (initialized.current) return;
     if (window.google) {
       // Already present — script loaded before this effect ran (e.g.
@@ -215,10 +243,15 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
 
     return () => clearInterval(poll);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isNative]);
 
   async function handleButtonClick() {
     setTapError(null);
+
+    if (isNative) {
+      await handleNativeSignIn();
+      return;
+    }
 
     if (status === "network-error" || status === "init-error") {
       // Give a real retry instead of just an error: re-check for
@@ -262,17 +295,19 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
 
   return (
     <>
-      <Script
-        src="https://accounts.google.com/gsi/client"
-        strategy="afterInteractive"
-        onLoad={handleScriptLoad}
-        onError={() => {
-          // Don't immediately declare network-error here — the polling
-          // effect above is the real source of truth and will confirm
-          // (or, on a false negative, quietly correct) this within ~6s.
-          setDebugDetail((d) => d ?? "Script onError fired — confirming via poll before showing an error");
-        }}
-      />
+      {!isNative && (
+        <Script
+          src="https://accounts.google.com/gsi/client"
+          strategy="afterInteractive"
+          onLoad={handleScriptLoad}
+          onError={() => {
+            // Don't immediately declare network-error here — the polling
+            // effect above is the real source of truth and will confirm
+            // (or, on a false negative, quietly correct) this within ~6s.
+            setDebugDetail((d) => d ?? "Script onError fired — confirming via poll before showing an error");
+          }}
+        />
+      )}
       <button
         type="button"
         onClick={handleButtonClick}

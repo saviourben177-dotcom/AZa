@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, Bookmark, Send, Lightbulb, Target } from "lucide-react";
 import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
 import OpportunityCard from "@/components/opportunity-card";
 import BusinessCard from "@/components/business-card";
@@ -46,7 +46,7 @@ export default async function ProfilePage({
   if (!user) {
     return (
       <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-aza-light text-3xl shadow-card">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-3xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
           👋
         </div>
         <h1 className="mt-5 font-display text-[21px] font-bold text-ink">You&apos;re not logged in</h1>
@@ -159,10 +159,10 @@ function OverviewTab({
       </div>
 
       <div className="mt-4 grid grid-cols-4 divide-x divide-line rounded-card border border-line-strong bg-surface shadow-card">
-        <StatBox label="Saved" value={savedOppCount} />
-        <StatBox label="Applied" value={applicationCount} />
-        <StatBox label="Ideas" value={ideaCount} />
-        <StatBox label="Skills" value={skillCount} />
+        <StatBox label="Saved" value={savedOppCount} icon={<Bookmark size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Applied" value={applicationCount} icon={<Send size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Ideas" value={ideaCount} icon={<Lightbulb size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Skills" value={skillCount} icon={<Target size={15} strokeWidth={1.8} className="text-aza" />} />
       </div>
 
       {(profile?.role === "curator" || profile?.role === "admin") && (
@@ -386,11 +386,16 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-function StatBox({ label, value }: { label: string; value: number }) {
+function StatBox({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
   return (
-    <div className="py-4 text-center">
-      <p className="font-display text-[19px] font-bold text-ink tabular">{value}</p>
-      <p className="mt-0.5 text-[10.5px] font-semibold text-ink/50">{label}</p>
+    <div className="flex flex-col items-center gap-1.5 py-4 text-center">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+        {icon}
+      </div>
+      <div>
+        <p className="font-display text-[19px] font-bold text-ink tabular">{value}</p>
+        <p className="text-[10.5px] font-semibold text-ink/50">{label}</p>
+      </div>
     </div>
   );
 }

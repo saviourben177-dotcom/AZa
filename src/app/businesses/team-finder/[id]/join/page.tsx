@@ -63,7 +63,7 @@ export default async function RequestToJoinPage({
       </Link>
 
       <div className="mt-5 flex flex-col items-center text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-aza-light shadow-card">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <circle cx="9" cy="8" r="3" stroke="rgb(var(--accent))" strokeWidth="1.7" />
             <circle cx="17" cy="9" r="2.3" stroke="rgb(var(--accent))" strokeWidth="1.7" />

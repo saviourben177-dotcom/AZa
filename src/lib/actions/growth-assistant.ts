@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { askGrowthAssistant } from "@/lib/groq";
+import { isOpenOpportunity } from "@/lib/opportunity-deadline";
 
 // Common English/Nigerian-context stopwords that add noise to keyword search without adding
 // signal (e.g. "find me something about design" should really search "design").
@@ -51,7 +52,7 @@ export async function askGrowthHub(question: string): Promise<{ answer: string; 
       .select("id, title, org, category, description, eligibility, deadline, tags")
       .or(oppOrClauses.join(","))
       .order("deadline", { ascending: true, nullsFirst: false })
-      .limit(20),
+      .limit(28),
     supabase
       .from("skill_resources")
       .select("id, title, provider, skills(name)")
@@ -82,6 +83,7 @@ export async function askGrowthHub(question: string): Promise<{ answer: string; 
   }
 
   const rankedOpportunities = (opportunities ?? [])
+    .filter(isOpenOpportunity)
     .map((o) => ({ o, score: scoreOpportunity(o) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 6)

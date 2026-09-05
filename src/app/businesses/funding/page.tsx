@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import OpportunityCard from "@/components/opportunity-card";
+import { isOpenOpportunity } from "@/lib/opportunity-deadline";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +11,13 @@ export default async function FundingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: grants } = await supabase
+  const { data: grantsRaw } = await supabase
     .from("opportunities")
     .select("*")
     .eq("category", "grant")
     .order("deadline", { ascending: true, nullsFirst: false })
-    .limit(50);
+    .limit(60);
+  const grants = (grantsRaw ?? []).filter(isOpenOpportunity);
 
   let savedIds = new Set<string>();
   if (user) {

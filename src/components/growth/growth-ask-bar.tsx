@@ -26,7 +26,7 @@ export default function GrowthAskBar() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Ask or search anything..."
-          className="h-11 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-text-tertiary focus:outline-none"
+          className="h-11 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-ink/35 focus:outline-none"
         />
         <button
           type="submit"
@@ -39,7 +39,7 @@ export default function GrowthAskBar() {
         </button>
       </form>
       {showNotice && (
-        <p className="mt-2 text-[11.5px] font-medium text-text-secondary">
+        <p className="mt-2 text-[11.5px] font-medium text-ink/50">
           Growth AI isn&apos;t connected yet — try My Skills, Ideas, or Courses below for now.
         </p>
       )}

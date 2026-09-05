@@ -73,7 +73,7 @@ export default async function DiscoverPage({
 
       {needsRegion ? (
         <div className="mt-8 rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">📍</div>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📍</div>
           <p className="font-display text-[15px] font-bold text-ink">Set your state to see nearby opportunities</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink/55">
             Add your state so we can match opportunities near you.

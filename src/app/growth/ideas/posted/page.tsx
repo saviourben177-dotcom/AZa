@@ -88,7 +88,7 @@ export default async function IdeaPostedPage({
 function NextStep({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
   return (
     <div className="flex items-start gap-3 rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-aza-light">{icon}</div>
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">{icon}</div>
       <div className="min-w-0">
         <p className="text-[13px] font-bold text-ink">{title}</p>
         <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink/55">{subtitle}</p>

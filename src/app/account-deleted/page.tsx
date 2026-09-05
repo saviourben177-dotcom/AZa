@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function AccountDeletedPage() {
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-aza-light shadow-card">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
           <path
             d="M5 13l4 4L19 7"

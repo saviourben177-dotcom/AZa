@@ -4,8 +4,9 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { Opportunity } from "@/lib/types";
-import { daysUntil } from "@/lib/types";
 import { CATEGORY_IMAGE, CATEGORY_EYEBROW } from "@/lib/category-visuals";
+import VerifiedBadge from "@/components/verified-badge";
+import DeadlinePill from "@/components/deadline-pill";
 import {
   dismissOpportunity,
   saveOpportunityFromDiscover,
@@ -87,7 +88,7 @@ export default function DiscoverDeck({
   if (total === 0) {
     return (
       <div className="mt-10 rounded-card border border-line-strong bg-surface p-10 text-center shadow-card">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-aza-light text-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
           🔍
         </div>
         <p className="font-display text-[17px] font-bold text-ink">Nothing to discover yet</p>
@@ -101,7 +102,7 @@ export default function DiscoverDeck({
   if (!current) {
     return (
       <div className="mt-10 rounded-card border border-line-strong bg-surface p-10 text-center shadow-card">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-aza-light text-2xl">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
           🎉
         </div>
         <p className="font-display text-[17px] font-bold text-ink">You&apos;re all caught up</p>
@@ -117,7 +118,6 @@ export default function DiscoverDeck({
     );
   }
 
-  const days = daysUntil(current.deadline);
   const nextCard = opportunities[index + 1];
   const rotation = drag.x / 18;
   const stampOpacity = Math.min(1, Math.abs(drag.x) / 80);
@@ -171,22 +171,16 @@ export default function DiscoverDeck({
               draggable={false}
               priority
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/5 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-surface via-surface/10 to-transparent" />
             <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
               <span className="rounded-pill bg-black/55 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-white backdrop-blur-sm">
                 {CATEGORY_EYEBROW[current.category]}
               </span>
-              {current.curator_verified && (
-                <span className="inline-flex items-center gap-1.5 rounded-pill border border-white/30 bg-black/45 px-3 py-1.5 text-[11.5px] font-bold text-aza backdrop-blur-sm">
-                  ✓ Verified
-                </span>
-              )}
+              {current.curator_verified && <VerifiedBadge />}
             </div>
-            {days !== null && days >= 0 && (
-              <span className="absolute -bottom-3.5 left-4 rounded-pill bg-gold px-3.5 py-1.5 text-[11.5px] font-extrabold text-[rgb(24_18_4)] shadow-card">
-                ⏳ {days} day{days === 1 ? "" : "s"} left
-              </span>
-            )}
+            <div className="absolute -bottom-3.5 left-4">
+              <DeadlinePill deadline={current.deadline} />
+            </div>
           </div>
 
           <div className="flex h-[44%] flex-col px-5 pb-5 pt-7">

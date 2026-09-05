@@ -50,12 +50,12 @@ export default function ProgressRing({
           )}
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-[16px] font-bold ${unavailable ? "text-text-tertiary" : "text-ink"}`}>
+          <span className={`text-[16px] font-bold ${unavailable ? "text-ink/40" : "text-ink"}`}>
             {unavailable ? "—" : value}
           </span>
         </div>
       </div>
-      <span className="text-[11.5px] font-medium text-text-secondary">{label}</span>
+      <span className="text-[11.5px] font-medium text-ink/50">{label}</span>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export default async function NotificationsPage() {
 
       {items.length === 0 ? (
         <div className="mt-10 rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">🔔</div>
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">🔔</div>
           <p className="font-display text-[15px] font-bold text-ink">No notifications yet</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-ink/55">
             We&apos;ll let you know about new matches, deadlines, and idea activity here.

@@ -11,6 +11,21 @@ export type OpportunityCategory =
 
 export type ProductCategory = "food" | "fuel_energy" | "building_materials";
 
+export type SkillCategory =
+  | "ai"
+  | "business"
+  | "coding"
+  | "design"
+  | "trades_diy"
+  | "trading";
+
+export interface Skill {
+  id: string;
+  name: string;
+  category: SkillCategory;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   full_name: string | null;

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Lightbulb } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import UpvoteButton from "@/components/growth/upvote-button";
 import SaveIdeaButton from "@/components/save-idea-button";
@@ -55,9 +56,20 @@ export default async function IdeasPage({
 
       <div className="mt-4 space-y-3">
         {(ideas ?? []).length === 0 && (
-          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">💡</div>
-            <p className="text-[13px] text-ink/55">No ideas here yet — be the first to share one.</p>
+          <div className="rounded-card border border-line-strong bg-surface px-8 py-10 text-center shadow-card">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+              <Lightbulb size={22} strokeWidth={1.8} className="text-aza" />
+            </div>
+            <p className="font-display text-[14.5px] font-bold text-ink">No ideas here yet</p>
+            <p className="mx-auto mt-1.5 max-w-[220px] text-[12.5px] leading-relaxed text-ink/55">
+              Be the first to share one — pitch a concept and get feedback from the community.
+            </p>
+            <Link
+              href="/growth/ideas/new"
+              className="mt-4 inline-block rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent"
+            >
+              + Share an idea
+            </Link>
           </div>
         )}
         {ideas?.map((idea) => (

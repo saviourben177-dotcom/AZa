@@ -31,6 +31,8 @@ public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
     private static final long EXIT_CONFIRM_WINDOW_MS = 2000;
+    private static final String AUTH_CALLBACK_SCHEME = "com.azatechnologies.aza";
+    private static final String AUTH_CALLBACK_HOST = "auth-callback";
 
     private LinearLayout loadingOverlay;
     private LinearLayout errorState;
@@ -86,6 +88,22 @@ public class MainActivity extends BridgeActivity {
                 }
                 boolean isWebScheme = scheme.equals("http") || scheme.equals("https");
                 if (isWebScheme) {
+                    String host = request.getUrl().getHost();
+                    if ("accounts.google.com".equals(host)) {
+                        // Google blocks its sign-in flow inside embedded WebViews
+                        // (disallowed_useragent policy). Hand this off to the
+                        // system browser instead of letting the WebView load it;
+                        // the browser completes the OAuth flow and redirects back
+                        // via the custom-scheme deep link handled in
+                        // onNewIntent()/onCreate() below.
+                        try {
+                            Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
+                            startActivity(intent);
+                        } catch (ActivityNotFoundException e) {
+                            Toast.makeText(MainActivity.this, "No app found to handle this link.", Toast.LENGTH_SHORT).show();
+                        }
+                        return true;
+                    }
                     return false;
                 }
                 try {
@@ -119,6 +137,38 @@ public class MainActivity extends BridgeActivity {
         });
 
         loadAppUrl();
+
+        // Cold-start case: the app was launched fresh by the auth-callback
+        // deep link (system browser handed control back to us), rather than
+        // already being in memory. getIntent() carries that launch intent.
+        handleAuthCallbackIntent(getIntent());
+    }
+
+    @Override
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // Warm-start case: MainActivity is singleTask and already running,
+        // so the auth-callback deep link arrives here instead of onCreate().
+        setIntent(intent);
+        handleAuthCallbackIntent(intent);
+    }
+
+    private void handleAuthCallbackIntent(Intent intent) {
+        if (intent == null) return;
+        Uri uri = intent.getData();
+        if (uri == null) return;
+        if (!AUTH_CALLBACK_SCHEME.equals(uri.getScheme()) || !AUTH_CALLBACK_HOST.equals(uri.getHost())) {
+            return;
+        }
+
+        String code = uri.getQueryParameter("code");
+        if (code == null) return;
+
+        // Reuses the existing /auth/callback route as-is — it already
+        // exchanges `code` for a session via exchangeCodeForSession and
+        // redirects to `/`. Loading it in the app's own WebView is enough;
+        // no new backend logic needed.
+        bridge.getWebView().loadUrl(APP_URL + "/auth/callback?code=" + code);
     }
 
     private void loadAppUrl() {

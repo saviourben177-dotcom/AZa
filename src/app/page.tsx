@@ -8,6 +8,7 @@ import SearchBar from "@/components/search-bar";
 import NotificationBell from "@/components/notification-bell";
 import DeadlineCountdown from "@/components/deadline-countdown";
 import { personalize, buildSwipeHistory } from "@/lib/personalization";
+import { isOpenOpportunity } from "@/lib/opportunity-deadline";
 import AppGuideGate from "@/components/app-guide/app-guide-gate";
 import type { Opportunity, Profile, OpportunityCategory } from "@/lib/types";
 import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
@@ -65,13 +66,15 @@ export default async function HomePage({
     listQuery = listQuery.or(`title.ilike.%${term}%,org.ilike.%${term}%,description.ilike.%${term}%`);
   }
   listQuery = listQuery.order("deadline", { ascending: true, nullsFirst: false });
-  const { data: filteredList } = await listQuery.limit(50);
+  const { data: filteredListRaw } = await listQuery.limit(60);
+  const filteredList = (filteredListRaw ?? []).filter(isOpenOpportunity).slice(0, 50);
 
-  const { data: allOpportunities } = await supabase
+  const { data: allOpportunitiesRaw } = await supabase
     .from("opportunities")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(60);
+  const allOpportunities = (allOpportunitiesRaw ?? []).filter(isOpenOpportunity);
 
   let savedIds = new Set<string>();
   let savedRows: { opportunity_id: string; saved_at: string; opportunities: Opportunity }[] = [];
@@ -107,10 +110,16 @@ export default async function HomePage({
   });
 
   // Upcoming deadline card: most urgent saved opportunity, else most urgent
-  // personalized one — always a real, live value.
+  // personalized one — always a real, live, FUTURE value. A past deadline
+  // must never be selected here: the countdown math clamps negative diffs
+  // to 0, so a stale/expired opportunity silently renders as
+  // "00 Days / 00 Hours / 00 Mins" instead of being excluded.
+  const now = Date.now();
+  const isFutureDeadline = (o: { deadline: string | null }) =>
+    !!o.deadline && new Date(o.deadline).getTime() > now;
   const deadlineCandidates = savedRows.length > 0
-    ? savedRows.map((s) => s.opportunities).filter((o) => o?.deadline)
-    : personalized.opportunities.filter((o) => o.deadline);
+    ? savedRows.map((s) => s.opportunities).filter(isFutureDeadline)
+    : personalized.opportunities.filter(isFutureDeadline);
   const upcoming = [...deadlineCandidates].sort(
     (a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()
   )[0];
@@ -229,7 +238,7 @@ function relativeTime(iso: string): string {
 function EmptyState() {
   return (
     <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light text-xl">✨</div>
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">✨</div>
       <p className="font-display text-[15px] font-bold text-ink">Nothing here yet</p>
       <p className="mt-1 text-[13px] text-ink/55">New opportunities are added regularly — check back soon.</p>
     </div>

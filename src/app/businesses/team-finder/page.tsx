@@ -45,7 +45,7 @@ export default async function TeamFinderHomePage({
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-aza-light">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
             <Users size={16} strokeWidth={1.8} className="text-aza" />
           </div>
         </div>
@@ -89,7 +89,7 @@ export default async function TeamFinderHomePage({
       <div className="mt-5 space-y-3">
         {ideas.length === 0 && (
           <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-aza-light">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
               <Users size={22} strokeWidth={1.6} className="text-aza" />
             </div>
             <p className="text-[13px] text-ink/55">

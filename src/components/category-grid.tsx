@@ -62,7 +62,7 @@ export default function CategoryGrid() {
           href={`/?category=${cat}`}
           className="flex flex-col items-center gap-2 rounded-card-sm border border-line-strong bg-surface py-4 shadow-card transition-transform active:scale-95"
         >
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-aza-light">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
             {ICONS[cat]}
           </span>
           <span className="text-[11.5px] font-bold text-ink/80">

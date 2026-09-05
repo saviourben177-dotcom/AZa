@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { personalize, buildSwipeHistory } from "@/lib/personalization";
+import { isOpenOpportunity } from "@/lib/opportunity-deadline";
 import type { Profile, OpportunityCategory } from "@/lib/types";
 import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
 
@@ -23,8 +24,11 @@ export async function getDiscoverQueue(category?: string) {
       .select("*")
       .order("deadline", { ascending: true, nullsFirst: false });
     if (validCategory) query = query.eq("category", validCategory);
-    const { data } = await query.limit(25);
-    return { opportunities: data ?? [], isAuthed: false };
+    // +10 buffer: deadline-ascending sort puts any expired rows first, so
+    // isOpenOpportunity() below can trim below the intended 25 if the
+    // fetch window is exactly 25 — see opportunity-deadline.ts.
+    const { data } = await query.limit(35);
+    return { opportunities: (data ?? []).filter(isOpenOpportunity).slice(0, 25), isAuthed: false };
   }
 
   const [{ data: saved }, { data: dismissed }, { data: profile }] = await Promise.all([
@@ -51,9 +55,9 @@ export async function getDiscoverQueue(category?: string) {
     .select("*")
     .order("deadline", { ascending: true, nullsFirst: false });
   if (validCategory) query = query.eq("category", validCategory);
-  const { data } = await query.limit(80);
+  const { data } = await query.limit(90);
 
-  const available = (data ?? []).filter((o) => !excludeIds.has(o.id));
+  const available = (data ?? []).filter((o) => !excludeIds.has(o.id) && isOpenOpportunity(o));
   const personalized = personalize(available, profile as Profile | null, { swipeHistory });
 
   return { opportunities: personalized.opportunities.slice(0, 25), isAuthed: true };
@@ -112,7 +116,7 @@ export async function getTrendingQueue(category?: string) {
   const { data } = await query;
 
   const ranked = (data ?? [])
-    .filter((o) => !excludeIds.has(o.id))
+    .filter((o) => !excludeIds.has(o.id) && isOpenOpportunity(o))
     .sort((a, b) => (velocityMap.get(b.id) ?? 0) - (velocityMap.get(a.id) ?? 0))
     .slice(0, 25);
 
@@ -134,9 +138,11 @@ export async function getNewQueue(category?: string) {
 
   let query = supabase.from("opportunities").select("*").order("created_at", { ascending: false });
   if (validCategory) query = query.eq("category", validCategory);
-  const { data } = await query.limit(50);
+  const { data } = await query.limit(60);
 
-  const opportunities = (data ?? []).filter((o) => !excludeIds.has(o.id)).slice(0, 25);
+  const opportunities = (data ?? [])
+    .filter((o) => !excludeIds.has(o.id) && isOpenOpportunity(o))
+    .slice(0, 25);
   return { opportunities, isAuthed: !!user };
 }
 
@@ -178,9 +184,11 @@ export async function getNearbyQueue(category?: string) {
     .or(`region.eq.${profile.region},region.eq.Nationwide`)
     .order("deadline", { ascending: true, nullsFirst: false });
   if (validCategory) query = query.eq("category", validCategory);
-  const { data } = await query.limit(50);
+  const { data } = await query.limit(60);
 
-  const opportunities = (data ?? []).filter((o) => !excludeIds.has(o.id)).slice(0, 25);
+  const opportunities = (data ?? [])
+    .filter((o) => !excludeIds.has(o.id) && isOpenOpportunity(o))
+    .slice(0, 25);
   return { opportunities, isAuthed: true, needsRegion: false };
 }
 
