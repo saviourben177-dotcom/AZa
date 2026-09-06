@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { Sora, Inter } from "next/font/google";
 import "./globals.css";
 import BottomNav from "@/components/bottom-nav";
+import PushNotificationsMount from "@/components/push-notifications-mount";
 import { THEME_COOKIE, isValidTheme } from "@/lib/theme/cookie";
 
 const sora = Sora({
@@ -47,6 +48,7 @@ export default async function RootLayout({
     <html lang="en" data-theme={theme} className={`${sora.variable} ${inter.variable}`}>
       <body className="font-body antialiased">
         <div className="bg-ambient mx-auto flex min-h-screen max-w-md flex-col bg-paper">
+          <PushNotificationsMount />
           <main className="flex-1 pb-20">{children}</main>
           <BottomNav />
         </div>

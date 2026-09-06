@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "32638055207",
+    "project_id": "azanotifications",
+    "storage_bucket": "azanotifications.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:32638055207:android:f49da2e5aa544c75462f02",
+        "android_client_info": {
+          "package_name": "com.azatechnologies.aza"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqshnZIlKGwNlj6tipz8B6NU6MUNSRCWg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
