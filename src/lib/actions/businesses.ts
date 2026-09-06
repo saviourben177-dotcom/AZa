@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { NIGERIA_STATE_NAMES } from "@/lib/nigeria-locations";
+import { NIGERIA_STATE_NAMES, zoneForState } from "@/lib/nigeria-locations";
+import { COUNTRY_NAMES } from "@/lib/countries";
 
 export async function createBusiness(formData: FormData) {
   const supabase = await createClient();
@@ -27,8 +28,23 @@ export async function createBusiness(formData: FormData) {
     }
   }
 
-  const rawState = formData.get("state") as string | null;
-  const state = rawState && NIGERIA_STATE_NAMES.includes(rawState) ? rawState : null;
+  // Same "never trust arbitrary client text in a shared matching column"
+  // principle as onboarding.ts — scope decides whether we validate
+  // against Nigerian states or countries, and region is derived the
+  // same way in both places (zone for Nigeria, country name for Global).
+  const rawScope = formData.get("scope") as string | null;
+  const scope: "nigeria" | "global" = rawScope === "global" ? "global" : "nigeria";
+
+  let state: string | null = null;
+  let region: string | null = null;
+  if (scope === "global") {
+    const rawCountry = formData.get("country") as string | null;
+    region = rawCountry && COUNTRY_NAMES.includes(rawCountry) ? rawCountry : null;
+  } else {
+    const rawState = formData.get("state") as string | null;
+    state = rawState && NIGERIA_STATE_NAMES.includes(rawState) ? rawState : null;
+    region = state ? (zoneForState(state) ?? null) : null;
+  }
 
   const { error } = await supabase.from("businesses").insert({
     name: formData.get("name") as string,
@@ -39,6 +55,7 @@ export async function createBusiness(formData: FormData) {
     email: (formData.get("email") as string) || null,
     location: (formData.get("location") as string) || null,
     state,
+    region,
     logo_url: logoUrl,
     created_by: user.id,
     curator_verified: false,

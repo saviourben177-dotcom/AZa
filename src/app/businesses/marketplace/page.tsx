@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { koboToNaira } from "@/lib/types";
+import { minorToDisplay } from "@/lib/types";
 import type { MarketplaceListingType } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -73,7 +73,7 @@ export default async function MarketplacePage({
                 <p className="mt-1.5 truncate text-[14px] font-bold text-ink">{listing.title}</p>
                 <p className="mt-0.5 line-clamp-1 text-[11.5px] text-ink/55">{listing.description}</p>
                 {listing.price_kobo != null && (
-                  <p className="mt-1.5 text-[13.5px] font-bold text-aza tabular">{koboToNaira(listing.price_kobo)}</p>
+                  <p className="mt-1.5 text-[13.5px] font-bold text-aza tabular">{minorToDisplay(listing.price_kobo, listing.currency)}</p>
                 )}
               </div>
             </div>

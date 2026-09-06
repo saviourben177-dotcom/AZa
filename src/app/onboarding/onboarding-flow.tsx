@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { saveOnboarding, skipOnboarding, type OnboardingData, type EmploymentStatusOption } from "@/lib/actions/onboarding";
 import { NIGERIA_STATES, nearestStateToCoordinates } from "@/lib/nigeria-locations";
+import { COUNTRY_NAMES } from "@/lib/countries";
 
 const STATUS_OPTIONS: { value: EmploymentStatusOption; label: string }[] = [
   { value: "student", label: "Student" },
@@ -43,7 +44,7 @@ const LEARNING_CONTEXTS = [
 type StepKey =
   | "name" | "age" | "status"
   | "field_student" | "job_employed" | "business_self_employed" | "freelance_skill" | "field_unemployed"
-  | "disability" | "qualification" | "skilled" | "location"
+  | "disability" | "qualification" | "skilled" | "scope" | "location"
   | "exact_location" | "learning" | "notes";
 
 function buildSteps(status: string[], hasName: boolean): StepKey[] {
@@ -60,7 +61,7 @@ function buildSteps(status: string[], hasName: boolean): StepKey[] {
     ...(hasName ? [] : (["name"] as StepKey[])),
     "age", "status",
     ...branch,
-    "disability", "qualification", "skilled", "location",
+    "disability", "qualification", "skilled", "scope", "location",
     "exact_location", "learning", "notes",
   ];
 }
@@ -73,6 +74,7 @@ export default function OnboardingFlow({ initialFullName }: { initialFullName: s
     status: [],
     learning_context: [],
     full_name: initialFullName ?? undefined,
+    scope: "nigeria",
   });
   const [fieldQuery, setFieldQuery] = useState("");
   const [locating, setLocating] = useState(false);
@@ -325,7 +327,37 @@ export default function OnboardingFlow({ initialFullName }: { initialFullName: s
           </StepShell>
         )}
 
-        {currentKey === "location" && (
+        {currentKey === "scope" && (
+          <StepShell title="Where are you based?" subtitle="This decides how we match you to opportunities near you.">
+            <div className="mt-6 space-y-2.5">
+              <RadioRow
+                label="Nigeria"
+                checked={data.scope !== "global"}
+                onClick={() => setData((d) => ({ ...d, scope: "nigeria", country: undefined }))}
+              />
+              <RadioRow
+                label="Outside Nigeria"
+                checked={data.scope === "global"}
+                onClick={() => setData((d) => ({ ...d, scope: "global", state: undefined }))}
+              />
+            </div>
+          </StepShell>
+        )}
+
+        {currentKey === "location" && data.scope === "global" && (
+          <StepShell title="Which country are you in?" subtitle="This helps us show opportunities, businesses and resources near you.">
+            <select
+              value={data.country ?? ""}
+              onChange={(e) => setData({ ...data, country: e.target.value })}
+              className="mt-6 w-full rounded-card-sm border border-line-strong bg-surface shadow-card px-4 py-3.5 text-[14px]"
+            >
+              <option value="">Select your country</option>
+              {COUNTRY_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </StepShell>
+        )}
+
+        {currentKey === "location" && data.scope !== "global" && (
           <StepShell title="Which state are you in?" subtitle="This helps us show opportunities, businesses and resources near you.">
             <button
               onClick={useMyLocation}

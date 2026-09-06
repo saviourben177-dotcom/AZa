@@ -1,9 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createBusiness } from "@/lib/actions/businesses";
 import { NIGERIA_STATES } from "@/lib/nigeria-locations";
+import { COUNTRY_NAMES, type UserScope } from "@/lib/countries";
 
 const CATEGORIES = [
   "Retail / Trade", "Food & Beverage", "Fashion & Beauty", "Technology",
@@ -14,6 +15,7 @@ const CATEGORIES = [
 export default function NewBusinessForm() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const [scope, setScope] = useState<UserScope>("nigeria");
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
@@ -45,15 +47,49 @@ export default function NewBusinessForm() {
       </div>
 
       <div>
-        <label className="text-[13px] font-semibold text-ink/70">State</label>
-        <select name="state" defaultValue="" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]">
-          <option value="">Select a state</option>
-          {NIGERIA_STATES.map((s) => (
-            <option key={s.name} value={s.name}>{s.name}</option>
-          ))}
-        </select>
-        <p className="mt-1 text-[11px] text-ink/40">Used for &quot;Near me&quot; search — separate from the address below.</p>
+        <label className="text-[13px] font-semibold text-ink/70">Where is this business based?</label>
+        <div className="mt-1 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setScope("nigeria")}
+            className={`flex-1 rounded-card border py-2.5 text-[13.5px] font-semibold ${scope === "nigeria" ? "border-aza bg-aza-light text-aza" : "border-line bg-surface text-ink/60"}`}
+          >
+            Nigeria
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope("global")}
+            className={`flex-1 rounded-card border py-2.5 text-[13.5px] font-semibold ${scope === "global" ? "border-aza bg-aza-light text-aza" : "border-line bg-surface text-ink/60"}`}
+          >
+            Outside Nigeria
+          </button>
+        </div>
+        <input type="hidden" name="scope" value={scope} />
       </div>
+
+      {scope === "nigeria" ? (
+        <div>
+          <label className="text-[13px] font-semibold text-ink/70">State</label>
+          <select name="state" defaultValue="" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]">
+            <option value="">Select a state</option>
+            {NIGERIA_STATES.map((s) => (
+              <option key={s.name} value={s.name}>{s.name}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-ink/40">Used for &quot;Near me&quot; search — separate from the address below.</p>
+        </div>
+      ) : (
+        <div>
+          <label className="text-[13px] font-semibold text-ink/70">Country</label>
+          <select name="country" defaultValue="" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]">
+            <option value="">Select a country</option>
+            {COUNTRY_NAMES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-[11px] text-ink/40">Used for &quot;Near me&quot; search — separate from the address below.</p>
+        </div>
+      )}
 
       <div>
         <label className="text-[13px] font-semibold text-ink/70">Location</label>

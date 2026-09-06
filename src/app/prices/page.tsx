@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { koboToNaira, PRODUCT_CATEGORY_LABELS, type Price } from "@/lib/types";
+import { minorToDisplay, PRODUCT_CATEGORY_LABELS, type Price } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,7 @@ export default async function PricesPage() {
                     </p>
                   </div>
                   <p className="tabular text-[15px] font-bold text-ink">
-                    {koboToNaira(price.price_kobo)}
+                    {minorToDisplay(price.price_kobo, price.currency)}
                   </p>
                 </div>
               ))}

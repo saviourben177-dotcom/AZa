@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { koboToNaira, PRODUCT_CATEGORY_LABELS } from "@/lib/types";
+import { minorToDisplay, PRODUCT_CATEGORY_LABELS } from "@/lib/types";
 import PriceForm from "@/components/curator/price-form";
 import DeletePriceButton from "@/components/curator/delete-price-button";
 
@@ -39,7 +39,7 @@ export default async function CuratorPricesPage() {
             </div>
             <div className="flex items-center gap-3">
               <p className="tabular text-[14px] font-bold text-ink">
-                {koboToNaira(price.price_kobo)}
+                {minorToDisplay(price.price_kobo, price.currency)}
               </p>
               <DeletePriceButton id={price.id} />
             </div>

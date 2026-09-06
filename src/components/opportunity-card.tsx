@@ -59,7 +59,7 @@ export default function OpportunityCard({
 
         <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
           <span className="text-[11.5px] font-medium text-ink/50">
-            {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Nigeria"}
+            {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Location not specified"}
           </span>
           <SaveButton
             opportunityId={opportunity.id}

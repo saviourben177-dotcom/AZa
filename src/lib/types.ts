@@ -41,9 +41,11 @@ export interface Profile {
   disability_or_health_note: string | null;
   highest_qualification: string | null;
   skilled_or_unskilled: string | null;
-  /** Nigerian state (or "FCT"), from src/lib/nigeria-locations.ts NIGERIA_STATE_NAMES. */
+  /** "nigeria" (default) or "global" — which onboarding location path was taken. See src/lib/actions/onboarding.ts. */
+  scope: "nigeria" | "global";
+  /** Nigerian state (or "FCT"), from src/lib/nigeria-locations.ts NIGERIA_STATE_NAMES. Null for scope "global". */
   state: string | null;
-  /** Geopolitical zone, derived from state at save time. */
+  /** Geopolitical zone (scope "nigeria") or country name (scope "global") — same free-text column, broader value for Global. */
   region: string | null;
   exact_location: string | null;
   is_currently_learning: boolean | null;
@@ -91,6 +93,8 @@ export interface Price {
   category: ProductCategory;
   unit: string | null;
   price_kobo: number;
+  /** Lowercase currency code for price_kobo — see src/lib/currencies.ts. Defaults to "ngn" for rows saved before this field existed. */
+  currency: string;
   last_updated_by: string | null;
   last_updated_at: string;
   created_at: string;
@@ -106,8 +110,10 @@ export interface Business {
   whatsapp: string | null;
   email: string | null;
   location: string | null;
-  /** Nigerian state (or "FCT"), used for "Near me" filtering. Separate from the free-text location display string. */
+  /** Nigerian state (or "FCT"), used for "Near me" filtering. Separate from the free-text location display string. Null for Global-scope businesses. */
   state: string | null;
+  /** General-purpose matching field mirroring Opportunity.region: a zone, a country name, or "Nationwide"/"Worldwide". */
+  region: string | null;
   created_by: string | null;
   curator_verified: boolean;
   created_at: string;
@@ -156,6 +162,33 @@ export function koboToNaira(kobo: number): string {
 
 export function nairaToKobo(naira: number): number {
   return Math.round(naira * 100);
+}
+
+/**
+ * Generic version of koboToNaira for any currency — used by
+ * Marketplace/Prices now that price_kobo can hold minor units in
+ * whatever currency a row's `currency` field names. koboToNaira above is
+ * left exactly as it was; nothing that already assumed Naira needed to
+ * change.
+ */
+export function minorToDisplay(amountMinor: number, currencyCode: string): string {
+  const code = (currencyCode || "ngn").toUpperCase();
+  try {
+    return (amountMinor / 100).toLocaleString("en-US", {
+      style: "currency",
+      currency: code,
+      maximumFractionDigits: 0,
+    });
+  } catch {
+    // Intl throws on a code it doesn't recognize — degrade to a plain
+    // "CODE amount" string instead of letting the page crash.
+    return `${code} ${(amountMinor / 100).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  }
+}
+
+/** Generic major-unit-to-minor-unit conversion (same math as nairaToKobo, currency-agnostic name for new call sites). */
+export function majorToMinor(amountMajor: number): number {
+  return Math.round(amountMajor * 100);
 }
 
 export function daysUntil(dateStr: string | null): number | null {
@@ -328,6 +361,8 @@ export interface MarketplaceListing {
   listing_type: MarketplaceListingType;
   category: string | null;
   price_kobo: number | null;
+  /** Lowercase currency code for price_kobo — see src/lib/currencies.ts. Defaults to "ngn" for rows saved before this field existed. */
+  currency: string;
   image_url: string | null;
   location: string | null;
   contact_phone: string | null;

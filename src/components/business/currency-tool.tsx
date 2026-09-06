@@ -1,16 +1,9 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { COMMON_CODES, CODE_LABELS } from "@/lib/currencies";
 
 type RatesResponse = Record<string, number> & { date?: string };
-
-const COMMON_CODES = ["usd", "gbp", "eur", "ngn", "cad", "cny", "zar", "ghs", "kes", "aed"];
-
-const CODE_LABELS: Record<string, string> = {
-  usd: "US Dollar", gbp: "British Pound", eur: "Euro", ngn: "Nigerian Naira",
-  cad: "Canadian Dollar", cny: "Chinese Yuan", zar: "South African Rand",
-  ghs: "Ghanaian Cedi", kes: "Kenyan Shilling", aed: "UAE Dirham",
-};
 
 export default function CurrencyTool() {
   const [availableCodes, setAvailableCodes] = useState<string[]>([]);

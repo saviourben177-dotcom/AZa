@@ -181,7 +181,7 @@ export async function getNearbyQueue(category?: string) {
   let query = supabase
     .from("opportunities")
     .select("*")
-    .or(`region.eq.${profile.region},region.eq.Nationwide`)
+    .or(`region.eq.${profile.region},region.eq.Nationwide,region.eq.Worldwide`)
     .order("deadline", { ascending: true, nullsFirst: false });
   if (validCategory) query = query.eq("category", validCategory);
   const { data } = await query.limit(60);

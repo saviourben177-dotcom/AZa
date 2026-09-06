@@ -2,10 +2,12 @@
 
 import { useTransition, useState } from "react";
 import { createListing } from "@/lib/actions/marketplace";
+import { COMMON_CODES, CODE_LABELS } from "@/lib/currencies";
 
 export default function NewListingForm() {
   const [isPending, startTransition] = useTransition();
   const [listingType, setListingType] = useState("sell");
+  const [currency, setCurrency] = useState("ngn");
 
   function handleSubmit(formData: FormData) {
     startTransition(() => createListing(formData));
@@ -45,8 +47,21 @@ export default function NewListingForm() {
 
       {listingType === "sell" && (
         <div>
-          <label className="text-[13px] font-semibold text-ink/70">Price in ₦ (optional)</label>
-          <input name="price_naira" type="number" step="0.01" min="0.01" className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]" />
+          <label className="text-[13px] font-semibold text-ink/70">Price (optional)</label>
+          <div className="mt-1 flex gap-2">
+            <select
+              name="currency"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              className="w-[120px] rounded-card border border-line bg-surface px-2.5 py-3 text-[13.5px] font-semibold"
+            >
+              {COMMON_CODES.map((code) => (
+                <option key={code} value={code}>{code.toUpperCase()}</option>
+              ))}
+            </select>
+            <input name="price_amount" type="number" step="0.01" min="0.01" className="flex-1 rounded-card border border-line bg-surface px-4 py-3 text-[14px]" />
+          </div>
+          <p className="mt-1 text-[11px] text-ink/45">{CODE_LABELS[currency]}</p>
         </div>
       )}
 

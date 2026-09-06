@@ -190,7 +190,7 @@ export default function DiscoverDeck({
             </div>
             <h3 className="font-display text-[20px] font-bold leading-tight text-ink">{current.title}</h3>
             <p className="mt-1.5 text-[12.5px] text-ink/45">
-              📍 {current.remote ? "Remote" : current.location ?? "Nigeria"}
+              📍 {current.remote ? "Remote" : current.location ?? "Location not specified"}
             </p>
 
             <p className="mt-2.5 line-clamp-2 text-[13px] leading-relaxed text-ink/65">{current.description}</p>

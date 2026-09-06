@@ -51,6 +51,10 @@ export async function runOpportunityIngest(): Promise<IngestRunResult> {
       location: r.location,
       remote: r.remote,
       tags: r.tags,
+      // Ingested rows have no fixed geography — without this, they never
+      // matched Nearby for any user with a region set, since null never
+      // matches the Nationwide/Worldwide sentinels. See getNearbyQueue().
+      region: "Worldwide",
       curator_verified: false,
       created_by: EDITORIAL_PROFILE_ID,
       job_type: r.job_type,

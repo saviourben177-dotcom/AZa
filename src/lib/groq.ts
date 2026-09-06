@@ -116,7 +116,7 @@ interface CvInputData {
  * Generates the base CV body (markdown) from structured profile + CV data.
  */
 export async function generateBaseCv(input: CvInputData): Promise<string> {
-  const prompt = `You are writing a professional CV/résumé for a job/opportunity-seeking platform user in Nigeria. Use only the information provided below — never invent employers, dates, qualifications, or achievements not present in the data. If a section has no data, omit it entirely rather than padding it.
+  const prompt = `You are writing a professional CV/résumé for a job/opportunity-seeking platform user. Use only the information provided below (including their region, if it's natural to mention) — never invent employers, dates, qualifications, or achievements not present in the data. If a section has no data, omit it entirely rather than padding it.
 
 Output clean Markdown with these sections where data exists: a 2-3 sentence professional summary at the top (write or lightly polish from the provided summary), Education, Experience, Certifications, Skills. Use standard CV tone: concise, achievement-oriented, no first-person pronouns in bullet points.
 
@@ -145,6 +145,8 @@ export async function askGrowthAssistant(
     opportunities: { id: string; title: string; org: string; category: string; deadline: string | null }[];
     resources: { id: string; title: string; provider: string | null; skill: string }[];
     ideas: { id: string; title: string; description: string }[];
+    /** User's profile region (Nigerian zone or Global country name), if known. */
+    region?: string | null;
   }
 ): Promise<{ answer: string; hasResults: boolean }> {
   const hasResults =
@@ -178,7 +180,8 @@ export async function askGrowthAssistant(
     .filter(Boolean)
     .join("\n\n");
 
-  const prompt = `You are AZA's Growth Hub assistant, helping a Nigerian youth user find opportunities, skills resources, and ideas within the AZA app. Answer the user's question using ONLY the items listed below — these are real items that exist in AZA right now. Do not mention or invent anything not in this list. If nothing below actually answers the question, say so honestly instead of stretching an unrelated item to fit. Keep the answer short (2-4 sentences), warm, and direct. Refer to items by name, not by their [id].
+  const regionLine = context.region ? ` The user is based in ${context.region}.` : "";
+  const prompt = `You are AZA's Growth Hub assistant, helping a youth user find opportunities, skills resources, and ideas within the AZA app.${regionLine} Answer the user's question using ONLY the items listed below — these are real items that exist in AZA right now. Do not mention or invent anything not in this list. If nothing below actually answers the question, say so honestly instead of stretching an unrelated item to fit. Keep the answer short (2-4 sentences), warm, and direct. Refer to items by name, not by their [id].
 
 User's question: ${question}
 

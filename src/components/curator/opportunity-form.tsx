@@ -1,10 +1,26 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import type { Opportunity } from "@/lib/types";
 import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
+import { GEOPOLITICAL_ZONES } from "@/lib/nigeria-locations";
+import { COUNTRY_NAMES } from "@/lib/countries";
 
 const CATEGORIES = Object.entries(OPPORTUNITY_CATEGORY_LABELS);
+
+type RegionLockType = "none" | "nigeria_zone" | "country" | "nationwide" | "worldwide" | "legacy";
+
+function classifyRegion(value: string): { type: RegionLockType; detail: string } {
+  if (!value) return { type: "none", detail: "" };
+  if (value === "Nationwide") return { type: "nationwide", detail: "" };
+  if (value === "Worldwide") return { type: "worldwide", detail: "" };
+  if ((GEOPOLITICAL_ZONES as readonly string[]).includes(value)) return { type: "nigeria_zone", detail: value };
+  if (COUNTRY_NAMES.includes(value)) return { type: "country", detail: value };
+  // Existing free-text value from before this picker existed — keep it
+  // intact until the curator consciously replaces it, rather than
+  // silently wiping data we don't recognize.
+  return { type: "legacy", detail: value };
+}
 
 export default function OpportunityForm({
   opportunity,
@@ -81,7 +97,7 @@ export default function OpportunityForm({
         <Field label="Min age (optional)" name="min_age" type="number" defaultValue={opportunity?.min_age?.toString() ?? ""} />
         <Field label="Max age (optional)" name="max_age" type="number" defaultValue={opportunity?.max_age?.toString() ?? ""} />
       </div>
-      <Field label="Region lock (optional, leave blank for national/remote)" name="region" defaultValue={opportunity?.region ?? ""} />
+      <RegionLockField defaultValue={opportunity?.region ?? ""} />
 
       <div>
         <label className="text-[13px] font-semibold text-ink/70">
@@ -157,7 +173,7 @@ export default function OpportunityForm({
       </div>
 
       <Field
-        label="Salary range (display text, e.g. ₦70,000 – ₦120,000 / Month)"
+        label="Salary range (display text, e.g. ₦70,000 – ₦120,000 / Month or $500 – $800 / Month)"
         name="salary_range"
         defaultValue={opportunity?.salary_range ?? ""}
       />
@@ -268,6 +284,78 @@ function TextArea({
         rows={4}
         className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
       />
+    </div>
+  );
+}
+
+/**
+ * Two-step "scope then value" region-lock picker. Outputs a single hidden
+ * `region` field so createOpportunity/updateOpportunity (which already
+ * read `region` as plain FormData text) need no changes — this only
+ * constrains what the curator can type, it doesn't touch how it's saved.
+ */
+function RegionLockField({ defaultValue }: { defaultValue: string }) {
+  const initial = classifyRegion(defaultValue);
+  const [type, setType] = useState<RegionLockType>(initial.type);
+  const [zone, setZone] = useState(initial.type === "nigeria_zone" ? initial.detail : "");
+  const [country, setCountry] = useState(initial.type === "country" ? initial.detail : "");
+
+  const value =
+    type === "nationwide" ? "Nationwide"
+    : type === "worldwide" ? "Worldwide"
+    : type === "nigeria_zone" ? zone
+    : type === "country" ? country
+    : type === "legacy" ? defaultValue
+    : "";
+
+  return (
+    <div>
+      <label className="text-[13px] font-semibold text-ink/70">Region lock</label>
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value as RegionLockType)}
+        className="mt-1 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+      >
+        <option value="none">No lock — not restricted to a place</option>
+        <option value="nigeria_zone">Specific Nigeria zone</option>
+        <option value="country">Specific country</option>
+        <option value="nationwide">Nationwide (all of Nigeria)</option>
+        <option value="worldwide">Worldwide</option>
+        {initial.type === "legacy" && <option value="legacy">Keep existing value: &quot;{defaultValue}&quot;</option>}
+      </select>
+
+      {type === "nigeria_zone" && (
+        <select
+          value={zone}
+          onChange={(e) => setZone(e.target.value)}
+          className="mt-1.5 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+        >
+          <option value="">Select a zone</option>
+          {GEOPOLITICAL_ZONES.map((z) => (
+            <option key={z} value={z}>{z}</option>
+          ))}
+        </select>
+      )}
+      {type === "country" && (
+        <select
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="mt-1.5 w-full rounded-card border border-line bg-surface px-3.5 py-2.5 text-[14px]"
+        >
+          <option value="">Select a country</option>
+          {COUNTRY_NAMES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      )}
+
+      <p className="mt-1 text-[11px] text-ink/40">
+        Leave &quot;No lock&quot; for opportunities that aren&apos;t tied to one place. Pick a zone or country to
+        restrict who sees this as a Nearby match. Nationwide/Worldwide are broadcast sentinels that reach
+        every Nearby search, regardless of the viewer&apos;s own location.
+      </p>
+
+      <input type="hidden" name="region" value={value} />
     </div>
   );
 }

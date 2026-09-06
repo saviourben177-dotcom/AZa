@@ -31,6 +31,17 @@ export async function askGrowthHub(question: string): Promise<{ answer: string; 
   const supabase = await createClient();
   const terms = extractSearchTerms(trimmed);
 
+  // Best-effort — this function has never required a logged-in user, so an
+  // absent user/profile just means no region grounding, not an error.
+  let profileRegion: string | null = null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase.from("profiles").select("region").eq("id", user.id).single();
+    profileRegion = profile?.region ?? null;
+  }
+
   // Fall back to the full (sanitized) phrase if stopword-stripping left nothing searchable
   // (e.g. the question was just "help me" — unlikely to be useful, but don't crash on it).
   const safeFullQuery = trimmed.replace(/[,.():]/g, " ").trim();
@@ -116,6 +127,7 @@ export async function askGrowthHub(question: string): Promise<{ answer: string; 
       skill: (r.skills as unknown as { name: string } | null)?.name ?? "General",
     })),
     ideas: rankedIdeas.map((i) => ({ id: i.id, title: i.title, description: i.description })),
+    region: profileRegion,
   });
 
   return result;

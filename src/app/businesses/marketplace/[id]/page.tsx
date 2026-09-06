@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { koboToNaira } from "@/lib/types";
+import { minorToDisplay } from "@/lib/types";
 import ListingOwnerControls from "@/components/business/listing-owner-controls";
 
 export const dynamic = "force-dynamic";
@@ -48,7 +48,7 @@ export default async function ListingDetailPage({
       </div>
 
       <h1 className="mt-3 font-display text-[21px] font-bold leading-tight text-ink">{listing.title}</h1>
-      {listing.price_kobo != null && <p className="mt-1.5 text-[19px] font-bold text-aza tabular">{koboToNaira(listing.price_kobo)}</p>}
+      {listing.price_kobo != null && <p className="mt-1.5 text-[19px] font-bold text-aza tabular">{minorToDisplay(listing.price_kobo, listing.currency)}</p>}
 
       <section className="mt-4 rounded-card border border-line-strong bg-surface p-5 shadow-card">
         <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{listing.description}</p>

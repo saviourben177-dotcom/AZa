@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { MarketplaceListingType } from "@/lib/types";
+import { COMMON_CODES } from "@/lib/currencies";
 
 export async function createListing(formData: FormData) {
   const supabase = await createClient();
@@ -12,8 +13,10 @@ export async function createListing(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/businesses/marketplace");
 
-  const priceNaira = formData.get("price_naira") as string;
-  const priceKobo = priceNaira ? Math.round(parseFloat(priceNaira) * 100) : null;
+  const priceAmount = formData.get("price_amount") as string;
+  const priceKobo = priceAmount ? Math.round(parseFloat(priceAmount) * 100) : null;
+  const rawCurrency = (formData.get("currency") as string)?.toLowerCase();
+  const currency = COMMON_CODES.includes(rawCurrency) ? rawCurrency : "ngn";
 
   const imageFile = formData.get("image") as File | null;
   let imageUrl: string | null = null;
@@ -34,6 +37,7 @@ export async function createListing(formData: FormData) {
     listing_type: formData.get("listing_type") as MarketplaceListingType,
     category: (formData.get("category") as string) || null,
     price_kobo: priceKobo,
+    currency,
     image_url: imageUrl,
     location: (formData.get("location") as string) || null,
     contact_phone: (formData.get("contact_phone") as string) || null,

@@ -38,7 +38,7 @@ export default async function IncubatorsPage() {
             {inc.focus_area && <p className="mt-1 text-[11.5px] font-medium text-ink/50">{inc.focus_area}</p>}
             {inc.description && <p className="mt-2 text-[12.5px] leading-relaxed text-ink/65">{inc.description}</p>}
             <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-              <span className="text-[11.5px] font-medium text-ink/45">{inc.remote ? "Remote" : inc.location ?? "Nigeria"}</span>
+              <span className="text-[11.5px] font-medium text-ink/45">{inc.remote ? "Remote" : inc.location ?? "Location not specified"}</span>
               {inc.application_url && (
                 <a href={inc.application_url} target="_blank" rel="noopener noreferrer" className="rounded-pill bg-aza-light px-3 py-1.5 text-[12px] font-bold text-aza">
                   Apply →

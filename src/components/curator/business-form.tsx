@@ -1,17 +1,20 @@
 "use client";
 
-import { useTransition, useRef } from "react";
+import { useState, useTransition, useRef } from "react";
 import { createBusiness } from "@/lib/actions/businesses";
 import { NIGERIA_STATES } from "@/lib/nigeria-locations";
+import { COUNTRY_NAMES, type UserScope } from "@/lib/countries";
 
 export default function BusinessForm() {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const [scope, setScope] = useState<UserScope>("nigeria");
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       await createBusiness(formData);
       formRef.current?.reset();
+      setScope("nigeria");
     });
   }
 
@@ -44,16 +47,46 @@ export default function BusinessForm() {
         placeholder="Location (optional)"
         className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
       />
-      <select
-        name="state"
-        defaultValue=""
-        className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
-      >
-        <option value="">State (optional, for Near me search)</option>
-        {NIGERIA_STATES.map((s) => (
-          <option key={s.name} value={s.name}>{s.name}</option>
-        ))}
-      </select>
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => setScope("nigeria")}
+          className={`flex-1 rounded-card border py-2 text-[12.5px] font-semibold ${scope === "nigeria" ? "border-aza bg-aza-light text-aza" : "border-line text-ink/55"}`}
+        >
+          Nigeria
+        </button>
+        <button
+          type="button"
+          onClick={() => setScope("global")}
+          className={`flex-1 rounded-card border py-2 text-[12.5px] font-semibold ${scope === "global" ? "border-aza bg-aza-light text-aza" : "border-line text-ink/55"}`}
+        >
+          Outside Nigeria
+        </button>
+      </div>
+      <input type="hidden" name="scope" value={scope} />
+      {scope === "nigeria" ? (
+        <select
+          name="state"
+          defaultValue=""
+          className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
+        >
+          <option value="">State (optional, for Near me search)</option>
+          {NIGERIA_STATES.map((s) => (
+            <option key={s.name} value={s.name}>{s.name}</option>
+          ))}
+        </select>
+      ) : (
+        <select
+          name="country"
+          defaultValue=""
+          className="w-full rounded-card border border-line px-3 py-2 text-[13.5px]"
+        >
+          <option value="">Country (optional, for Near me search)</option>
+          {COUNTRY_NAMES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      )}
       <div className="flex gap-2">
         <input
           name="phone"

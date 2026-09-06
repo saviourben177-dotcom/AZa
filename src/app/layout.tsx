@@ -22,7 +22,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Aza — Opportunities, prices & businesses",
   description:
-    "Find scholarships, grants, hackathons, fellowships, internships, competitions and gigs. Curator-verified prices and businesses, built for Nigeria.",
+    "Find scholarships, grants, hackathons, fellowships, internships, competitions and gigs. Curator-verified prices and businesses, built out of Nigeria for opportunity-seekers everywhere.",
 };
 
 export const viewport: Viewport = {

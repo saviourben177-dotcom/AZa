@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { COMMON_CODES, CODE_LABELS } from "@/lib/currencies";
 
 export default function BreakEvenTool() {
+  const [currency, setCurrency] = useState("ngn");
   const [monthlyCosts, setMonthlyCosts] = useState("50000");
   const [pricePerUnit, setPricePerUnit] = useState("2000");
   const [costPerUnit, setCostPerUnit] = useState("800");
@@ -24,7 +26,20 @@ export default function BreakEvenTool() {
   return (
     <div className="rounded-card border border-line-strong bg-surface p-4 shadow-card">
       <div>
-        <label className="text-[12.5px] font-semibold text-ink/70">Monthly running costs (₦)</label>
+        <label className="text-[12.5px] font-semibold text-ink/70">Currency</label>
+        <select
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value)}
+          className="mt-1 w-full rounded-card-sm border border-line bg-paper px-3.5 py-2.5 text-[13.5px] font-semibold text-ink"
+        >
+          {COMMON_CODES.map((code) => (
+            <option key={code} value={code}>{code.toUpperCase()} — {CODE_LABELS[code]}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mt-3">
+        <label className="text-[12.5px] font-semibold text-ink/70">Monthly running costs ({currency.toUpperCase()})</label>
         <input
           type="number"
           inputMode="decimal"
@@ -37,7 +52,7 @@ export default function BreakEvenTool() {
 
       <div className="mt-3 flex gap-2">
         <div className="flex-1">
-          <label className="text-[12.5px] font-semibold text-ink/70">Price per sale (₦)</label>
+          <label className="text-[12.5px] font-semibold text-ink/70">Price per sale ({currency.toUpperCase()})</label>
           <input
             type="number"
             inputMode="decimal"
@@ -47,7 +62,7 @@ export default function BreakEvenTool() {
           />
         </div>
         <div className="flex-1">
-          <label className="text-[12.5px] font-semibold text-ink/70">Cost per sale (₦)</label>
+          <label className="text-[12.5px] font-semibold text-ink/70">Cost per sale ({currency.toUpperCase()})</label>
           <input
             type="number"
             inputMode="decimal"
@@ -70,7 +85,7 @@ export default function BreakEvenTool() {
               {result.unitsNeeded.toLocaleString()} sales/month
             </p>
             <p className="mt-1 text-center text-[11.5px] text-ink/55">
-              to break even — that&apos;s ₦{result.revenueNeeded.toLocaleString()} in revenue, at a profit of ₦{result.margin.toLocaleString()} per sale.
+              to break even — that&apos;s {currency.toUpperCase()} {result.revenueNeeded.toLocaleString()} in revenue, at a profit of {currency.toUpperCase()} {result.margin.toLocaleString()} per sale.
             </p>
           </>
         )}
