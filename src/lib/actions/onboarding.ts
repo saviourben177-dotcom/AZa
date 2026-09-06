@@ -42,7 +42,10 @@ export async function saveOnboarding(data: OnboardingData) {
   // Never spread scope/state/country straight onto the update — same
   // "don't trust arbitrary client text in a column other features rely
   // on" principle already applied to state below, now extended to the
-  // two new location fields.
+  // two new location fields. (Destructuring-to-discard is the correct
+  // way to get `rest`'s type properly narrowed — the lint rule below
+  // doesn't recognize the underscore-prefix convention for that.)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { scope: _rawScope, state: _rawState, country: _rawCountry, ...rest } = data;
 
   const scope: UserScope | undefined = data.scope === "nigeria" || data.scope === "global" ? data.scope : undefined;

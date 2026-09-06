@@ -42,7 +42,7 @@ export interface Profile {
   highest_qualification: string | null;
   skilled_or_unskilled: string | null;
   /** "nigeria" (default) or "global" — which onboarding location path was taken. See src/lib/actions/onboarding.ts. */
-  scope: "nigeria" | "global";
+  scope: string;
   /** Nigerian state (or "FCT"), from src/lib/nigeria-locations.ts NIGERIA_STATE_NAMES. Null for scope "global". */
   state: string | null;
   /** Geopolitical zone (scope "nigeria") or country name (scope "global") — same free-text column, broader value for Global. */
