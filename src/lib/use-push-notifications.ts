@@ -34,7 +34,7 @@ export function usePushNotifications() {
       await PushNotifications.register();
     }
 
-    const registrationListener = PushNotifications.addListener(
+    const registrationListenerPromise = PushNotifications.addListener(
       "registration",
       async (token) => {
         const supabase = createClient();
@@ -55,7 +55,7 @@ export function usePushNotifications() {
       }
     );
 
-    const errorListener = PushNotifications.addListener("registrationError", (err) => {
+    const errorListenerPromise = PushNotifications.addListener("registrationError", (err) => {
       console.error("Push registration error:", err);
     });
 
@@ -63,8 +63,8 @@ export function usePushNotifications() {
 
     return () => {
       cancelled = true;
-      registrationListener.remove();
-      errorListener.remove();
+      registrationListenerPromise.then((handle) => handle.remove());
+      errorListenerPromise.then((handle) => handle.remove());
     };
   }, []);
 }
