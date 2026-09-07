@@ -10,7 +10,7 @@
 // dropped via the removal procedure documented at the bottom of the
 // migration file.
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export type AdminAction = "create" | "update" | "delete" | "bulk_import";
 
@@ -20,7 +20,7 @@ export async function logAdminAction(params: {
   recordId?: string | null;
   summary: string;
 }): Promise<void> {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.rpc("log_admin_action", {
     p_action: params.action,

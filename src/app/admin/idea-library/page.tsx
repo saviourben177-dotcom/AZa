@@ -1,12 +1,12 @@
 // src/app/admin/idea-library/page.tsx
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getEditorialProfileId } from "@/lib/actions/admin/require-admin";
 import { IdeaLibraryForm } from "./idea-library-form";
 import { IdeaLibraryImportForm } from "./idea-library-import-form";
 
 export default async function AdminIdeaLibraryPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const editorialId = await getEditorialProfileId();
 
   const { data: entries } = await supabase

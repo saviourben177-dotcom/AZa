@@ -15,29 +15,21 @@
 // membership — an idea with a strong pitch and real open roles is enough
 // to make Team Finder feel populated at launch.
 //
-// Ownership: the idea's user_id is set to whichever profile the admin
-// selects — normally the @Aza editorial identity, but any existing real
-// profile can be chosen (e.g. if a real user should appear as the team's
-// point of contact). ideas.user_id has no RLS carve-out for curator/editorial
-// insert today (by design — see the original architecture review), so this
-// action writes as the ADMIN'S OWN authenticated session and explicitly sets
-// user_id to the target profile via a service-independent path: the insert
-// itself, subject to normal ideas RLS.
-//
-// NOTE: public.ideas' existing INSERT policy is owner-only
-// (`user_id = auth.uid()`). This tool does not add a curator/editorial
-// bypass for that (per the "avoid changing existing architecture
-// unnecessarily" instruction), so in practice the admin should create
-// seeded teams under their OWN account (if it holds role='admin') or under
-// an account they are legitimately acting for. If you want @Aza to be able
-// to own seeded ideas directly, that requires one additional narrow INSERT
-// policy on public.ideas — deliberately NOT added here; flag it if you hit
-// this limitation in practice and we'll add the smallest possible policy.
+// Ownership: the idea's user_id can be set to EITHER the admin's own
+// account, OR the @Aza editorial identity specifically — nothing else.
+// This is enforced by two RLS policies on public.ideas:
+//   - "ideas_owner_insert" (pre-existing, unmodified): user_id = auth.uid()
+//   - "ideas_editorial_seed_insert" (added in
+//     supabase/migrations/<timestamp>_allow_editorial_seeded_ideas.sql):
+//     lets an admin/editorial caller insert an idea owned by a profile
+//     with role='editorial' specifically — i.e. @Aza, not an arbitrary user.
+// There is deliberately no way to seed an idea owned by any other real
+// user's account through this tool.
 
 "use server";
 
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "./require-admin";
 import { logAdminAction } from "./audit";
 
@@ -59,24 +51,17 @@ export const createTeamSchema = z.object({
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;
 
 export async function createTeam(input: CreateTeamInput) {
-  const admin = await requireAdmin();
-  const supabase = createServerClient();
+  await requireAdmin();
+  const supabase = await createClient();
 
   const parsed = createTeamSchema.parse(input);
 
-  // Safety check with a clear error, since ideas' INSERT policy requires
-  // user_id = auth.uid() — see file header. This surfaces the constraint
-  // as a readable message instead of a raw RLS 42501 error.
-  if (parsed.owner_profile_id !== admin.userId) {
-    throw new Error(
-      "Team ownership is currently limited to the admin's own account " +
-        "(public.ideas only allows self-owned inserts). To let @Aza or " +
-        "another profile own seeded teams directly, a narrow additional " +
-        "INSERT policy on public.ideas is required — this was deliberately " +
-        "not added in v1. Ask for it if you need this."
-    );
-  }
-
+  // No client-side ownership check here beyond schema validation — RLS is
+  // the actual gate. If owner_profile_id is neither the admin's own account
+  // nor the @Aza editorial profile, the insert below is rejected by
+  // Postgres (42501) rather than silently succeeding. That's intentional:
+  // the DB, not this function, is the source of truth for who's allowed to
+  // own a seeded idea.
   const { data: idea, error: ideaError } = await supabase
     .from("ideas")
     .insert({
@@ -119,7 +104,7 @@ export async function createTeam(input: CreateTeamInput) {
 
 export async function deleteTeam(ideaId: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   // idea_roles.idea_id -> ideas.id is ON DELETE CASCADE (confirmed against
   // the live schema), so deleting the idea removes its roles automatically.

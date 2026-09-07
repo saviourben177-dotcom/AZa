@@ -9,7 +9,7 @@
 "use server";
 
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "./require-admin";
 import { logAdminAction } from "./audit";
 import { parseImportFile, validateImportRows } from "./import";
@@ -41,7 +41,7 @@ export type BusinessInput = z.infer<typeof businessSchema>;
 
 export async function createBusiness(input: BusinessInput, createdBy: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const parsed = businessSchema.parse(input);
 
@@ -65,7 +65,7 @@ export async function createBusiness(input: BusinessInput, createdBy: string) {
 
 export async function updateBusiness(id: string, input: Partial<BusinessInput>) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const parsed = businessSchema.partial().parse(input);
 
@@ -82,7 +82,7 @@ export async function updateBusiness(id: string, input: Partial<BusinessInput>) 
 
 export async function deleteBusiness(id: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from("businesses").delete().eq("id", id);
   if (error) throw error;
@@ -107,7 +107,7 @@ export async function previewBusinessImport(fileText: string, format: "csv" | "j
 
 export async function commitBusinessImport(rows: BusinessInput[], createdBy: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const toInsert = rows.map((r) => ({
     ...r,

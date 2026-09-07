@@ -6,7 +6,7 @@
 // of coupling that makes this tool hard to remove later. Add a proper
 // shared auth helper elsewhere instead.
 
-import { createServerClient } from "@/lib/supabase/server"; // adjust to your existing server client factory
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export type AdminSession = {
@@ -22,7 +22,7 @@ export type AdminSession = {
  * grant unauthorized writes.
  */
 export async function requireAdmin(): Promise<AdminSession> {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const {
     data: { user },
@@ -52,7 +52,7 @@ export async function requireAdmin(): Promise<AdminSession> {
  * silently falling back to some other id.
  */
 export async function getEditorialProfileId(): Promise<string> {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("profiles")

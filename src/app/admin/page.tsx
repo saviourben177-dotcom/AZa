@@ -1,10 +1,10 @@
 // src/app/admin/page.tsx
 
 import Link from "next/link";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function AdminDashboard() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }] =
     await Promise.all([

@@ -7,7 +7,7 @@ import { createTeam } from "@/lib/actions/admin/teams";
 
 type RoleRow = { role_name: string; slots_needed: number };
 
-export function TeamForm() {
+export function TeamForm({ defaultOwnerId }: { defaultOwnerId: string }) {
   const [roles, setRoles] = useState<RoleRow[]>([{ role_name: "", slots_needed: 1 }]);
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -26,9 +26,8 @@ export function TeamForm() {
     setStatus("saving");
     setErrorMsg("");
     try {
-      // NOTE: owner_profile_id must currently be the admin's own account —
-      // see teams.ts for why (ideas' RLS is owner-only insert, unchanged
-      // from the original architecture on purpose).
+      // owner_profile_id must be either your own admin account or the
+      // @Aza editorial profile id — see teams.ts for the exact RLS rule.
       await createTeam({
         title: String(formData.get("title")),
         description: String(formData.get("description")),
@@ -58,10 +57,15 @@ export function TeamForm() {
       <input name="category" placeholder="Category (optional)" className="rounded border px-3 py-2" />
       <input
         name="owner_profile_id"
-        placeholder="Owner profile UUID (your own admin account id)"
+        defaultValue={defaultOwnerId}
+        placeholder="Owner profile UUID — your admin account, or @Aza's editorial profile id"
         required
         className="rounded border px-3 py-2 font-mono text-sm"
       />
+      <p className="-mt-2 text-xs text-neutral-400">
+        Defaults to @Aza&apos;s editorial profile. Replace with your own admin
+        account&apos;s UUID if you want a team owned by you instead.
+      </p>
 
       <div>
         <p className="mb-2 text-sm font-medium">Open roles</p>

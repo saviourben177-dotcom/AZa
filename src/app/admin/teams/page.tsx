@@ -4,11 +4,13 @@
 // src/lib/actions/admin/teams.ts for why. Real users join through the
 // existing Team Finder request/accept flow, untouched by this tool.
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
+import { getEditorialProfileId } from "@/lib/actions/admin/require-admin";
 import { TeamForm } from "./team-form";
 
 export default async function AdminTeamsPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
+  const editorialId = await getEditorialProfileId();
 
   const { data: teams } = await supabase
     .from("ideas")
@@ -29,7 +31,7 @@ export default async function AdminTeamsPage() {
 
       <section>
         <h2 className="mb-3 text-lg font-medium">Create a team</h2>
-        <TeamForm />
+        <TeamForm defaultOwnerId={editorialId} />
       </section>
 
       <section>

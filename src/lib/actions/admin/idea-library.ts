@@ -9,7 +9,7 @@
 "use server";
 
 import { z } from "zod";
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "./require-admin";
 import { logAdminAction } from "./audit";
 import { parseImportFile, validateImportRows } from "./import";
@@ -45,7 +45,7 @@ export type IdeaLibraryInput = z.infer<typeof ideaLibrarySchema>;
 
 export async function createIdeaLibraryEntry(input: IdeaLibraryInput, createdBy: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const parsed = ideaLibrarySchema.parse(input);
 
@@ -69,7 +69,7 @@ export async function createIdeaLibraryEntry(input: IdeaLibraryInput, createdBy:
 
 export async function updateIdeaLibraryEntry(id: string, input: Partial<IdeaLibraryInput>) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const parsed = ideaLibrarySchema.partial().parse(input);
 
@@ -86,7 +86,7 @@ export async function updateIdeaLibraryEntry(id: string, input: Partial<IdeaLibr
 
 export async function deleteIdeaLibraryEntry(id: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from("idea_library").delete().eq("id", id);
   if (error) throw error;
@@ -107,7 +107,7 @@ export async function previewIdeaLibraryImport(fileText: string, format: "csv" |
 
 export async function commitIdeaLibraryImport(rows: IdeaLibraryInput[], createdBy: string) {
   await requireAdmin();
-  const supabase = createServerClient();
+  const supabase = await createClient();
 
   const toInsert = rows.map((r) => ({
     ...r,

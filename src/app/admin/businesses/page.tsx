@@ -8,13 +8,13 @@
 // Editor import doesn't give you. Use whichever is faster for the task at
 // hand — both write to the same table under the same RLS.
 
-import { createServerClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { getEditorialProfileId } from "@/lib/actions/admin/require-admin";
 import { BusinessForm } from "./business-form";
 import { BusinessImportForm } from "./business-import-form";
 
 export default async function AdminBusinessesPage() {
-  const supabase = createServerClient();
+  const supabase = await createClient();
   const editorialId = await getEditorialProfileId();
 
   const { data: businesses } = await supabase
