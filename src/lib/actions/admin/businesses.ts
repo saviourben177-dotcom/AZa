@@ -14,7 +14,7 @@ import { requireAdmin } from "./require-admin";
 import { logAdminAction } from "./audit";
 import { parseImportFile, validateImportRows } from "./import";
 
-const NIGERIAN_STATES = [
+export const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
   "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT",
   "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi",

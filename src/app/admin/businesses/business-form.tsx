@@ -3,7 +3,7 @@
 // src/app/admin/businesses/business-form.tsx
 
 import { useState } from "react";
-import { createBusiness } from "@/lib/actions/admin/businesses";
+import { createBusiness, NIGERIAN_STATES, type BusinessInput } from "@/lib/actions/admin/businesses";
 
 export function BusinessForm({ defaultOwnerId }: { defaultOwnerId: string }) {
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
@@ -13,13 +13,20 @@ export function BusinessForm({ defaultOwnerId }: { defaultOwnerId: string }) {
     setStatus("saving");
     setErrorMsg("");
     try {
+      const rawState = formData.get("state") as string;
+      const state = (
+        rawState && (NIGERIAN_STATES as readonly string[]).includes(rawState)
+          ? rawState
+          : null
+      ) as BusinessInput["state"];
+
       await createBusiness(
         {
           name: String(formData.get("name")),
           category: String(formData.get("category")),
           description: (formData.get("description") as string) || null,
           location: (formData.get("location") as string) || null,
-          state: (formData.get("state") as string) || null,
+          state,
           phone: (formData.get("phone") as string) || null,
           email: (formData.get("email") as string) || null,
         },
@@ -38,7 +45,14 @@ export function BusinessForm({ defaultOwnerId }: { defaultOwnerId: string }) {
       <input name="category" placeholder="Category" required className="rounded border px-3 py-2" />
       <textarea name="description" placeholder="Description (max 1000 chars)" className="rounded border px-3 py-2" />
       <input name="location" placeholder="Location (e.g. Ikeja, Lagos)" className="rounded border px-3 py-2" />
-      <input name="state" placeholder="State (must match Nigerian state list)" className="rounded border px-3 py-2" />
+      <select name="state" defaultValue="" className="rounded border px-3 py-2 text-sm">
+        <option value="">No state selected</option>
+        {NIGERIAN_STATES.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
       <input name="phone" placeholder="Phone" className="rounded border px-3 py-2" />
       <input name="email" placeholder="Email" className="rounded border px-3 py-2" />
 
