@@ -37,18 +37,34 @@ notification trigger was modified.
   a preview step (nothing is written until you confirm). For large one-off
   batches, Supabase's own Table Editor CSV import against these tables works
   too, under the same RLS — use whichever is faster for the task.
-- **Teams** (`/admin/teams`): creates an idea with
-  `looking_for_collaborators = true` plus its open `idea_roles`. It does
-  **not** create members or simulate join requests — see the comment block
-  at the top of `src/lib/actions/admin/teams.ts` for why (join_requests has
-  live notification + push-notification triggers; faking membership there
-  would send real notifications for things that didn't happen). Real users
-  fill these roles through the existing Team Finder flow, unmodified.
-- **Team ownership**: a seeded team's `user_id` (owner) can be either your
-  own admin account or the `@Aza` editorial profile — nothing else. This is
-  enforced by RLS (`ideas_editorial_seed_insert`), not just app logic, so
-  attempting to seed an idea owned by some other arbitrary user is rejected
-  by Postgres. The team form defaults the owner field to `@Aza`'s profile id.
+- **Ideas & Teams** (`/admin/teams`): creates a normal Idea post, or — if
+  the "This is a team looking for collaborators" checkbox is ticked — a
+  Team (an idea plus its open `idea_roles`). A normal Idea appears in the
+  same Ideas feed as user-posted content, with the same interactions
+  (upvotes, comments, saves), since nothing about the feed or those tables
+  was touched. Also supports CSV/JSON bulk import with the same
+  preview-before-commit pattern as Businesses/Idea Library — CSV rows are
+  always plain Ideas (no roles, since CSV can't cleanly express a nested
+  array per row); use JSON if any row needs `is_team: true` with `roles`.
+  Either way, this tool does **not** create members or simulate join
+  requests — see the comment block at the top of
+  `src/lib/actions/admin/teams.ts` for why (join_requests has live
+  notification + push-notification triggers; faking membership there would
+  send real notifications for things that didn't happen). Real users fill
+  team roles through the existing Team Finder flow, unmodified.
+- **Post ownership**: a seeded idea or team's `user_id` (owner) can be
+  either your own admin account or the `@Aza` editorial profile — nothing
+  else. This is enforced by RLS (`ideas_editorial_seed_insert`), not just
+  app logic, so attempting to seed a post owned by some other arbitrary
+  user is rejected by Postgres. The form defaults the owner field to
+  `@Aza`'s profile id.
+- **Official attribution without a schema change**: to make an
+  `@Aza`-authored post visibly read as official in the feed, set `@Aza`'s
+  `profiles.full_name` to something like "Aza Editorial Board" — the feed
+  already renders the post author's `full_name`, so this alone is enough.
+  Not done automatically by this tool since it affects how `@Aza` appears
+  everywhere else too (opportunities, incubators, etc.), not just new
+  Ideas — your call to make.
 
 ## Audit trail
 
