@@ -25,7 +25,16 @@ export async function logAdminAction(params: {
   const { error } = await supabase.rpc("log_admin_action", {
     p_action: params.action,
     p_table_name: params.tableName,
-    p_record_id: params.recordId ?? null,
+    // The Postgres function's actual signature is
+    // (p_action text, p_table_name text, p_record_id uuid, p_summary text)
+    // — p_record_id is a nullable uuid, and null is what the function
+    // expects for bulk_import calls (no single row to point at). The
+    // Supabase-generated RPC arg type narrows this to `string` (no `| null`)
+    // even though the underlying column and function param both accept
+    // null — a known gap in how the type generator handles nullable RPC
+    // arguments. The cast below reflects the real DB signature, not a way
+    // around it.
+    p_record_id: (params.recordId ?? null) as unknown as string,
     p_summary: params.summary,
   });
 
