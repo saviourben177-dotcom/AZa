@@ -64,7 +64,7 @@ export function IdeaImportForm({ defaultOwnerId }: { defaultOwnerId: string }) {
         CSV will fail validation with a clear message telling you to use
         JSON instead. For teams with roles, upload a JSON array where each
         object may include <code>&quot;is_team&quot;: true</code> and{" "}
-        <code>&quot;roles&quot;: [{"{"}"role_name": "...", "slots_needed": 1{"}"}]</code>.
+        <code>{'"roles": [{"role_name": "...", "slots_needed": 1}]'}</code>.
       </p>
 
       <input type="file" accept=".csv,.json" onChange={handleFile} className="mb-4" />
