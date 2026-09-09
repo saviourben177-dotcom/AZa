@@ -4,11 +4,8 @@
 // Same pattern as business-import-form.tsx — parse+validate first, commit only on confirm.
 
 import { useState } from "react";
-import {
-  previewIdeaLibraryImport,
-  commitIdeaLibraryImport,
-  type IdeaLibraryInput,
-} from "@/lib/actions/admin/idea-library";
+import { previewIdeaLibraryImport, commitIdeaLibraryImport } from "@/lib/actions/admin/idea-library";
+import type { IdeaLibraryInput } from "@/lib/actions/admin/idea-library-schema";
 import type { ImportPreview } from "@/lib/actions/admin/import";
 
 export function IdeaLibraryImportForm({ defaultOwnerId }: { defaultOwnerId: string }) {

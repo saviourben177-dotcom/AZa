@@ -8,11 +8,8 @@
 // with roles. See teams.ts for the exact schema and this constraint.
 
 import { useState } from "react";
-import {
-  previewIdeaImport,
-  commitIdeaImport,
-  type BulkIdeaRow,
-} from "@/lib/actions/admin/teams";
+import { previewIdeaImport, commitIdeaImport } from "@/lib/actions/admin/teams";
+import type { BulkIdeaRow } from "@/lib/actions/admin/team-schema";
 import type { ImportPreview } from "@/lib/actions/admin/import";
 
 export function IdeaImportForm({ defaultOwnerId }: { defaultOwnerId: string }) {

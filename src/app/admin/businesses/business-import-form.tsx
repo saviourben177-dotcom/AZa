@@ -7,11 +7,8 @@
 // they never block the valid rows in the same file.
 
 import { useState } from "react";
-import {
-  previewBusinessImport,
-  commitBusinessImport,
-  type BusinessInput,
-} from "@/lib/actions/admin/businesses";
+import { previewBusinessImport, commitBusinessImport } from "@/lib/actions/admin/businesses";
+import type { BusinessInput } from "@/lib/actions/admin/business-schema";
 import type { ImportPreview } from "@/lib/actions/admin/import";
 
 export function BusinessImportForm({ defaultOwnerId }: { defaultOwnerId: string }) {

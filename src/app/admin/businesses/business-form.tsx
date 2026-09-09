@@ -3,7 +3,8 @@
 // src/app/admin/businesses/business-form.tsx
 
 import { useState } from "react";
-import { createBusiness, NIGERIAN_STATES, type BusinessInput } from "@/lib/actions/admin/businesses";
+import { createBusiness } from "@/lib/actions/admin/businesses";
+import { NIGERIAN_STATES, type BusinessInput } from "@/lib/actions/admin/business-schema";
 
 export function BusinessForm({ defaultOwnerId }: { defaultOwnerId: string }) {
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");

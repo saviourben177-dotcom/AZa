@@ -43,34 +43,11 @@
 
 "use server";
 
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "./require-admin";
 import { logAdminAction } from "./audit";
 import { parseImportFile, validateImportRows } from "./import";
-
-export const teamRoleSchema = z.object({
-  role_name: z.string().min(1).max(80),
-  slots_needed: z.number().int().min(1).max(20).default(1),
-});
-
-export const createIdeaSchema = z.object({
-  title: z.string().min(1).max(150),
-  description: z.string().min(1).max(3000),
-  category: z.string().optional().nullable(),
-  tags: z.array(z.string()).optional(),
-  stage: z.enum(["idea", "validation", "building", "launched"]).default("idea"),
-  owner_profile_id: z.string().uuid(),
-  is_team: z.boolean().default(false),
-  // Required only when is_team is true — enforced below with a refine,
-  // since Zod's per-field "required if" needs a cross-field check.
-  roles: z.array(teamRoleSchema).optional(),
-}).refine(
-  (data) => !data.is_team || (data.roles && data.roles.length > 0),
-  { message: "A team needs at least one open role", path: ["roles"] }
-);
-
-export type CreateIdeaInput = z.infer<typeof createIdeaSchema>;
+import { createIdeaSchema, bulkIdeaRowSchema, type CreateIdeaInput, type BulkIdeaRow } from "./team-schema";
 
 export async function createIdea(input: CreateIdeaInput) {
   await requireAdmin();
@@ -159,21 +136,6 @@ export async function deleteIdea(ideaId: string) {
 // stage) — no roles, since CSV has no clean way to express a nested array
 // per row. Use JSON if any row needs is_team + roles. This constraint is
 // surfaced in the import form, not just this comment.
-
-export const bulkIdeaRowSchema = z.object({
-  title: z.string().min(1).max(150),
-  description: z.string().min(1).max(3000),
-  category: z.string().optional().nullable(),
-  tags: z.array(z.string()).optional(),
-  stage: z.enum(["idea", "validation", "building", "launched"]).optional(),
-  is_team: z.boolean().optional(),
-  roles: z.array(teamRoleSchema).optional(),
-}).refine(
-  (data) => !data.is_team || (data.roles && data.roles.length > 0),
-  { message: "A team row needs at least one open role", path: ["roles"] }
-);
-
-export type BulkIdeaRow = z.infer<typeof bulkIdeaRowSchema>;
 
 /**
  * Preview step only — parses and validates, does not write to the DB.
