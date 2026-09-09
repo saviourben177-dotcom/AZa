@@ -6,8 +6,12 @@
 // Both are called via Groq's OpenAI-compatible chat completions endpoint.
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
-const TEXT_MODEL = "llama-3.3-70b-versatile";
+// meta-llama/llama-4-scout-17b-16e-instruct was decommissioned 2026-07-17.
+// llama-3.3-70b-versatile was decommissioned 2026-08-16.
+// Both replaced with Groq's recommended production model per
+// https://console.groq.com/docs/deprecations
+const VISION_MODEL = "openai/gpt-oss-120b";
+const TEXT_MODEL = "openai/gpt-oss-120b";
 
 function requireApiKey(): string {
   const key = process.env.GROQ_API_KEY;
