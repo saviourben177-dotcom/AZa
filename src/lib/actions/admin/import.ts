@@ -42,7 +42,20 @@ export function parseImportFile(fileText: string, format: "csv" | "json"): unkno
     );
   }
 
-  return result.data;
+  // Papa Parse gives "" for a blank cell, but z.string().optional() /
+  // z.enum(...).optional() / z.string().email().optional() all reject ""
+  // (it's a valid non-empty-typed value, just not a valid enum member or
+  // email address) — only `undefined` satisfies .optional(). Without this,
+  // any row with a blank optional column (state, email, phone, etc.) is
+  // rejected as "invalid" even though leaving that field blank is exactly
+  // what optional is supposed to allow.
+  return (result.data as Record<string, unknown>[]).map((row) => {
+    const cleaned: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row)) {
+      cleaned[key] = value === "" ? undefined : value;
+    }
+    return cleaned;
+  });
 }
 
 /**
