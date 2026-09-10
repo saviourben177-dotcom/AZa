@@ -19,9 +19,9 @@ export default function OpportunityCard({
   applicationStatus?: ApplicationStatus;
 }) {
   return (
-    <div className="overflow-hidden rounded-card border border-line-strong bg-surface shadow-card">
+    <div className="relative overflow-visible rounded-card border border-line-strong bg-surface shadow-card">
       <Link href={`/opportunities/${opportunity.id}`} className="block">
-        <div className="relative h-36 w-full overflow-hidden">
+        <div className="relative h-36 w-full overflow-hidden rounded-t-card">
           <Image
             src={CATEGORY_IMAGE[opportunity.category]}
             alt=""
@@ -36,11 +36,11 @@ export default function OpportunityCard({
             </span>
             {opportunity.curator_verified && <VerifiedBadge />}
           </div>
-          <div className="absolute -bottom-3 left-3">
-            <DeadlinePill deadline={opportunity.deadline} />
-          </div>
         </div>
       </Link>
+      <div className="absolute -bottom-3 left-3 z-10">
+        <DeadlinePill deadline={opportunity.deadline} />
+      </div>
 
       <div className="px-4 pb-4 pt-6">
         <Link href={`/opportunities/${opportunity.id}`} className="block">
