@@ -3,6 +3,8 @@ import { Lightbulb } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import UpvoteButton from "@/components/growth/upvote-button";
 import SaveIdeaButton from "@/components/save-idea-button";
+import ShareIdeaButton from "@/components/growth/share-idea-button";
+import IdeaAuthorRow from "@/components/growth/idea-author-row";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function IdeasPage({
   if (filter === "trending") query = query.order("upvotes_count", { ascending: false });
 
   const { data: ideas } = await query.limit(50);
+  const ideaList = ideas ?? [];
 
   let upvotedIds = new Set<string>();
   let savedIds = new Set<string>();
@@ -32,6 +35,21 @@ export default async function IdeasPage({
     ]);
     upvotedIds = new Set((upvotes ?? []).map((u) => u.idea_id));
     savedIds = new Set((savedIdeas ?? []).map((s) => s.idea_id));
+  }
+
+  // Author identity — this is the piece that turns the list into a feed.
+  const authorIds = Array.from(new Set(ideaList.map((idea) => idea.user_id)));
+  let authors = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  if (authorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", authorIds);
+    authors = new Map(
+      (profiles ?? [])
+        .filter((p): p is { id: string; full_name: string | null; avatar_url: string | null } => p.id !== null)
+        .map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+    );
   }
 
   return (
@@ -55,7 +73,7 @@ export default async function IdeasPage({
       </div>
 
       <div className="mt-4 space-y-3">
-        {(ideas ?? []).length === 0 && (
+        {ideaList.length === 0 && (
           <div className="rounded-card border border-line-strong bg-surface px-8 py-10 text-center shadow-card">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
               <Lightbulb size={22} strokeWidth={1.8} className="text-aza" />
@@ -72,29 +90,59 @@ export default async function IdeasPage({
             </Link>
           </div>
         )}
-        {ideas?.map((idea) => (
-          <Link key={idea.id} href={`/growth/ideas/${idea.id}`} className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-[14px] font-bold text-ink">{idea.title}</p>
-                {idea.category && <p className="mt-1 text-[11px] font-semibold text-ink/45">{idea.category}</p>}
+
+        {ideaList.map((idea) => {
+          const author = authors.get(idea.user_id);
+          const authorName = author?.full_name ?? "Aza user";
+          const visibleTags = (idea.tags ?? []).slice(0, 3);
+
+          return (
+            <Link
+              key={idea.id}
+              href={`/growth/ideas/${idea.id}`}
+              className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card"
+            >
+              {/* 1. Person — identity first, this is what makes it a feed not a listing */}
+              <IdeaAuthorRow name={authorName} avatarUrl={author?.avatar_url} createdAt={idea.created_at} />
+
+              {/* 2. Post — title leads, category/tags are quiet secondary context */}
+              <div className="mt-3">
+                <p className="text-[14.5px] font-bold leading-snug text-ink">{idea.title}</p>
+                <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-ink/65">{idea.description}</p>
+
+                {(idea.category || visibleTags.length > 0) && (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    {idea.category && (
+                      <span className="rounded-full bg-aza-light px-2.5 py-1 text-[10.5px] font-bold text-aza">
+                        {idea.category}
+                      </span>
+                    )}
+                    {visibleTags.map((tag: string) => (
+                      <span key={tag} className="rounded-full bg-paper-dim px-2.5 py-1 text-[10.5px] font-semibold text-ink/50">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
+
+              {/* 3. Engagement — comment / like / save / share, one row, equal weight */}
+              <div className="mt-3.5 flex items-center gap-1 border-t border-line-strong pt-3">
+                <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold text-ink/50">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path d="M4 4h16v12H8l-4 4V4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                  </svg>
+                  {idea.comments_count}
+                </span>
                 <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvotedIds.has(idea.id)} isAuthed={!!user} />
-                <SaveIdeaButton ideaId={idea.id} initialSaved={savedIds.has(idea.id)} isAuthed={!!user} />
+                <div className="ml-auto flex items-center gap-1">
+                  <SaveIdeaButton ideaId={idea.id} initialSaved={savedIds.has(idea.id)} isAuthed={!!user} />
+                  <ShareIdeaButton ideaId={idea.id} title={idea.title} />
+                </div>
               </div>
-            </div>
-            <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-ink/65">{idea.description}</p>
-            {idea.comments_count > 0 && (
-              <p className="mt-2 flex items-center gap-1 text-[11.5px] font-semibold text-ink/45">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <path d="M4 4h16v12H8l-4 4V4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                </svg>
-                {idea.comments_count} comment{idea.comments_count === 1 ? "" : "s"}
-              </p>
-            )}
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
