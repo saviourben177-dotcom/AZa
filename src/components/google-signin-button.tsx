@@ -5,14 +5,30 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
 import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 
-// Google One Tap: tap once, get signed in immediately — no email typing,
-// no separate consent page. Falls back to a custom-styled "Continue
-// with Google" button whenever One Tap can't show (blocked by the
-// browser, dismissed recently, no FedCM support in an embedded
-// WebView, slow network, misconfigured origin, etc.) so sign-in is
-// never a dead end.
+// Google Identity Services (GIS) only — no signInWithOAuth/PKCE redirect
+// path. That path required a code_verifier generated in one browser
+// context to survive a hop through the system browser and back into
+// this app's WebView, which does not reliably work: the verifier lives
+// in whatever storage the WebView had at the moment of the outbound
+// request, and the round trip through the system browser and back
+// breaks that chain (confirmed against Supabase's own PKCE/deep-link
+// troubleshooting docs). GIS avoids the problem entirely because the
+// credential comes back via a JS callback in the same page — no code
+// exchange, no verifier, no state to lose.
+//
+// Google blocks GIS itself from running inside embedded WebViews
+// (disallowed_useragent policy), so this app's WebView never loads the
+// GIS script. Instead, on native, tapping the button opens the full
+// login page in the SYSTEM browser (Chrome Custom Tabs / SFSafariView),
+// where GIS runs normally. Once signed in there, that page hands the
+// finished session back to the app via a custom-scheme deep link —
+// tokens, not a code — so the app just calls setSession() with them.
+// See /auth/native-handoff and MainActivity.java's onNewIntent/onCreate.
+//
+// On web, this renders One Tap + the classic rendered button as before.
 //
 // IMPORTANT: the button only ever hides itself if there is truly no
 // client ID configured (nothing it could possibly do in that case).
@@ -82,30 +98,25 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const isNative = Capacitor.isNativePlatform();
 
-  // Google blocks its sign-in flow (One Tap + GIS script) from working
-  // inside any embedded WebView (disallowed_useragent policy) — this is
-  // enforced on Google's side and no client-side fix here can work around
-  // it. Inside the native app, skip Google Identity Services entirely and
-  // do a full-page OAuth redirect instead; native code (MainActivity)
-  // intercepts that redirect and routes it to the system browser, then
-  // hands the signed-in session back via a custom-scheme deep link.
+  // Native: open the real login page in the system browser instead of
+  // trying to run any Google flow inside this WebView. GIS will run
+  // fine there since it's a real browser, not an embedded WebView.
   const handleNativeSignIn = useCallback(async () => {
     setLoading(true);
     setTapError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: "com.azatechnologies.aza://auth-callback" },
-    });
-    if (error) {
+    try {
+      const url = `${window.location.origin}/login?native=1&next=${encodeURIComponent(next)}`;
+      await Browser.open({ url });
+    } catch (err) {
+      console.error("Failed to open system browser for sign-in:", err);
+      setTapError("Couldn't open the sign-in page. Please try again.");
+      setDebugDetail(`browser.open: ${describeError(err)}`);
+    } finally {
       setLoading(false);
-      console.error("Google sign-in (native) failed:", error);
-      setTapError("Couldn't sign you in. Please try again.");
-      setDebugDetail(`supabase: ${error.message}`);
     }
-    // On success, signInWithOAuth performs a full-page redirect itself —
-    // nothing further to do here.
-  }, []);
+    // The browser tab handles the rest and hands control back to the
+    // app via a deep link once signed in (see MainActivity.java).
+  }, [next]);
 
   const handleCredential = useCallback(
     async (nonce: string, response: CredentialResponse) => {
@@ -124,6 +135,16 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         setDebugDetail(`supabase: ${error.message}`);
         return;
       }
+
+      // Opened from the native app's system-browser handoff: package the
+      // session into the deep link instead of navigating this browser tab
+      // onward, so the native app can pick it up.
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("native") === "1") {
+        router.push(`/auth/native-handoff?next=${encodeURIComponent(next)}`);
+        return;
+      }
+
       router.push(next);
       router.refresh();
     },

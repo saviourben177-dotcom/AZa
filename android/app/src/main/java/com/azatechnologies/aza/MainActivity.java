@@ -161,14 +161,26 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
-        String code = uri.getQueryParameter("code");
-        if (code == null) return;
+        // Google sign-in now completes entirely via Google Identity
+        // Services in the system browser (see native-handoff/page.tsx),
+        // which hands back a finished access/refresh token pair here —
+        // not an authorization code. There is no PKCE code_verifier
+        // involved and nothing left to exchange: load /auth/set-session
+        // in the app's own WebView and let it call setSession() with
+        // these tokens directly.
+        String accessToken = uri.getQueryParameter("access_token");
+        String refreshToken = uri.getQueryParameter("refresh_token");
+        if (accessToken == null || refreshToken == null) return;
 
-        // Reuses the existing /auth/callback route as-is — it already
-        // exchanges `code` for a session via exchangeCodeForSession and
-        // redirects to `/`. Loading it in the app's own WebView is enough;
-        // no new backend logic needed.
-        bridge.getWebView().loadUrl(APP_URL + "/auth/callback?code=" + code);
+        String next = uri.getQueryParameter("next");
+        if (next == null) next = "/";
+
+        Uri.Builder builder = Uri.parse(APP_URL + "/auth/set-session").buildUpon()
+                .appendQueryParameter("access_token", accessToken)
+                .appendQueryParameter("refresh_token", refreshToken)
+                .appendQueryParameter("next", next);
+
+        bridge.getWebView().loadUrl(builder.build().toString());
     }
 
     private void loadAppUrl() {
