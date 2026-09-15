@@ -30,6 +30,7 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
+    private static final String APP_HOST = "a-za.vercel.app";
     private static final long EXIT_CONFIRM_WINDOW_MS = 2000;
     private static final String AUTH_CALLBACK_SCHEME = "com.azatechnologies.aza";
     private static final String AUTH_CALLBACK_HOST = "auth-callback";
@@ -89,13 +90,25 @@ public class MainActivity extends BridgeActivity {
                 boolean isWebScheme = scheme.equals("http") || scheme.equals("https");
                 if (isWebScheme) {
                     String host = request.getUrl().getHost();
-                    if ("accounts.google.com".equals(host)) {
-                        // Google blocks its sign-in flow inside embedded WebViews
-                        // (disallowed_useragent policy). Hand this off to the
-                        // system browser instead of letting the WebView load it;
-                        // the browser completes the OAuth flow and redirects back
-                        // via the custom-scheme deep link handled in
-                        // onNewIntent()/onCreate() below.
+                    String path = request.getUrl().getPath();
+                    boolean isGoogleAuth = "accounts.google.com".equals(host);
+                    // /auth/native-start must ALSO be intercepted, not just
+                    // accounts.google.com: the whole point of this page is to
+                    // run signInWithOAuth() and exchangeCodeForSession() in the
+                    // SAME browser context throughout, so the code_verifier
+                    // PKCE writes to storage is readable when the exchange
+                    // happens later in that same flow. If this first navigation
+                    // were left to load inside the WebView, the verifier would
+                    // end up in the WebView's storage instead, and the same
+                    // storage-boundary bug this exists to fix would reappear —
+                    // just moved one step earlier.
+                    boolean isNativeAuthStart = APP_HOST.equals(host) && path != null
+                            && path.equals("/auth/native-start");
+                    if (isGoogleAuth || isNativeAuthStart) {
+                        // Hand this off to the system browser instead of letting
+                        // the WebView load it; the browser completes the OAuth
+                        // flow and redirects back via the custom-scheme deep
+                        // link handled in onNewIntent()/onCreate() below.
                         try {
                             Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
                             startActivity(intent);
@@ -161,28 +174,29 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
-        // Google sign-in now completes via Google's own OAuth endpoint
-        // (implicit flow, response_type=id_token) opened in the system
-        // browser — the WebView itself just navigates there and Android's
-        // shouldOverrideUrlLoading hands it off, no Capacitor plugin
-        // involved. Google's redirect lands on /auth/native-google-return
-        // in that same system browser, which reads the id_token out of
-        // the URL fragment (fragments never reach this native code) and
-        // forwards it here as a plain query param instead. Load
-        // /auth/set-session in the app's own WebView with that id_token
-        // and nonce so it can call signInWithIdToken() directly — no
-        // code exchange, no PKCE verifier, nothing crossing storage
-        // contexts.
-        String idToken = uri.getQueryParameter("id_token");
-        String nonce = uri.getQueryParameter("nonce");
-        if (idToken == null || nonce == null) return;
+        // Google sign-in completes via Supabase's PKCE authorization-code
+        // flow, run ENTIRELY inside the system browser: /auth/native-start
+        // (opened by shouldOverrideUrlLoading above, same as
+        // accounts.google.com) calls signInWithOAuth(), the resulting
+        // Google consent hop is also intercepted the same way, and
+        // Google's redirect lands on /auth/native-google-return — still
+        // in that same browser tab/context — which calls
+        // exchangeCodeForSession() using a client that can actually see
+        // the verifier, because nothing crossed a storage boundary at any
+        // point in that chain. That page then hands the FINISHED session
+        // (access_token + refresh_token, not a code, not an id_token) here
+        // via this deep link, so the WebView's own Supabase client can
+        // just call setSession() with them directly.
+        String accessToken = uri.getQueryParameter("access_token");
+        String refreshToken = uri.getQueryParameter("refresh_token");
+        if (accessToken == null || refreshToken == null) return;
 
         String next = uri.getQueryParameter("next");
         if (next == null) next = "/";
 
         Uri.Builder builder = Uri.parse(APP_URL + "/auth/set-session").buildUpon()
-                .appendQueryParameter("id_token", idToken)
-                .appendQueryParameter("nonce", nonce)
+                .appendQueryParameter("access_token", accessToken)
+                .appendQueryParameter("refresh_token", refreshToken)
                 .appendQueryParameter("next", next);
 
         bridge.getWebView().loadUrl(builder.build().toString());

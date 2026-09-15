@@ -97,51 +97,45 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const isNative = Capacitor.isNativePlatform();
 
-  // Native: navigate the WebView itself straight to Google's own OAuth
-  // endpoint. This does NOT open in the WebView — MainActivity.java's
-  // shouldOverrideUrlLoading already intercepts any navigation to
-  // accounts.google.com and hands it to the system browser via
-  // Intent.ACTION_VIEW (no Capacitor plugin involved, so it can't hit
-  // the "plugin not implemented" wall the Browser-plugin approach did).
-  // Uses response_type=id_token so Google returns a signed ID token
-  // directly in the redirect fragment — exactly what
-  // signInWithIdToken() needs, no code exchange, no PKCE verifier,
-  // nothing that can get lost crossing the WebView/browser boundary.
-  const handleNativeSignIn = useCallback(async () => {
+  // Native: the WebView does NOT call signInWithOAuth itself. Verified
+  // directly against @supabase/auth-js's GoTrueClient source:
+  // exchangeCodeForSession() reads the PKCE code_verifier from
+  // `this.storage` — the storage backend belonging to whichever client
+  // instance originally called signInWithOAuth(). There is no way to
+  // pass a verifier in manually; it must be read back from that same
+  // storage. The WebView and the system browser are separate storage
+  // contexts on Android, so a client created in one can never read a
+  // verifier written by a client in the other — this was the actual
+  // bug in the original approach, confirmed in source rather than
+  // assumed.
+  //
+  // The fix: run BOTH signInWithOAuth() and exchangeCodeForSession()
+  // in the same context — the system browser — using one client
+  // instance for the whole flow. The WebView's only job is to hand off
+  // to a page that does that. /auth/native-start (opened via a plain
+  // navigation, intercepted by MainActivity.java's
+  // shouldOverrideUrlLoading exactly like the old accounts.google.com
+  // navigation was) creates its own client, calls signInWithOAuth(),
+  // and lets that client's own storage hold the verifier for the
+  // remainder of the flow within that same browser tab. Google then
+  // redirects to /auth/native-google-return, still in that same
+  // browser tab/origin, where the SAME kind of client (fresh instance,
+  // same storage backend/key) can find the verifier normally, because
+  // nothing crossed a storage boundary — it's all been one continuous
+  // browser session throughout.
+  const handleNativeSignIn = useCallback(() => {
     setLoading(true);
     setTapError(null);
-    try {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setTapError("Google sign-in isn't set up correctly for this app yet.");
-        setLoading(false);
-        return;
-      }
-      const { raw, hashed } = await generateNonce();
-      // Google requires an EXACT match on redirect_uri against what's
-      // registered in Cloud Console — no extra query params allowed, or
-      // it's a redirect_uri_mismatch error. So next/nonce/raw can't ride
-      // along on redirect_uri itself (an earlier version of this code
-      // tried that — wrong). Google DOES echo back whatever is passed
-      // as `state` unmodified, so that's the channel used here instead.
-      const redirectUri = `${window.location.origin}/auth/native-google-return`;
-      const state = new URLSearchParams({ next, nonce: raw }).toString();
-      const params = new URLSearchParams({
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        response_type: "id_token",
-        scope: "openid email profile",
-        nonce: hashed,
-        state,
-        prompt: "select_account",
-      });
-      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    } catch (err) {
-      console.error("Failed to start native Google sign-in:", err);
-      setTapError("Couldn't start sign-in. Please try again.");
-      setDebugDetail(`native init: ${describeError(err)}`);
-      setLoading(false);
-    }
+    const url = new URL(`${window.location.origin}/auth/native-start`);
+    url.searchParams.set("next", next);
+    // A normal https:// navigation, not a Google URL — MainActivity's
+    // shouldOverrideUrlLoading only special-cases accounts.google.com
+    // today, so this needs its own host check added there too (done:
+    // see MainActivity.java, native-start is now intercepted the same
+    // way). This page must open in the system browser from the very
+    // first navigation, not just from Google's hop onward, since the
+    // signInWithOAuth() call itself has to happen there.
+    window.location.href = url.toString();
   }, [next]);
 
   const handleCredential = useCallback(

@@ -5,13 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 // Loaded by MainActivity.java (native app WebView) after the system
-// browser finished Google's implicit-flow sign-in and handed back an
-// id_token via the custom-scheme deep link. Passes that id_token
-// (plus the original nonce, required for verification) straight to
-// signInWithIdToken() to establish the session in THIS WebView's
-// Supabase client — same mechanism the web button uses via GIS, just
-// fed a token that arrived through the system-browser round trip
-// instead of a same-page JS callback.
+// browser finished the PKCE code-for-session exchange (in
+// /auth/native-google-return — see that file for why it has to run
+// there, not here) and handed back a finished session via the
+// custom-scheme deep link. Passes the access_token/refresh_token pair
+// straight to setSession() to establish the session in THIS WebView's
+// Supabase client. No code exchange happens here — that already
+// happened in the system browser, using a client whose storage
+// actually held the PKCE verifier. This page just adopts the
+// already-finished session; nothing storage-dependent needs to work
+// correctly here beyond persisting the session it's handed.
 function SetSession() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -19,24 +22,23 @@ function SetSession() {
 
   useEffect(() => {
     (async () => {
-      const idToken = searchParams.get("id_token");
-      const nonce = searchParams.get("nonce");
+      const accessToken = searchParams.get("access_token");
+      const refreshToken = searchParams.get("refresh_token");
       const next = searchParams.get("next") ?? "/";
 
-      if (!idToken || !nonce) {
+      if (!accessToken || !refreshToken) {
         setError(true);
         return;
       }
 
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithIdToken({
-        provider: "google",
-        token: idToken,
-        nonce,
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
       });
 
-      if (signInError) {
-        console.error("signInWithIdToken failed:", signInError);
+      if (setSessionError) {
+        console.error("setSession failed:", setSessionError);
         setError(true);
         return;
       }
