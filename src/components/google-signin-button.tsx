@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 
 // Google Identity Services (GIS) only — no signInWithOAuth/PKCE redirect
@@ -98,24 +97,51 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const router = useRouter();
   const isNative = Capacitor.isNativePlatform();
 
-  // Native: open the real login page in the system browser instead of
-  // trying to run any Google flow inside this WebView. GIS will run
-  // fine there since it's a real browser, not an embedded WebView.
+  // Native: navigate the WebView itself straight to Google's own OAuth
+  // endpoint. This does NOT open in the WebView — MainActivity.java's
+  // shouldOverrideUrlLoading already intercepts any navigation to
+  // accounts.google.com and hands it to the system browser via
+  // Intent.ACTION_VIEW (no Capacitor plugin involved, so it can't hit
+  // the "plugin not implemented" wall the Browser-plugin approach did).
+  // Uses response_type=id_token so Google returns a signed ID token
+  // directly in the redirect fragment — exactly what
+  // signInWithIdToken() needs, no code exchange, no PKCE verifier,
+  // nothing that can get lost crossing the WebView/browser boundary.
   const handleNativeSignIn = useCallback(async () => {
     setLoading(true);
     setTapError(null);
     try {
-      const url = `${window.location.origin}/login?native=1&next=${encodeURIComponent(next)}`;
-      await Browser.open({ url });
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        setTapError("Google sign-in isn't set up correctly for this app yet.");
+        setLoading(false);
+        return;
+      }
+      const { raw, hashed } = await generateNonce();
+      // Google requires an EXACT match on redirect_uri against what's
+      // registered in Cloud Console — no extra query params allowed, or
+      // it's a redirect_uri_mismatch error. So next/nonce/raw can't ride
+      // along on redirect_uri itself (an earlier version of this code
+      // tried that — wrong). Google DOES echo back whatever is passed
+      // as `state` unmodified, so that's the channel used here instead.
+      const redirectUri = `${window.location.origin}/auth/native-google-return`;
+      const state = new URLSearchParams({ next, nonce: raw }).toString();
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: "id_token",
+        scope: "openid email profile",
+        nonce: hashed,
+        state,
+        prompt: "select_account",
+      });
+      window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     } catch (err) {
-      console.error("Failed to open system browser for sign-in:", err);
-      setTapError("Couldn't open the sign-in page. Please try again.");
-      setDebugDetail(`browser.open: ${describeError(err)}`);
-    } finally {
+      console.error("Failed to start native Google sign-in:", err);
+      setTapError("Couldn't start sign-in. Please try again.");
+      setDebugDetail(`native init: ${describeError(err)}`);
       setLoading(false);
     }
-    // The browser tab handles the rest and hands control back to the
-    // app via a deep link once signed in (see MainActivity.java).
   }, [next]);
 
   const handleCredential = useCallback(

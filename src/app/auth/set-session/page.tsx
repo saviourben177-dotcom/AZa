@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 // Loaded by MainActivity.java (native app WebView) after the system
-// browser finished a Google sign-in and handed control back via the
-// custom-scheme deep link. Takes the access/refresh tokens straight
-// from the URL and establishes the session in THIS WebView's Supabase
-// client with setSession() — no code exchange, no PKCE verifier
-// involved, since the tokens are already fully-formed.
+// browser finished Google's implicit-flow sign-in and handed back an
+// id_token via the custom-scheme deep link. Passes that id_token
+// (plus the original nonce, required for verification) straight to
+// signInWithIdToken() to establish the session in THIS WebView's
+// Supabase client — same mechanism the web button uses via GIS, just
+// fed a token that arrived through the system-browser round trip
+// instead of a same-page JS callback.
 function SetSession() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -17,23 +19,24 @@ function SetSession() {
 
   useEffect(() => {
     (async () => {
-      const access_token = searchParams.get("access_token");
-      const refresh_token = searchParams.get("refresh_token");
+      const idToken = searchParams.get("id_token");
+      const nonce = searchParams.get("nonce");
       const next = searchParams.get("next") ?? "/";
 
-      if (!access_token || !refresh_token) {
+      if (!idToken || !nonce) {
         setError(true);
         return;
       }
 
       const supabase = createClient();
-      const { error: setSessionError } = await supabase.auth.setSession({
-        access_token,
-        refresh_token,
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: idToken,
+        nonce,
       });
 
-      if (setSessionError) {
-        console.error("setSession failed:", setSessionError);
+      if (signInError) {
+        console.error("signInWithIdToken failed:", signInError);
         setError(true);
         return;
       }

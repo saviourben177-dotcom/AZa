@@ -161,23 +161,28 @@ public class MainActivity extends BridgeActivity {
             return;
         }
 
-        // Google sign-in now completes entirely via Google Identity
-        // Services in the system browser (see native-handoff/page.tsx),
-        // which hands back a finished access/refresh token pair here —
-        // not an authorization code. There is no PKCE code_verifier
-        // involved and nothing left to exchange: load /auth/set-session
-        // in the app's own WebView and let it call setSession() with
-        // these tokens directly.
-        String accessToken = uri.getQueryParameter("access_token");
-        String refreshToken = uri.getQueryParameter("refresh_token");
-        if (accessToken == null || refreshToken == null) return;
+        // Google sign-in now completes via Google's own OAuth endpoint
+        // (implicit flow, response_type=id_token) opened in the system
+        // browser — the WebView itself just navigates there and Android's
+        // shouldOverrideUrlLoading hands it off, no Capacitor plugin
+        // involved. Google's redirect lands on /auth/native-google-return
+        // in that same system browser, which reads the id_token out of
+        // the URL fragment (fragments never reach this native code) and
+        // forwards it here as a plain query param instead. Load
+        // /auth/set-session in the app's own WebView with that id_token
+        // and nonce so it can call signInWithIdToken() directly — no
+        // code exchange, no PKCE verifier, nothing crossing storage
+        // contexts.
+        String idToken = uri.getQueryParameter("id_token");
+        String nonce = uri.getQueryParameter("nonce");
+        if (idToken == null || nonce == null) return;
 
         String next = uri.getQueryParameter("next");
         if (next == null) next = "/";
 
         Uri.Builder builder = Uri.parse(APP_URL + "/auth/set-session").buildUpon()
-                .appendQueryParameter("access_token", accessToken)
-                .appendQueryParameter("refresh_token", refreshToken)
+                .appendQueryParameter("id_token", idToken)
+                .appendQueryParameter("nonce", nonce)
                 .appendQueryParameter("next", next);
 
         bridge.getWebView().loadUrl(builder.build().toString());
