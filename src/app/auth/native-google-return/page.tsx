@@ -4,17 +4,10 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// Reached in the SYSTEM BROWSER — still the same browser tab that
-// /auth/native-start opened, after Supabase's authorize endpoint and
-// Google's consent screen finish and redirect back here with `?code=`.
-//
-// This page's createClient() call can successfully exchange that code:
-// the PKCE verifier signInWithOAuth() wrote (in native-start, in this
-// same tab/origin) is sitting in this browser's storage, reachable by
-// any client instance created here. That's the entire fix — nothing
-// about exchangeCodeForSession() itself changed; what changed is that
-// signInWithOAuth() and exchangeCodeForSession() now both run in the
-// system browser instead of split across the WebView and the browser.
+// Reached in the SYSTEM BROWSER after Supabase/Google redirect back with ?code=.
+// createBrowserClient() uses Supabase Auth URL detection, so the PKCE code is
+// exchanged automatically during client initialization. Do NOT exchange it a
+// second time here; that would race/duplicate the one-time code exchange.
 function NativeGoogleReturn() {
   const searchParams = useSearchParams();
   const [state, setState] = useState<"working" | "done" | "error">("working");
@@ -40,22 +33,22 @@ function NativeGoogleReturn() {
       }
 
       const supabase = createClient();
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+      // createClient() automatically detects ?code= and completes the PKCE
+      // exchange. getSession() waits for that initialization to finish, so
+      // this reads the resulting session without consuming the code again.
+      const { data, error } = await supabase.auth.getSession();
 
       if (error || !data?.session) {
-        console.error("exchangeCodeForSession failed:", error);
+        console.error("Native Google return: session initialization failed:", error);
         setErrorDetail(error?.message ?? "no session returned");
         setState("error");
         return;
       }
 
       setState("done");
-      // Hand the FINISHED session (tokens, not a code) back to the app
-      // via the existing custom-scheme deep link. MainActivity.java's
-      // handleAuthCallbackIntent reads access_token/refresh_token here
-      // and loads /auth/set-session in the WebView with them, which
-      // just calls setSession() — no exchange, no verifier, nothing
-      // storage-dependent left to do on the WebView side.
+      // Hand the FINISHED session back to the app via the existing custom-scheme
+      // deep link. MainActivity.java loads /auth/set-session in the WebView,
+      // where setSession() adopts the already-finished session.
       const params = new URLSearchParams({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
