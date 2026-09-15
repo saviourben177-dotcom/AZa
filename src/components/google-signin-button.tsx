@@ -123,19 +123,29 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   // same storage backend/key) can find the verifier normally, because
   // nothing crossed a storage boundary — it's all been one continuous
   // browser session throughout.
-  const handleNativeSignIn = useCallback(() => {
+  const handleNativeSignIn = useCallback(async () => {
     setLoading(true);
     setTapError(null);
     const url = new URL(`${window.location.origin}/auth/native-start`);
     url.searchParams.set("next", next);
-    // A normal https:// navigation, not a Google URL — MainActivity's
-    // shouldOverrideUrlLoading only special-cases accounts.google.com
-    // today, so this needs its own host check added there too (done:
-    // see MainActivity.java, native-start is now intercepted the same
-    // way). This page must open in the system browser from the very
-    // first navigation, not just from Google's hop onward, since the
-    // signInWithOAuth() call itself has to happen there.
-    window.location.href = url.toString();
+    // Direct native call — bypasses the WebView navigation +
+    // shouldOverrideUrlLoading interception path entirely. Instead of
+    // this WebView attempting to load native-start (which would then
+    // need to be caught and redirected to the system browser), a small
+    // native plugin (SystemBrowserPlugin.java, registered in
+    // MainActivity) fires Intent.ACTION_VIEW immediately. The WebView
+    // never navigates anywhere; the system browser opens straight away.
+    try {
+      const SystemBrowser = Capacitor.registerPlugin<{
+        open: (options: { url: string }) => Promise<{ opened: boolean }>;
+      }>("SystemBrowser");
+      await SystemBrowser.open({ url: url.toString() });
+    } catch (err) {
+      console.error("Failed to open system browser:", err);
+      setTapError("Couldn't open the sign-in page. Please try again.");
+      setDebugDetail(`native init: ${describeError(err)}`);
+      setLoading(false);
+    }
   }, [next]);
 
   const handleCredential = useCallback(

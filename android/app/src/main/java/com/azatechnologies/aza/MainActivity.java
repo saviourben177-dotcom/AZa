@@ -30,7 +30,6 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
-    private static final String APP_HOST = "a-za.vercel.app";
     private static final long EXIT_CONFIRM_WINDOW_MS = 2000;
     private static final String AUTH_CALLBACK_SCHEME = "com.azatechnologies.aza";
     private static final String AUTH_CALLBACK_HOST = "auth-callback";
@@ -45,6 +44,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(SystemBrowserPlugin.class);
         super.onCreate(savedInstanceState);
 
         View overlay = getLayoutInflater().inflate(R.layout.overlay_loading, null);
@@ -90,25 +90,17 @@ public class MainActivity extends BridgeActivity {
                 boolean isWebScheme = scheme.equals("http") || scheme.equals("https");
                 if (isWebScheme) {
                     String host = request.getUrl().getHost();
-                    String path = request.getUrl().getPath();
-                    boolean isGoogleAuth = "accounts.google.com".equals(host);
-                    // /auth/native-start must ALSO be intercepted, not just
-                    // accounts.google.com: the whole point of this page is to
-                    // run signInWithOAuth() and exchangeCodeForSession() in the
-                    // SAME browser context throughout, so the code_verifier
-                    // PKCE writes to storage is readable when the exchange
-                    // happens later in that same flow. If this first navigation
-                    // were left to load inside the WebView, the verifier would
-                    // end up in the WebView's storage instead, and the same
-                    // storage-boundary bug this exists to fix would reappear —
-                    // just moved one step earlier.
-                    boolean isNativeAuthStart = APP_HOST.equals(host) && path != null
-                            && path.equals("/auth/native-start");
-                    if (isGoogleAuth || isNativeAuthStart) {
-                        // Hand this off to the system browser instead of letting
-                        // the WebView load it; the browser completes the OAuth
-                        // flow and redirects back via the custom-scheme deep
-                        // link handled in onNewIntent()/onCreate() below.
+                    if ("accounts.google.com".equals(host)) {
+                        // Defensive fallback only: the native sign-in flow no
+                        // longer navigates the WebView to auth URLs at all —
+                        // SystemBrowserPlugin.java opens the system browser
+                        // directly via Intent.ACTION_VIEW, called straight from
+                        // JS, bypassing WebView navigation entirely. This catch
+                        // stays in case some other path (e.g. a deep link) ever
+                        // lands a Google auth URL in the WebView; it hands that
+                        // off to the system browser instead of trying to load
+                        // it here, since Google blocks its sign-in flow inside
+                        // embedded WebViews.
                         try {
                             Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
                             startActivity(intent);
