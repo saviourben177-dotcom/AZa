@@ -1,8 +1,6 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.9.25'
-
     repositories {
         google()
         mavenCentral()
@@ -10,12 +8,17 @@ buildscript {
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.0'
         classpath 'com.google.gms:google-services:4.4.4'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
 
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
 }
+
+// Kotlin plugin version for capacitor-native-google-one-tap-signin is
+// resolved centrally via pluginManagement.resolutionStrategy in
+// settings.gradle — don't also declare it here, that reintroduces the
+// exact "plugin already on the classpath" conflict this was set up to
+// avoid.
 
 apply from: "variables.gradle"
 

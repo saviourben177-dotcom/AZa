@@ -1,3 +1,27 @@
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    // capacitor-native-google-one-tap-signin's own module declares
+    // 'org.jetbrains.kotlin.android' version '1.9.25' directly via the
+    // plugins{} DSL. Declaring that same plugin+version again anywhere
+    // else (root build.gradle's plugins{} block, or a buildscript
+    // classpath entry) causes "plugin already on the classpath with an
+    // unknown version" — Gradle can't tell whether the two declarations
+    // are guaranteed identical. This resolutionStrategy pins the version
+    // Gradle actually resolves to, so it stops mattering how many places
+    // request it or with what version string.
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == 'org.jetbrains.kotlin.android') {
+                useVersion('1.9.25')
+            }
+        }
+    }
+}
+
 include ':app'
 include ':capacitor-cordova-android-plugins'
 project(':capacitor-cordova-android-plugins').projectDir = new File('./capacitor-cordova-android-plugins/')
