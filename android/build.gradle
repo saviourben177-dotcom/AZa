@@ -29,6 +29,27 @@ allprojects {
     }
 }
 
+// capacitor-native-google-one-tap-signin's own build.gradle (inside
+// node_modules, not something we can edit and have it survive
+// `npm install`) hardcodes compileSdk 35. That's one version behind the
+// androidx.core/androidx.activity releases it pulls in, which require
+// compileSdk 36+ — without this override, :checkReleaseAarMetadata
+// fails the release build outright (not just a warning). This patches
+// that one module's compileSdk after Gradle evaluates it, without
+// touching its actual build.gradle file, so it survives `npm install`
+// re-fetching the package. Pattern confirmed against multiple working
+// real-world examples of this exact technique (Android library modules
+// pinned to an older compileSdk than the consuming app requires).
+subprojects { subproject ->
+    subproject.afterEvaluate {
+        if (subproject.name == 'capacitor-native-google-one-tap-signin' && subproject.hasProperty('android')) {
+            subproject.android {
+                compileSdkVersion rootProject.ext.compileSdkVersion
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
