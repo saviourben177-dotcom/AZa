@@ -130,7 +130,12 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
       if (!result.isSuccess || !result.success) {
         const reason = result.noSuccess?.noSuccessReasonCode;
         setLoading(false);
-        if (reason === "SIGN_IN_CANCELLED") return; // user backed out, not an error
+        // TEMPORARY: previously returned silently here for
+        // SIGN_IN_CANCELLED on the assumption a real user-initiated
+        // cancel should stay quiet. Surfacing it now instead — some
+        // underlying failures get misreported as CANCELLED by this
+        // plugin's Android wrapper, and swallowing it here made a real
+        // failure look like nothing happened at all.
         setTapError("Couldn't sign you in. Please try again.");
         setDebugDetail(`native: ${reason ?? "unknown"} — ${result.noSuccess?.noSuccessAdditionalInfo ?? ""}`);
         return;
