@@ -31,8 +31,6 @@ public class MainActivity extends BridgeActivity {
 
     private static final String APP_URL = "https://a-za.vercel.app";
     private static final long EXIT_CONFIRM_WINDOW_MS = 2000;
-    private static final String AUTH_CALLBACK_SCHEME = "com.azatechnologies.aza";
-    private static final String AUTH_CALLBACK_HOST = "auth-callback";
 
     private LinearLayout loadingOverlay;
     private LinearLayout errorState;
@@ -44,7 +42,6 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
-        registerPlugin(SystemBrowserPlugin.class);
         super.onCreate(savedInstanceState);
 
         View overlay = getLayoutInflater().inflate(R.layout.overlay_loading, null);
@@ -91,16 +88,15 @@ public class MainActivity extends BridgeActivity {
                 if (isWebScheme) {
                     String host = request.getUrl().getHost();
                     if ("accounts.google.com".equals(host)) {
-                        // Defensive fallback only: the native sign-in flow no
-                        // longer navigates the WebView to auth URLs at all —
-                        // SystemBrowserPlugin.java opens the system browser
-                        // directly via Intent.ACTION_VIEW, called straight from
-                        // JS, bypassing WebView navigation entirely. This catch
-                        // stays in case some other path (e.g. a deep link) ever
-                        // lands a Google auth URL in the WebView; it hands that
-                        // off to the system browser instead of trying to load
-                        // it here, since Google blocks its sign-in flow inside
-                        // embedded WebViews.
+                        // Google blocks its sign-in flow inside embedded WebViews
+                        // (disallowed_useragent policy). Kept here for any future
+                        // web-facing Google navigation that isn't handled by the
+                        // native Google Identity Services plugin (see
+                        // capacitor-native-google-one-tap-signin, used for the
+                        // in-app Continue with Google button, which never
+                        // triggers this code path since it never navigates the
+                        // WebView anywhere). Hands any such navigation to the
+                        // system browser instead of loading it in-WebView.
                         try {
                             Intent intent = new Intent(Intent.ACTION_VIEW, request.getUrl());
                             startActivity(intent);
@@ -142,56 +138,12 @@ public class MainActivity extends BridgeActivity {
         });
 
         loadAppUrl();
-
-        // Cold-start case: the app was launched fresh by the auth-callback
-        // deep link (system browser handed control back to us), rather than
-        // already being in memory. getIntent() carries that launch intent.
-        handleAuthCallbackIntent(getIntent());
     }
 
     @Override
     public void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        // Warm-start case: MainActivity is singleTask and already running,
-        // so the auth-callback deep link arrives here instead of onCreate().
         setIntent(intent);
-        handleAuthCallbackIntent(intent);
-    }
-
-    private void handleAuthCallbackIntent(Intent intent) {
-        if (intent == null) return;
-        Uri uri = intent.getData();
-        if (uri == null) return;
-        if (!AUTH_CALLBACK_SCHEME.equals(uri.getScheme()) || !AUTH_CALLBACK_HOST.equals(uri.getHost())) {
-            return;
-        }
-
-        // Google sign-in completes via Supabase's PKCE authorization-code
-        // flow, run ENTIRELY inside the system browser: /auth/native-start
-        // (opened by shouldOverrideUrlLoading above, same as
-        // accounts.google.com) calls signInWithOAuth(), the resulting
-        // Google consent hop is also intercepted the same way, and
-        // Google's redirect lands on /auth/native-google-return — still
-        // in that same browser tab/context — which calls
-        // exchangeCodeForSession() using a client that can actually see
-        // the verifier, because nothing crossed a storage boundary at any
-        // point in that chain. That page then hands the FINISHED session
-        // (access_token + refresh_token, not a code, not an id_token) here
-        // via this deep link, so the WebView's own Supabase client can
-        // just call setSession() with them directly.
-        String accessToken = uri.getQueryParameter("access_token");
-        String refreshToken = uri.getQueryParameter("refresh_token");
-        if (accessToken == null || refreshToken == null) return;
-
-        String next = uri.getQueryParameter("next");
-        if (next == null) next = "/";
-
-        Uri.Builder builder = Uri.parse(APP_URL + "/auth/set-session").buildUpon()
-                .appendQueryParameter("access_token", accessToken)
-                .appendQueryParameter("refresh_token", refreshToken)
-                .appendQueryParameter("next", next);
-
-        bridge.getWebView().loadUrl(builder.build().toString());
     }
 
     private void loadAppUrl() {

@@ -5,47 +5,35 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
 import { Capacitor } from "@capacitor/core";
+import { GoogleOneTapAuth } from "capacitor-native-google-one-tap-signin";
 import { createClient } from "@/lib/supabase/client";
 
-// Google Identity Services (GIS) only — no signInWithOAuth/PKCE redirect
-// path. That path required a code_verifier generated in one browser
-// context to survive a hop through the system browser and back into
-// this app's WebView, which does not reliably work: the verifier lives
-// in whatever storage the WebView had at the moment of the outbound
-// request, and the round trip through the system browser and back
-// breaks that chain (confirmed against Supabase's own PKCE/deep-link
-// troubleshooting docs). GIS avoids the problem entirely because the
-// credential comes back via a JS callback in the same page — no code
-// exchange, no verifier, no state to lose.
+// Web: Google Identity Services (GIS), rendered/One Tap, as before —
+// no PKCE redirect, no signInWithOAuth. Runs entirely in-page; the
+// credential comes back via a JS callback on the same page.
 //
-// Google blocks GIS itself from running inside embedded WebViews
-// (disallowed_useragent policy), so this app's WebView never loads the
-// GIS script. Instead, on native, tapping the button opens the full
-// login page in the SYSTEM browser (Chrome Custom Tabs / SFSafariView),
-// where GIS runs normally. Once signed in there, that page hands the
-// finished session back to the app via a custom-scheme deep link —
-// tokens, not a code — so the app just calls setSession() with them.
-// See /auth/native-handoff and MainActivity.java's onNewIntent/onCreate.
+// Native: capacitor-native-google-one-tap-signin, which wraps
+// Android's actual native Google Identity Services / Credential
+// Manager SDK — a real native API call, not a WebView-hosted script
+// and not a redirect through the system browser. This sidesteps the
+// entire category of problem every earlier attempt kept hitting:
+// GIS is blocked inside embedded WebViews by Google's own policy, and
+// every redirect-based workaround we tried (Capacitor Browser plugin,
+// PKCE code exchange, implicit id_token flow via Intent interception)
+// ran into a different WebView/browser-boundary issue each time
+// (missing native plugin registration, lost PKCE verifier,
+// redirect_uri exact-match restrictions). Because this plugin calls
+// Android's native SDK directly, none of those boundaries exist here.
 //
-// On web, this renders One Tap + the classic rendered button as before.
-//
-// IMPORTANT: the button only ever hides itself if there is truly no
-// client ID configured (nothing it could possibly do in that case).
-// Every other failure — Google rejecting the origin, the script
-// throwing, One Tap silently hanging — must leave a working, visible
-// button behind.
-//
-// use_fedcm_for_prompt is OFF by default here: FedCM support is
-// inconsistent across Chrome versions/Play Services states on
-// Android, and a FedCM failure can throw during initialize() itself
-// on some devices, which is the leading suspect for intermittent
-// "isn't set up correctly" errors that don't match a real Cloud
-// Console misconfiguration. Classic (non-FedCM) prompting is the
-// safer default; FedCM can be re-enabled once confirmed stable.
+// Both paths converge on the same call: supabase.auth.signInWithIdToken
+// with the resulting Google ID token, so a signed-in user looks
+// identical to Supabase regardless of which path got them there.
 //
 // Requires NEXT_PUBLIC_GOOGLE_CLIENT_ID to be set to a Google Cloud
-// "Web application" OAuth Client ID that has this exact origin listed
-// under "Authorized JavaScript origins".
+// "Web application" OAuth Client ID — used for BOTH platforms per this
+// plugin's docs (Android also needs this Client ID, not a separate
+// Android-type client, since it authenticates via Google Identity
+// Services under the hood either way).
 
 declare global {
   interface Window {
@@ -94,91 +82,81 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [tapError, setTapError] = useState<string | null>(null);
   const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const initialized = useRef(false);
+  const nativeInitialized = useRef(false);
   const router = useRouter();
   const isNative = Capacitor.isNativePlatform();
 
-  // Native: the WebView does NOT call signInWithOAuth itself. Verified
-  // directly against @supabase/auth-js's GoTrueClient source:
-  // exchangeCodeForSession() reads the PKCE code_verifier from
-  // `this.storage` — the storage backend belonging to whichever client
-  // instance originally called signInWithOAuth(). There is no way to
-  // pass a verifier in manually; it must be read back from that same
-  // storage. The WebView and the system browser are separate storage
-  // contexts on Android, so a client created in one can never read a
-  // verifier written by a client in the other — this was the actual
-  // bug in the original approach, confirmed in source rather than
-  // assumed.
-  //
-  // The fix: run BOTH signInWithOAuth() and exchangeCodeForSession()
-  // in the same context — the system browser — using one client
-  // instance for the whole flow. The WebView's only job is to hand off
-  // to a page that does that. /auth/native-start (opened via a plain
-  // navigation, intercepted by MainActivity.java's
-  // shouldOverrideUrlLoading exactly like the old accounts.google.com
-  // navigation was) creates its own client, calls signInWithOAuth(),
-  // and lets that client's own storage hold the verifier for the
-  // remainder of the flow within that same browser tab. Google then
-  // redirects to /auth/native-google-return, still in that same
-  // browser tab/origin, where the SAME kind of client (fresh instance,
-  // same storage backend/key) can find the verifier normally, because
-  // nothing crossed a storage boundary — it's all been one continuous
-  // browser session throughout.
+  const finishSignIn = useCallback(
+    async (idToken: string, nonce: string) => {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: idToken,
+        nonce,
+      });
+      if (error) {
+        console.error("Google sign-in failed:", error);
+        setTapError("Couldn't sign you in. Please try again.");
+        setDebugDetail(`supabase: ${error.message}`);
+        return false;
+      }
+      router.push(next);
+      router.refresh();
+      return true;
+    },
+    [next, router]
+  );
+
+  // Native path: real Android Credential Manager / One Tap SDK call,
+  // no WebView, no redirect, no system browser hop.
   const handleNativeSignIn = useCallback(async () => {
     setLoading(true);
     setTapError(null);
-    const url = new URL(`${window.location.origin}/auth/native-start`);
-    url.searchParams.set("next", next);
-    // Direct native call — bypasses the WebView navigation +
-    // shouldOverrideUrlLoading interception path entirely. Instead of
-    // this WebView attempting to load native-start (which would then
-    // need to be caught and redirected to the system browser), a small
-    // native plugin (SystemBrowserPlugin.java, registered in
-    // MainActivity) fires Intent.ACTION_VIEW immediately. The WebView
-    // never navigates anywhere; the system browser opens straight away.
     try {
-      const SystemBrowser = Capacitor.registerPlugin<{
-        open: (options: { url: string }) => Promise<{ opened: boolean }>;
-      }>("SystemBrowser");
-      await SystemBrowser.open({ url: url.toString() });
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        setTapError("Google sign-in isn't set up correctly for this app yet.");
+        setLoading(false);
+        return;
+      }
+
+      if (!nativeInitialized.current) {
+        await GoogleOneTapAuth.initialize({ clientId });
+        nativeInitialized.current = true;
+      }
+
+      const result = await GoogleOneTapAuth.signInWithGoogleButtonFlowForNativePlatform();
+
+      if (!result.isSuccess || !result.success) {
+        const reason = result.noSuccess?.noSuccessReasonCode;
+        setLoading(false);
+        if (reason === "SIGN_IN_CANCELLED") return; // user backed out, not an error
+        setTapError("Couldn't sign you in. Please try again.");
+        setDebugDetail(`native: ${reason ?? "unknown"} — ${result.noSuccess?.noSuccessAdditionalInfo ?? ""}`);
+        return;
+      }
+
+      const nonce = GoogleOneTapAuth.getNonce();
+      const ok = await finishSignIn(result.success.idToken, nonce);
+      setLoading(false);
+      if (!ok) return;
     } catch (err) {
-      console.error("Failed to open system browser:", err);
-      setTapError("Couldn't open the sign-in page. Please try again.");
-      setDebugDetail(`native init: ${describeError(err)}`);
+      console.error("Native Google sign-in failed:", err);
+      setTapError("Couldn't sign you in. Please try again.");
+      setDebugDetail(`native init/signin: ${describeError(err)}`);
       setLoading(false);
     }
-  }, [next]);
+  }, [finishSignIn]);
 
   const handleCredential = useCallback(
     async (nonce: string, response: CredentialResponse) => {
       setLoading(true);
       setTapError(null);
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithIdToken({
-        provider: "google",
-        token: response.credential,
-        nonce,
-      });
+      const ok = await finishSignIn(response.credential, nonce);
       setLoading(false);
-      if (error) {
-        console.error("Google sign-in failed:", error);
-        setTapError("Couldn't sign you in. Please try again.");
-        setDebugDetail(`supabase: ${error.message}`);
-        return;
-      }
-
-      // Opened from the native app's system-browser handoff: package the
-      // session into the deep link instead of navigating this browser tab
-      // onward, so the native app can pick it up.
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("native") === "1") {
-        router.push(`/auth/native-handoff?next=${encodeURIComponent(next)}`);
-        return;
-      }
-
-      router.push(next);
-      router.refresh();
+      void ok;
     },
-    [next, router]
+    [finishSignIn]
   );
 
   const initGoogle = useCallback(async (): Promise<boolean> => {
@@ -249,27 +227,18 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   }, [initGoogle]);
 
   useEffect(() => {
+    if (isNative) return;
     if (status !== "one-tap-pending") return;
     const timer = setTimeout(() => {
       setStatus((current) => (current === "one-tap-pending" ? "fallback" : current));
     }, 2500);
     return () => clearTimeout(timer);
-  }, [status]);
+  }, [status, isNative]);
 
-  // Independent ground-truth check: don't rely solely on next/script's
-  // onLoad/onError firing correctly. On a soft-navigated page (the tab
-  // was already open and Next did a client-side route change rather
-  // than a real reload), a <script> tag injected on a prior render can
-  // fail to re-fire its load event, causing onError to report a false
-  // "failed to load" even though the script actually loaded fine
-  // earlier. Poll for window.google directly as a fallback signal.
   useEffect(() => {
     if (isNative) return; // native app never loads/polls for the GIS script
     if (initialized.current) return;
     if (window.google) {
-      // Already present — script loaded before this effect ran (e.g.
-      // fast cache hit). Kick off init immediately rather than waiting
-      // on the Script component's onLoad, which may not fire again.
       handleScriptLoad();
       return;
     }
@@ -283,7 +252,6 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         return;
       }
       if (attempts >= 20) {
-        // ~6 seconds of polling with nothing — genuinely not there.
         clearInterval(poll);
         if (!initialized.current) {
           setStatus((s) => (s === "no-client-id" ? s : "network-error"));
@@ -305,9 +273,6 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
     }
 
     if (status === "network-error" || status === "init-error") {
-      // Give a real retry instead of just an error: re-check for
-      // window.google right now — the earlier failure may have been
-      // transient or a stale-script false negative.
       if (window.google && !initialized.current) {
         setDebugDetail(null);
         setStatus("idle");
@@ -352,9 +317,6 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
           strategy="afterInteractive"
           onLoad={handleScriptLoad}
           onError={() => {
-            // Don't immediately declare network-error here — the polling
-            // effect above is the real source of truth and will confirm
-            // (or, on a false negative, quietly correct) this within ~6s.
             setDebugDetail((d) => d ?? "Script onError fired — confirming via poll before showing an error");
           }}
         />
@@ -384,9 +346,7 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
           {tapError}
         </p>
       )}
-      {/* TEMPORARY debug line — shows the real error Google/Supabase
-          returned so we can pin down the exact cause instead of
-          guessing. Remove once the button is confirmed working. */}
+      {/* TEMPORARY debug line — remove once confirmed working. */}
       {debugDetail && (
         <p className="mt-2 break-words text-center text-[10.5px] text-ink/35">
           debug: {debugDetail}
