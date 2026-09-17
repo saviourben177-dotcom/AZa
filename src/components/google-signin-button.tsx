@@ -83,6 +83,8 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
   const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const initialized = useRef(false);
   const nativeInitialized = useRef(false);
+  const fallbackButtonRef = useRef<HTMLDivElement>(null);
+  const fallbackRendered = useRef(false);
   const router = useRouter();
   const isNative = Capacitor.isNativePlatform();
 
@@ -240,6 +242,37 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
     return () => clearTimeout(timer);
   }, [status, isNative]);
 
+  // One Tap can be silently skipped by the browser (common on mobile
+  // Chrome — see isSkippedMoment/isNotDisplayed above) with no error and
+  // no visible UI change. Re-calling accounts.id.prompt() on click just
+  // retries the same floating prompt the browser already suppressed, so
+  // it can look like tapping the button does nothing at all. Once we're
+  // in "fallback", render Google's own official button (renderButton)
+  // into a hidden container instead — it's a real click on Google's
+  // iframe, not a script-triggered prompt, so it isn't subject to the
+  // same silent-skip behavior. We swap our own button out for it.
+  useEffect(() => {
+    if (isNative) return;
+    if (status !== "fallback") return;
+    if (fallbackRendered.current) return;
+    if (!window.google || !fallbackButtonRef.current) return;
+
+    try {
+      window.google.accounts.id.renderButton(fallbackButtonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width: 320,
+      });
+      fallbackRendered.current = true;
+    } catch (err) {
+      console.error("Google renderButton fallback failed:", err);
+      setDebugDetail((d) => d ?? `renderButton fallback: ${describeError(err)}`);
+    }
+  }, [status, isNative]);
+
   useEffect(() => {
     if (isNative) return; // native app never loads/polls for the GIS script
     if (initialized.current) return;
@@ -326,11 +359,23 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
           }}
         />
       )}
+      {/* Real Google-rendered button — takes over once One Tap has been
+          skipped/not-displayed. Google draws its own button inside this
+          div once renderButton() succeeds; our custom button below is
+          hidden at that point so there's exactly one clickable control. */}
+      {!isNative && (
+        <div
+          ref={fallbackButtonRef}
+          className={status === "fallback" ? "flex w-full justify-center" : "hidden"}
+        />
+      )}
       <button
         type="button"
         onClick={handleButtonClick}
         disabled={loading}
-        className="flex w-full items-center justify-center gap-2.5 rounded-pill border border-line-strong bg-surface py-3.5 text-[14.5px] font-bold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60"
+        className={`flex w-full items-center justify-center gap-2.5 rounded-pill border border-line-strong bg-surface py-3.5 text-[14.5px] font-bold text-ink shadow-card transition active:scale-[0.98] disabled:opacity-60 ${
+          !isNative && status === "fallback" ? "hidden" : ""
+        }`}
       >
         <Image
           src="/icons/google-icon.png"
