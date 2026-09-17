@@ -15,6 +15,10 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/";
+  // See GoogleSignInButton's isHandoff — this page can also be opened
+  // by the native app's browser handoff, and someone might complete
+  // sign-in with email/password instead of Google once there.
+  const isHandoff = searchParams.get("handoff") === "1";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,6 +29,10 @@ function LoginForm() {
     setLoading(false);
     if (error) {
       setError(error.message);
+      return;
+    }
+    if (isHandoff) {
+      router.push(`/auth/native-handoff?next=${encodeURIComponent(next)}`);
       return;
     }
     router.push(next);

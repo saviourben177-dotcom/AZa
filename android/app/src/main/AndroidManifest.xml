@@ -22,6 +22,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Google sign-in browser handoff: after the system browser
+                 completes Supabase's Google OAuth flow (see
+                 src/app/auth/native-handoff/page.tsx), it redirects here
+                 with the session tokens in the URL. @capacitor/app's
+                 appUrlOpen listener (registered in google-signin-button.tsx)
+                 picks this intent up. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.azatechnologies.aza" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

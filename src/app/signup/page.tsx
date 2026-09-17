@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import GoogleSignInButton from "@/components/google-signin-button";
 import AuthError from "@/components/auth-error";
 
-export default function SignupPage() {
+function SignupForm() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +16,11 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // See GoogleSignInButton's isHandoff — signup can also be opened by
+  // the native app's browser handoff, and someone might complete
+  // signup with email/password instead of Google once there.
+  const isHandoff = searchParams.get("handoff") === "1";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,9 +46,18 @@ export default function SignupPage() {
     }
 
     if (data.session) {
+      if (isHandoff) {
+        router.push(`/auth/native-handoff?next=${encodeURIComponent("/onboarding")}`);
+        return;
+      }
       router.push("/onboarding");
       router.refresh();
     } else {
+      // Email confirmation required — no session yet either way, so
+      // there's nothing to hand off to the native app until the user
+      // confirms their email (likely on a different device) and later
+      // logs in through the normal /login handoff. Same screen for
+      // both cases.
       setSuccess(true);
     }
   }
@@ -74,7 +88,7 @@ export default function SignupPage() {
       </p>
 
       <div className="mt-7">
-        <GoogleSignInButton next="/onboarding" />
+        <GoogleSignInButton next="/onboarding" handoffPath="/signup" />
       </div>
 
       <div className="my-5 flex items-center gap-3">
@@ -150,5 +164,13 @@ export default function SignupPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupForm />
+    </Suspense>
   );
 }

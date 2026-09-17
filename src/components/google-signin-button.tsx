@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Script from "next/script";
 import { Capacitor } from "@capacitor/core";
-import { GoogleOneTapAuth } from "capacitor-native-google-one-tap-signin";
+import { App as CapacitorApp, type URLOpenListenerEvent } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 
 // Web: Google Identity Services (GIS), rendered/One Tap, as before —
@@ -76,17 +77,35 @@ function describeError(err: unknown): string {
 
 type Status = "idle" | "one-tap-pending" | "fallback" | "init-error" | "network-error" | "no-client-id";
 
-export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
+export default function GoogleSignInButton({
+  next = "/",
+  handoffPath = "/login",
+}: {
+  next?: string;
+  // Which page to open in the system browser for the native handoff
+  // flow (see handleNativeSignIn below). Pass "/signup" when this
+  // button is rendered on the signup screen so someone tapping
+  // "Continue with Google" from native signup doesn't land on a
+  // "Welcome back" login screen in the browser.
+  handoffPath?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   const [tapError, setTapError] = useState<string | null>(null);
   const [debugDetail, setDebugDetail] = useState<string | null>(null);
   const initialized = useRef(false);
-  const nativeInitialized = useRef(false);
   const fallbackButtonRef = useRef<HTMLDivElement>(null);
   const fallbackRendered = useRef(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const isNative = Capacitor.isNativePlatform();
+  // Present when this page was opened by Browser.open() from
+  // handleNativeSignIn below (running inside the system browser, not
+  // in the app itself — isNative is false here, deliberately, since
+  // this tab really is a normal web context). Redirects to the deep
+  // link handoff instead of an in-page router.push once sign-in here
+  // succeeds.
+  const isHandoff = searchParams.get("handoff") === "1";
 
   const finishSignIn = useCallback(
     async (idToken: string, nonce: string) => {
@@ -102,58 +121,105 @@ export default function GoogleSignInButton({ next = "/" }: { next?: string }) {
         setDebugDetail(`supabase: ${error.message}`);
         return false;
       }
+      if (isHandoff) {
+        router.push(`/auth/native-handoff?next=${encodeURIComponent(next)}`);
+        return true;
+      }
       router.push(next);
       router.refresh();
       return true;
     },
-    [next, router]
+    [next, router, isHandoff]
   );
 
-  // Native path: real Android Credential Manager / One Tap SDK call,
-  // no WebView, no redirect, no system browser hop.
+  // Native path: capacitor-native-google-one-tap-signin (Android's real
+  // Credential Manager SDK) turned out to fail with SIGN_IN_CANCELLED
+  // on real devices for reasons we couldn't pin down even after
+  // confirming SHA-1/OAuth-client config was correct — see the Sept
+  // 2026 debugging thread. Replaced with a browser handoff instead:
+  // open the same login page in the system browser (Chrome Custom
+  // Tabs via @capacitor/browser, not an embedded WebView, so Google's
+  // GIS anti-embedded-webview policy doesn't apply), let the already-
+  // working web Google sign-in run there, then the browser redirects
+  // to /auth/native-handoff which packages the resulting session into
+  // a com.azatechnologies.aza://auth-callback deep link.
+  // AndroidManifest.xml's intent-filter routes that back into this
+  // running app, and the appUrlOpen listener below (registered once,
+  // on mount) picks it up and calls setSession() directly.
   const handleNativeSignIn = useCallback(async () => {
     setLoading(true);
     setTapError(null);
     try {
-      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        setTapError("Google sign-in isn't set up correctly for this app yet.");
-        setLoading(false);
-        return;
-      }
-
-      if (!nativeInitialized.current) {
-        await GoogleOneTapAuth.initialize({ clientId });
-        nativeInitialized.current = true;
-      }
-
-      const result = await GoogleOneTapAuth.signInWithGoogleButtonFlowForNativePlatform();
-
-      if (!result.isSuccess || !result.success) {
-        const reason = result.noSuccess?.noSuccessReasonCode;
-        setLoading(false);
-        // TEMPORARY: previously returned silently here for
-        // SIGN_IN_CANCELLED on the assumption a real user-initiated
-        // cancel should stay quiet. Surfacing it now instead — some
-        // underlying failures get misreported as CANCELLED by this
-        // plugin's Android wrapper, and swallowing it here made a real
-        // failure look like nothing happened at all.
-        setTapError("Couldn't sign you in. Please try again.");
-        setDebugDetail(`native: ${reason ?? "unknown"} — ${result.noSuccess?.noSuccessAdditionalInfo ?? ""}`);
-        return;
-      }
-
-      const nonce = GoogleOneTapAuth.getNonce();
-      const ok = await finishSignIn(result.success.idToken, nonce);
-      setLoading(false);
-      if (!ok) return;
+      const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "https://a-za.vercel.app";
+      const url = `${origin}${handoffPath}?next=${encodeURIComponent(next)}&handoff=1`;
+      await Browser.open({ url });
+      // loading stays true until the deep-link listener resolves it, or
+      // the user backs out of the browser without completing sign-in —
+      // Browser.open() itself resolves as soon as the tab opens, not
+      // when it closes, so we can't tell "cancelled" from "in progress"
+      // from here. Give up on it after a while so the button isn't
+      // stuck showing "Connecting…" forever if they just close the tab.
+      setTimeout(() => {
+        setLoading((current) => (current ? false : current));
+      }, 90_000);
     } catch (err) {
-      console.error("Native Google sign-in failed:", err);
+      console.error("Opening browser for native Google sign-in failed:", err);
       setTapError("Couldn't sign you in. Please try again.");
-      setDebugDetail(`native init/signin: ${describeError(err)}`);
+      setDebugDetail(`native browser-open: ${describeError(err)}`);
       setLoading(false);
     }
-  }, [finishSignIn]);
+  }, [next, handoffPath]);
+
+  // Catches the com.azatechnologies.aza://auth-callback deep link that
+  // /auth/native-handoff redirects to once the browser tab finishes
+  // Google sign-in. Registered once on mount, native platforms only.
+  useEffect(() => {
+    if (!isNative) return;
+
+    const listenerPromise = CapacitorApp.addListener(
+      "appUrlOpen",
+      async (event: URLOpenListenerEvent) => {
+        let parsed: URL;
+        try {
+          parsed = new URL(event.url);
+        } catch {
+          return;
+        }
+        if (parsed.protocol !== "com.azatechnologies.aza:" || parsed.hostname !== "auth-callback") {
+          return;
+        }
+
+        const access_token = parsed.searchParams.get("access_token");
+        const refresh_token = parsed.searchParams.get("refresh_token");
+        const returnedNext = parsed.searchParams.get("next") ?? next;
+
+        void Browser.close().catch(() => {});
+
+        if (!access_token || !refresh_token) {
+          setLoading(false);
+          setTapError("Couldn't sign you in. Please try again.");
+          setDebugDetail("native handoff: missing tokens in callback URL");
+          return;
+        }
+
+        const supabase = createClient();
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        setLoading(false);
+        if (error) {
+          console.error("setSession from native handoff failed:", error);
+          setTapError("Couldn't sign you in. Please try again.");
+          setDebugDetail(`native handoff setSession: ${error.message}`);
+          return;
+        }
+        router.push(returnedNext);
+        router.refresh();
+      }
+    );
+
+    return () => {
+      void listenerPromise.then((listener) => listener.remove());
+    };
+  }, [isNative, next, router]);
 
   const handleCredential = useCallback(
     async (nonce: string, response: CredentialResponse) => {
