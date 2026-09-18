@@ -24,7 +24,13 @@ export default function OpportunityCvTailor({ opportunityId }: { opportunityId: 
     startTransition(async () => {
       try {
         const result = await tailorCvForOpportunityId(opportunityId);
-        setContent(result);
+        if (!result.ok) {
+          setError(
+            "Sorry, couldn't tailor your CV. Please make sure your details are in the CV builder in the profile page."
+          );
+          return;
+        }
+        setContent(result.content);
         // Re-fetch to pick up the persisted match_score from this tailoring pass
         const row = await getTailoredCv(opportunityId);
         setMatchScore(row?.match_score ?? null);

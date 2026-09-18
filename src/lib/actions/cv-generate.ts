@@ -72,8 +72,20 @@ export async function generateMyBaseCv() {
 /**
  * Produces a tailored version of the base CV for a specific opportunity.
  * Requires a base CV to already exist (generateMyBaseCv must run first).
+ *
+ * Returns a typed result instead of throwing for the "no base CV yet"
+ * case specifically: Next.js strips thrown Server Action error messages
+ * in production builds (replaced with a generic digest string, by
+ * design, so server internals never leak to the client) — so a plain
+ * throw here would only ever show the user a useless generic error
+ * instead of the actual, harmless, expected reason. Genuinely
+ * unexpected failures (bad opportunityId, Supabase/Groq errors) still
+ * throw as before, since those don't need a specific client-facing
+ * message anyway.
  */
-export async function tailorCvForOpportunityId(opportunityId: string) {
+export async function tailorCvForOpportunityId(
+  opportunityId: string
+): Promise<{ ok: true; content: string } | { ok: false; reason: "no-base-cv" }> {
   const { supabase, user } = await requireUser();
 
   const [{ data: cv }, { data: opportunity }] = await Promise.all([
@@ -82,7 +94,7 @@ export async function tailorCvForOpportunityId(opportunityId: string) {
   ]);
 
   if (!cv?.generated_content) {
-    throw new Error("Generate your base CV first, then tailor it for specific opportunities");
+    return { ok: false, reason: "no-base-cv" };
   }
   if (!opportunity) throw new Error("Opportunity not found");
 
@@ -104,7 +116,7 @@ export async function tailorCvForOpportunityId(opportunityId: string) {
 
   revalidatePath(`/opportunities/${opportunityId}`);
   revalidatePath("/profile/cv");
-  return tailored;
+  return { ok: true, content: tailored };
 }
 
 export async function getTailoredCv(opportunityId: string) {
