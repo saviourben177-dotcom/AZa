@@ -11,10 +11,16 @@ export async function createIdea(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/growth/ideas");
 
-  const tags = (formData.get("skills_needed") as string)
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
+  // skills_needed is not currently a field in the idea form.
+  // Keep tags empty unless the form explicitly supplies them.
+  const skillsNeeded = formData.get("skills_needed");
+  const tags =
+    typeof skillsNeeded === "string"
+      ? skillsNeeded
+          .split(",")
+          .map((t) => t.trim())
+          .filter(Boolean)
+      : [];
 
   const visibility = formData.get("visibility") === "private" ? "private" : "public";
   const lookingForCollaborators = formData.get("looking_for_collaborators") === "on";
