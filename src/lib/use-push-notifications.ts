@@ -59,6 +59,17 @@ export function usePushNotifications() {
 
         if (!granted || cancelled) return;
 
+        // Android 8+ requires a notification channel for visible notifications.
+        await PushNotifications.createChannel({
+          id: "aza_default",
+          name: "Aza Notifications",
+          description: "Notifications from Aza",
+          importance: 5,
+          visibility: 1,
+          sound: "default",
+          vibration: true,
+        });
+
         await PushNotifications.register();
       } catch (err) {
         console.error("Push setup error:", err);
