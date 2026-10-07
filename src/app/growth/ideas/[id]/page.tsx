@@ -9,6 +9,8 @@ import ShareIdeaButton from "@/components/growth/share-idea-button";
 import CommentForm from "@/components/growth/comment-form";
 import DeleteCommentButton from "@/components/growth/delete-comment-button";
 import IdeaAuthorRow from "@/components/growth/idea-author-row";
+import ReportButton from "@/components/reports/report-button";
+import ReportOnLongPress from "@/components/reports/report-on-long-press";
 import type { IdeaComment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -101,6 +103,7 @@ export default async function IdeaDetailPage({
         <div className="ml-auto flex items-center gap-1">
           <SaveIdeaButton ideaId={idea.id} initialSaved={isSaved} isAuthed={!!user} />
           <ShareIdeaButton ideaId={idea.id} title={idea.title} />
+          {user && !isOwner && <ReportButton contentType="idea" contentId={idea.id} />}
         </div>
       </div>
 
@@ -152,8 +155,8 @@ export default async function IdeaDetailPage({
           )}
           {commentList.map((comment) => {
             const commenter = commenters.get(comment.user_id);
-            return (
-              <div key={comment.id} className="rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
+            const card = (
+              <div className="rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
                 <div className="flex items-center justify-between">
                   <IdeaAuthorRow
                     name={commenter?.full_name ?? "Aza user"}
@@ -166,6 +169,11 @@ export default async function IdeaDetailPage({
                 </div>
                 <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-ink/70">{comment.body}</p>
               </div>
+            );
+            return user?.id === comment.user_id ? (
+              <div key={comment.id}>{card}</div>
+            ) : (
+              <ReportOnLongPress key={comment.id} contentType="idea_comment" contentId={comment.id}>{card}</ReportOnLongPress>
             );
           })}
         </div>
