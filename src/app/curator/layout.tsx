@@ -42,6 +42,7 @@ export default async function CuratorLayout({
         <CuratorTab href="/curator/incubators" label="Incubators" />
         <CuratorTab href="/curator/businesses" label="Businesses" />
         <CuratorTab href="/curator/prices" label="Prices" />
+        <CuratorTab href="/curator/reports" label="Reports" />
       </div>
 
       {children}
