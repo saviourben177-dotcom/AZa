@@ -3,6 +3,7 @@
 import { useRef, useTransition } from "react";
 import { sendMessage } from "@/lib/actions/team-finder";
 import { relativeTime } from "@/lib/types";
+import ReportOnLongPress from "@/components/reports/report-on-long-press";
 
 interface MessageItem {
   id: string;
@@ -42,16 +43,23 @@ export default function MessageThread({
           const mine = m.sender_id === currentUserId;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
+              {mine ? (
+                <div className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
                   mine ? "bg-aza text-white" : "border border-line-strong bg-surface text-ink"
-                }`}
-              >
-                <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
-                <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>
-                  {relativeTime(m.created_at)}
-                </p>
-              </div>
+                }`}>
+                  <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
+                  <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>{relativeTime(m.created_at)}</p>
+                </div>
+              ) : (
+                <ReportOnLongPress contentType="message" contentId={m.id}>
+                  <div className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
+                    mine ? "bg-aza text-white" : "border border-line-strong bg-surface text-ink"
+                  }`}>
+                    <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
+                    <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>{relativeTime(m.created_at)}</p>
+                  </div>
+                </ReportOnLongPress>
+              )}
             </div>
           );
         })}
