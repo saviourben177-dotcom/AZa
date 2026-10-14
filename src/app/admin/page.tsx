@@ -1,66 +1,65 @@
-// src/app/admin/page.tsx
+"use client";
 
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { useState } from "react";
+import { toast } from "sonner";
+import { AppShell } from "@/components/aza/app-shell";
+import { btn, Empty, Stat } from "@/components/aza/kit";
+import { PageHeader, Tag } from "@/components/aza/ui";
+import { curatorQueue, getPerson, timeAgo } from "@/lib/aza-data";
+import { api } from "@/lib/aza/api";
+import { ReportsQueue } from "@/components/aza/reports-queue";
 
-export default async function AdminDashboard() {
-  const supabase = await createClient();
+export default function AdminPage() {
+  const [list, setList] = useState(curatorQueue);
 
-  const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }] =
-    await Promise.all([
-      supabase.from("businesses").select("*", { count: "exact", head: true }),
-      supabase.from("idea_library").select("*", { count: "exact", head: true }),
-      supabase
-        .from("ideas")
-        .select("*", { count: "exact", head: true })
-        .eq("looking_for_collaborators", true),
-    ]);
-
-  const { data: recentLog } = await supabase
-    .from("admin_content_log")
-    .select("action, table_name, summary, created_at")
-    .order("created_at", { ascending: false })
-    .limit(20);
+  async function act(id: string, kind: string, action: "approve" | "reject" | "remove") {
+    await api.moderate(kind, id, action);
+    setList(list.filter((q) => q.id !== id));
+    toast.success(`${action.charAt(0).toUpperCase()}${action.slice(1)}d`);
+  }
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard label="Businesses" value={businessCount ?? 0} href="/admin/businesses" />
-        <StatCard label="Idea Library" value={ideaLibraryCount ?? 0} href="/admin/idea-library" />
-        <StatCard label="Open Teams" value={teamCount ?? 0} href="/admin/teams" />
+    <AppShell>
+      <PageHeader title="Admin" sub="Moderate content and manage the platform." />
+      <div className="mb-8 grid grid-cols-3 gap-3">
+        <Stat label="In queue" value={list.length} />
+        <Stat label="Approved this week" value={24} />
+        <Stat label="Rejected" value={3} />
       </div>
-
-      <section>
-        <h2 className="mb-2 text-sm font-medium text-neutral-600">Recent admin actions</h2>
-        <div className="rounded-lg border border-neutral-200 bg-white">
-          {recentLog && recentLog.length > 0 ? (
-            <ul className="divide-y divide-neutral-100">
-              {recentLog.map((entry, i) => (
-                <li key={i} className="flex justify-between px-4 py-2 text-sm">
-                  <span>{entry.summary}</span>
-                  <span className="text-neutral-400">
-                    {new Date(entry.created_at).toLocaleString()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="p-4 text-sm text-neutral-400">No admin actions yet.</p>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
-  return (
-    <Link
-      href={href}
-      className="block rounded-lg border border-neutral-200 bg-white p-4 hover:border-neutral-300"
-    >
-      <p className="text-sm text-neutral-500">{label}</p>
-      <p className="text-2xl font-semibold">{value}</p>
-    </Link>
+      {list.length === 0 ? (
+        <Empty title="Queue is clear" />
+      ) : (
+        <ul className="grid gap-3">
+          {list.map((q) => (
+            <li
+              key={q.id}
+              className="grid gap-3 rounded-lg border bg-card p-4 shadow-[var(--shadow-card)] sm:grid-cols-[1fr_auto] sm:items-center"
+            >
+              <div>
+                <Tag tone="info">{q.kind}</Tag>
+                <p className="mt-1.5 font-bold">{q.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  by {getPerson(q.by).name} · {timeAgo(q.hoursAgo)}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button className={btn.primary} onClick={() => act(q.id, q.kind, "approve")}>
+                  Approve
+                </button>
+                <button className={btn.secondary} onClick={() => act(q.id, q.kind, "reject")}>
+                  Reject
+                </button>
+                <button className={btn.danger} onClick={() => act(q.id, q.kind, "remove")}>
+                  Remove
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-8">
+        <ReportsQueue />
+      </div>
+    </AppShell>
   );
 }

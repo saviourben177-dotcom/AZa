@@ -1,148 +1,81 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, btn, Progress, Section } from "@/components/aza/kit";
+import { PageHeader, Tag } from "@/components/aza/ui";
+import { me } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/server";
-import { getOrCreateCvProfile } from "@/lib/actions/cv-profile";
-import { listCvDocuments } from "@/lib/actions/cv-documents";
-import CvSummaryEditor from "@/components/cv/cv-summary-editor";
-import CvSkillsEditor from "@/components/cv/cv-skills-editor";
-import CvEducationList from "@/components/cv/cv-education-list";
-import CvExperienceList from "@/components/cv/cv-experience-list";
-import CvCertificationsList from "@/components/cv/cv-certifications-list";
-import CvDocumentUpload from "@/components/cv/cv-document-upload";
-import CvGenerateButton from "@/components/cv/cv-generate-button";
-import CvGeneratedPreview from "@/components/cv/cv-generated-preview";
 
 export const dynamic = "force-dynamic";
 
-export default async function CvBuilderPage() {
+export const metadata: Metadata = {
+  title: "Your CV — Aza",
+  description: "View your CV and tailor it to each opportunity.",
+};
+
+export default async function CvPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return (
-      <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📄</div>
-        <p className="mt-4 font-display text-[17px] font-bold text-ink">Log in to build your CV</p>
-        <Link href="/login?next=/profile/cv" className="mt-5 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent">
-          Log in
-        </Link>
-      </div>
-    );
-  }
+  let name = me.name;
+  let role = me.role;
+  let location = me.location;
+  let summary = "Self-taught builder focused on education tools for students across Nigeria.";
 
-  const [cvProfile, documents] = await Promise.all([getOrCreateCvProfile(), listCvDocuments()]);
-
-  return (
-    <div className="px-5 pb-10 pt-7">
-      <div className="flex items-center gap-3">
-        <Link href="/profile" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
-            <path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-        <div>
-          <h1 className="font-display text-[19px] font-bold text-ink">CV Builder</h1>
-          <p className="text-[12px] text-ink/55">Build once, tailor for any opportunity</p>
-        </div>
-      </div>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Summary</h2>
-        <div className="mt-2.5"><CvSummaryEditor initialSummary={cvProfile.summary} /></div>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Scan a document</h2>
-        <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/55">
-          Upload a photo of a certificate, transcript, or ID. We&apos;ll pull out the details for you to review — nothing is saved to your CV automatically.
-        </p>
-        <div className="mt-3">
-          <CvDocumentUpload documents={documents} />
-        </div>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Education</h2>
-        <div className="mt-2.5"><CvEducationList entries={cvProfile.education} /></div>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Experience</h2>
-        <div className="mt-2.5"><CvExperienceList entries={cvProfile.experience} /></div>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Certifications</h2>
-        <div className="mt-2.5"><CvCertificationsList entries={cvProfile.certifications} /></div>
-      </section>
-
-      <section className="mt-7">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Skills</h2>
-        <div className="mt-2.5"><CvSkillsEditor initialSkills={cvProfile.skills} /></div>
-      </section>
-
-      <section className="mt-8 border-t border-line pt-6">
-        <CvGenerateButton hasGenerated={!!cvProfile.generated_content} />
-        {cvProfile.generated_content && (
-          <div className="mt-4">
-            <CvGeneratedPreview content={cvProfile.generated_content} generatedAt={cvProfile.generated_at} />
-          </div>
-        )}
-      </section>
-
-      <section className="mt-8 border-t border-line pt-6">
-        <h2 className="text-[12px] font-bold uppercase tracking-wide text-ink/45">Tailored CVs</h2>
-        <div className="mt-2.5">
-          <TailoredCvsList userId={user.id} />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-async function TailoredCvsList({ userId }: { userId: string }) {
-  const supabase = await createClient();
-  const { data: tailorings } = await supabase
-    .from("cv_tailorings")
-    .select("id, match_score, created_at, opportunity_id, opportunities(id, title, org)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  const rows = (tailorings ?? []).filter((t) => t.opportunities);
-
-  if (rows.length === 0) {
-    return (
-      <p className="text-[12.5px] text-ink/45">
-        No tailored CVs yet — visit any opportunity and tap &quot;AI Tailor My CV&quot; to create one.
-      </p>
-    );
+  if (user) {
+    const [{ data: p }, { data: cv }] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      supabase.from("cv_profiles").select("*").eq("user_id", user.id).maybeSingle(),
+    ]);
+    if (p) {
+      if (p.full_name) name = p.full_name;
+      if (p.job_title) role = p.job_title;
+      if (p.exact_location) location = p.exact_location;
+    }
+    if (cv?.summary) summary = cv.summary;
   }
 
   return (
-    <div className="space-y-2.5">
-      {rows.map((row) => {
-        const opp = row.opportunities as unknown as { id: string; title: string; org: string };
-        return (
-          <Link
-            key={row.id}
-            href={`/opportunities/${opp.id}`}
-            className="flex items-center justify-between gap-3 rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card"
-          >
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-bold text-ink">{opp.title}</p>
-              <p className="mt-0.5 text-[11.5px] font-medium text-ink/50">
-                {opp.org} · Tailored {new Date(row.created_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
-              </p>
-            </div>
-            {row.match_score !== null && (
-              <span className="shrink-0 rounded-pill bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza">
-                {row.match_score}% Match
-              </span>
-            )}
+    <AppShell>
+      <BackLink to="/profile" label="Profile" />
+      <PageHeader
+        title="Your CV"
+        action={
+          <Link href="/profile/cv/edit" className={btn.primary}>
+            Edit CV
           </Link>
-        );
-      })}
-    </div>
+        }
+      />
+      <div className="mb-8 max-w-2xl rounded-lg border bg-primary-soft p-4">
+        <p className="mb-2 text-sm font-bold text-primary-strong">60% complete</p>
+        <Progress value={60} />
+      </div>
+      <article className="max-w-2xl rounded-lg border bg-card p-6 shadow-[var(--shadow-lift)]">
+        <h2 className="text-2xl font-display font-bold text-foreground">{name}</h2>
+        <p className="mb-6 text-sm text-muted-foreground">
+          {role} · {location}
+        </p>
+        <Section title="Summary">
+          <p className="text-sm leading-relaxed text-foreground">{summary}</p>
+        </Section>
+        <Section title="Experience">
+          <p className="text-sm text-foreground">
+            <b>Founder, WhatsApp JAMB tutor</b> · 2025 – now
+          </p>
+        </Section>
+        <Section title="Skills">
+          <div className="flex flex-wrap gap-1.5">
+            {["Product design", "Python", "Bookkeeping"].map((s) => (
+              <Tag key={s}>{s}</Tag>
+            ))}
+          </div>
+        </Section>
+        <Section title="Education" className="mb-0">
+          <p className="text-sm text-muted-foreground">Not added yet</p>
+        </Section>
+      </article>
+    </AppShell>
   );
 }

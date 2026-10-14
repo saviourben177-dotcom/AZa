@@ -1,62 +1,62 @@
-import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
-import DeleteOpportunityButton from "@/components/curator/delete-opportunity-button";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useState } from "react";
+import { toast } from "sonner";
+import { AppShell } from "@/components/aza/app-shell";
+import { btn, Empty, Stat } from "@/components/aza/kit";
+import { PageHeader, Tag } from "@/components/aza/ui";
+import { curatorQueue, getPerson, timeAgo } from "@/lib/aza-data";
+import { api } from "@/lib/aza/api";
+import { ReportsQueue } from "@/components/aza/reports-queue";
 
-export default async function CuratorOpportunitiesPage() {
-  const supabase = await createClient();
-  const { data: opportunities } = await supabase
-    .from("opportunities")
-    .select("*")
-    .order("deadline", { ascending: true, nullsFirst: false });
+export default function CuratorPage() {
+  const [list, setList] = useState(curatorQueue);
+
+  async function act(id: string, kind: string, action: "approve" | "reject" | "remove") {
+    await api.moderate(kind, id, action);
+    setList(list.filter((q) => q.id !== id));
+    toast.success(`${action.charAt(0).toUpperCase()}${action.slice(1)}d`);
+  }
 
   return (
-    <div>
-      <Link
-        href="/curator/opportunities/new"
-        className="block rounded-card bg-aza py-3 text-center text-[14px] font-bold text-white"
-      >
-        + Add opportunity
-      </Link>
-
-      <div className="mt-4 space-y-2.5">
-        {(opportunities ?? []).length === 0 && (
-          <p className="text-[13px] text-ink/50">No opportunities yet.</p>
-        )}
-
-        {opportunities?.map((opp) => (
-          <div
-            key={opp.id}
-            className="rounded-card border border-line bg-surface p-3.5"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-[14px] font-bold text-ink">
-                  {opp.title}
-                </p>
-                <p className="text-[12px] text-ink/50">
-                  {OPPORTUNITY_CATEGORY_LABELS[opp.category as keyof typeof OPPORTUNITY_CATEGORY_LABELS]}
-                  {opp.curator_verified ? " · Verified" : " · Unverified"}
-                  {opp.deadline
-                    ? ` · Due ${new Date(opp.deadline).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}`
-                    : ""}
+    <AppShell>
+      <PageHeader title="Curator" sub="Review submitted opportunities, businesses and ideas." />
+      <div className="mb-8 grid grid-cols-3 gap-3">
+        <Stat label="In queue" value={list.length} />
+        <Stat label="Approved this week" value={24} />
+        <Stat label="Rejected" value={3} />
+      </div>
+      {list.length === 0 ? (
+        <Empty title="Queue is clear" />
+      ) : (
+        <ul className="grid gap-3">
+          {list.map((q) => (
+            <li
+              key={q.id}
+              className="grid gap-3 rounded-lg border bg-card p-4 shadow-[var(--shadow-card)] sm:grid-cols-[1fr_auto] sm:items-center"
+            >
+              <div>
+                <Tag tone="info">{q.kind}</Tag>
+                <p className="mt-1.5 font-bold">{q.title}</p>
+                <p className="text-sm text-muted-foreground">
+                  by {getPerson(q.by).name} · {timeAgo(q.hoursAgo)}
                 </p>
               </div>
-            </div>
-            <div className="mt-2.5 flex gap-3">
-              <Link
-                href={`/curator/opportunities/${opp.id}/edit`}
-                className="text-[12.5px] font-semibold text-aza"
-              >
-                Edit
-              </Link>
-              <DeleteOpportunityButton id={opp.id} />
-            </div>
-          </div>
-        ))}
+              <div className="flex gap-2">
+                <button className={btn.primary} onClick={() => act(q.id, q.kind, "approve")}>
+                  Approve
+                </button>
+                <button className={btn.secondary} onClick={() => act(q.id, q.kind, "reject")}>
+                  Reject
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-8">
+        <ReportsQueue />
       </div>
-    </div>
+    </AppShell>
   );
 }

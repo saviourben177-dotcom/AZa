@@ -1,65 +1,91 @@
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import MessageThread from "@/components/team-finder/message-thread";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { Send } from "lucide-react";
+import { use, useState, type FormEvent } from "react";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, btn } from "@/components/aza/kit";
+import { PageHeader } from "@/components/aza/ui";
+import { ReportButton } from "@/components/aza/report";
+import { getPerson, me, messages, timeAgo } from "@/lib/aza-data";
+import { api } from "@/lib/aza/api";
+import { cn } from "@/lib/utils";
 
-export default async function MessageThreadPage({
+export default function ChatPage({
   params,
 }: {
   params: Promise<{ requestId: string }>;
 }) {
-  const { requestId } = await params;
-  const supabase = await createClient();
+  const { requestId } = use(params);
+  const [list, setList] = useState(messages);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=/businesses/team-finder/messages/${requestId}`);
-
-  const { data: request, error } = await supabase
-    .from("join_requests")
-    .select("id, idea_id, requester_id, status, ideas(title, user_id)")
-    .eq("id", requestId)
-    .single();
-
-  if (error || !request) notFound();
-
-  const idea = request.ideas as unknown as { title: string; user_id: string } | null;
-  const isRequester = user.id === request.requester_id;
-  const isOwner = user.id === idea?.user_id;
-
-  if (!isRequester && !isOwner) notFound();
-  if (request.status !== "accepted") notFound();
-
-  const otherUserId = isOwner ? request.requester_id : idea?.user_id;
-  const { data: otherProfile } = otherUserId
-    ? await supabase.from("profiles").select("full_name, avatar_url").eq("id", otherUserId).single()
-    : { data: null };
-
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("id, sender_id, body, created_at")
-    .eq("join_request_id", requestId)
-    .order("created_at", { ascending: true });
+  async function send(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const f = e.currentTarget;
+    const body = String(new FormData(f).get("body") ?? "").trim();
+    if (!body) return;
+    f.reset();
+    await api.sendMessage(requestId, body);
+    setList([...list, { id: String(Date.now()), author: me.id, body, hoursAgo: 0 }]);
+  }
 
   return (
-    <div className="flex h-dvh flex-col">
-      <div className="flex items-center gap-3 border-b border-line px-5 pb-4 pt-7">
-        <Link href="/businesses/team-finder/my-requests" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Link>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-aza-light font-display text-[13px] font-bold text-aza">
-          {(otherProfile?.full_name ?? "?").charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[13.5px] font-bold text-ink">{otherProfile?.full_name ?? "Aza user"}</p>
-          <p className="truncate text-[11px] font-medium text-ink/45">{idea?.title}</p>
-        </div>
+    <AppShell>
+      <BackLink to="/businesses/team-finder/my-requests" label="Requests" />
+      <PageHeader title="Messages" />
+      <div className="mx-auto max-w-2xl">
+        <ul className="mb-4 space-y-3">
+          {list.map((m) => {
+            const mine = m.author === me.id || m.author === "ada";
+            return (
+              <li
+                key={m.id}
+                className={cn("max-w-[85%]", mine && "ml-auto text-right")}
+              >
+                <p
+                  className={cn(
+                    "inline-block rounded-lg px-3.5 py-2.5 text-left text-sm",
+                    mine
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "border bg-card text-foreground",
+                  )}
+                >
+                  {m.body}
+                </p>
+                <p
+                  className={cn(
+                    "mt-1 flex items-center gap-1 text-xs text-muted-foreground",
+                    mine && "justify-end",
+                  )}
+                >
+                  {getPerson(m.author).name} · {timeAgo(m.hoursAgo)}
+                  {!mine && (
+                    <ReportButton
+                      className="size-8"
+                      target={{
+                        type: "message",
+                        id: m.id,
+                        userId: m.author,
+                        content: m.body,
+                      }}
+                    />
+                  )}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+        <form onSubmit={send} className="flex gap-2">
+          <input
+            name="body"
+            aria-label="Message"
+            placeholder="Write a message"
+            className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button className={btn.primary} aria-label="Send">
+            <Send className="size-4" />
+          </button>
+        </form>
       </div>
-
-      <MessageThread joinRequestId={requestId} messages={messages ?? []} currentUserId={user.id} />
-    </div>
+    </AppShell>
   );
 }

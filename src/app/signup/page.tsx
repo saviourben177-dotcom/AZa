@@ -1,176 +1,47 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
-import GoogleSignInButton from "@/components/google-signin-button";
-import AuthError from "@/components/auth-error";
+import { useRouter } from "next/navigation";
+import { BareShell, Form, TextField } from "@/components/aza/kit";
+import { api } from "@/lib/aza/api";
 
-function SignupForm() {
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // See GoogleSignInButton's isHandoff — signup can also be opened by
-  // the native app's browser handoff, and someone might complete
-  // signup with email/password instead of Google once there.
-  const isHandoff = searchParams.get("handoff") === "1";
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    if (!agreedToTerms) {
-      setError("Please agree to the Privacy Policy to continue.");
-      return;
-    }
-
-    setLoading(true);
-    const supabase = createClient();
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-      return;
-    }
-
-    if (data.session) {
-      if (isHandoff) {
-        router.push(`/auth/native-handoff?next=${encodeURIComponent("/onboarding")}`);
-        return;
-      }
-      router.push("/onboarding");
-      router.refresh();
-    } else {
-      // Email confirmation required — no session yet either way, so
-      // there's nothing to hand off to the native app until the user
-      // confirms their email (likely on a different device) and later
-      // logs in through the normal /login handoff. Same screen for
-      // both cases.
-      setSuccess(true);
-    }
-  }
-
-  if (success) {
-    return (
-      <div className="px-5 pt-16 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-2xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">📬</div>
-        <h1 className="mt-4 font-display text-[19px] font-bold text-ink">
-          Check your email
-        </h1>
-        <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55">
-          We sent a confirmation link to {email}. Confirm it to finish setting
-          up your account.
-        </p>
-      </div>
-    );
-  }
 
   return (
-    <div className="px-5 pt-16">
-      <h1 className="font-display text-[16px] font-bold text-aza">Aza</h1>
-      <h2 className="mt-3 font-display text-[24px] font-bold text-ink">
-        Create your account
-      </h2>
-      <p className="mt-1.5 text-[13.5px] text-ink/55">
-        Save opportunities and apply faster.
-      </p>
-
-      <div className="mt-7">
-        <GoogleSignInButton next="/onboarding" handoffPath="/signup" />
-      </div>
-
-      <div className="my-5 flex items-center gap-3">
-        <div className="h-px flex-1 bg-line" />
-        <span className="text-[12px] font-semibold uppercase tracking-wide text-ink/40">
-          or
-        </span>
-        <div className="h-px flex-1 bg-line" />
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="text-[13px] font-bold text-ink/65">Full name</label>
-          <input
-            required
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
-          />
-        </div>
-        <div>
-          <label className="text-[13px] font-bold text-ink/65">Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
-          />
-        </div>
-        <div>
-          <label className="text-[13px] font-bold text-ink/65">Password</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1.5 w-full rounded-card-sm border border-line-strong bg-surface px-4 py-3 text-[14px] shadow-card"
-          />
-        </div>
-
-        <label className="flex items-start gap-2.5 pt-1">
-          <input
-            type="checkbox"
-            checked={agreedToTerms}
-            onChange={(e) => setAgreedToTerms(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-line-strong accent-aza"
-          />
-          <span className="text-[12.5px] leading-relaxed text-ink/60">
-            I agree to the{" "}
-            <Link href="/privacy" target="_blank" className="font-bold text-aza">
-              Privacy Policy
-            </Link>
-          </span>
-        </label>
-
-        <AuthError message={error} />
-
-        <button
-          type="submit"
-          disabled={loading || !agreedToTerms}
-          className="w-full rounded-pill bg-aza py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent disabled:opacity-60"
-        >
-          {loading ? "Creating account..." : "Create account"}
-        </button>
-      </form>
-
-      <p className="mt-5 text-center text-[13px] text-ink/55">
-        Already have an account?{" "}
-        <Link href="/login" className="font-bold text-aza">
+    <BareShell narrow>
+      <h1 className="mb-6 text-3xl font-display font-bold text-foreground">Join Aza</h1>
+      <Form
+        onSubmit={async (d) => {
+          await api.signUp(d);
+          router.push("/onboarding");
+        }}
+        submitLabel="Create account"
+        success="Account created"
+      >
+        <TextField label="Full name" name="name" required />
+        <TextField label="Email" name="email" type="email" required />
+        <TextField
+          label="Password"
+          name="password"
+          type="password"
+          required
+          hint="At least 8 characters"
+        />
+      </Form>
+      <p className="mt-6 text-sm text-foreground">
+        Have an account?{" "}
+        <Link href="/login" className="font-bold text-primary-strong hover:underline">
           Log in
         </Link>
       </p>
-    </div>
-  );
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense>
-      <SignupForm />
-    </Suspense>
+      <p className="mt-2 text-xs text-muted-foreground">
+        By joining you agree to our{" "}
+        <Link href="/privacy" className="underline">
+          privacy policy
+        </Link>
+        .
+      </p>
+    </BareShell>
   );
 }

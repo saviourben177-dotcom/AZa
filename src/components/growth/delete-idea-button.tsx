@@ -3,12 +3,12 @@
 import { useTransition } from "react";
 import { deleteIdea } from "@/lib/actions/ideas";
 
-export default function DeleteIdeaButton({ ideaId }: { ideaId: string }) {
+export default function DeleteIdeaButton({ ideaId, redirectTo }: { ideaId: string; redirectTo?: string }) {
   const [isPending, startTransition] = useTransition();
 
   function handleDelete() {
     if (!confirm("Delete this idea? This can't be undone.")) return;
-    startTransition(() => deleteIdea(ideaId));
+    startTransition(() => deleteIdea(ideaId, redirectTo));
   }
 
   return (

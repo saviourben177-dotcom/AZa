@@ -18,7 +18,10 @@ export default function SaveButton({
   const router = useRouter();
   const supabase = createClient();
 
-  function toggle() {
+  function toggle(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (!isAuthed) {
       router.push(`/login?next=/`);
       return;

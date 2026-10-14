@@ -1,55 +1,107 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import NewIdeaForm from "@/components/growth/new-idea-form";
+"use client";
 
-export default async function NewIdeaPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ team?: string }>;
-}) {
-  const { team } = await searchParams;
-  const fromTeamFinder = team === "1";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, btn } from "@/components/aza/kit";
+import { TextField, TextArea, SelectField } from "@/components/aza/kit";
+import { PageHeader } from "@/components/aza/ui";
+import { createIdea } from "@/lib/actions/ideas";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=/growth/ideas/new${fromTeamFinder ? "?team=1" : ""}`);
+export default function NewIdeaPage() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
 
-  const backHref = fromTeamFinder ? "/businesses/team-finder" : "/growth/ideas";
+  const asks = [
+    "Seeking Co-Founder",
+    "Feedback Wanted",
+    "Looking for Beta Testers",
+    "Distribution Advice",
+  ];
+  const stages = ["Idea", "Validating", "Building", "Launched"];
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
+    // Map prototype fields if needed
+    if (!data.get("description") && data.get("pitch")) {
+      data.set("description", data.get("pitch") as string);
+    }
+    const ask = data.get("ask");
+    if (ask) {
+      data.set("skills_needed", String(ask));
+    }
+    const stage = data.get("stage");
+    if (stage) {
+      data.set("category", String(stage));
+    }
+
+    startTransition(async () => {
+      try {
+        await createIdea(data);
+        toast.success("Idea posted");
+      } catch (err: unknown) {
+        // Next.js redirect throws a digest error; let it propagate
+        if (err && typeof err === "object" && "digest" in err) {
+          throw err;
+        }
+        const message = err instanceof Error ? err.message : "Failed to post idea";
+        setError(message);
+        toast.error(message);
+      }
+    });
+  }
 
   return (
-    <div className="px-5 pt-7">
-      <div className="flex items-center gap-3">
-        <Link href={backHref} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Link>
-        <h1 className="font-display text-[19px] font-bold text-ink">{fromTeamFinder ? "Post a Team Project" : "Add Idea"}</h1>
-      </div>
+    <AppShell>
+      <BackLink to="/growth/ideas" label="Ideas" />
+      <PageHeader title="Share an idea" sub="Be specific about what you need" />
+      <div className="mx-auto max-w-xl">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-lg border bg-card p-6 shadow-[var(--shadow-card)]"
+        >
+          {error && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+          <TextField label="Title" name="title" required />
+          <SelectField label="The Ask" name="ask" options={asks} />
+          <SelectField label="Stage" name="stage" options={stages} />
+          <TextArea label="Pitch" name="pitch" rows={6} required />
 
-      <div className="mt-7 flex flex-col items-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6h5.4c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3Z" stroke="rgb(var(--accent))" strokeWidth="1.6" strokeLinejoin="round" />
-          </svg>
-        </div>
-        {fromTeamFinder ? (
-          <>
-            <p className="mt-3 font-display text-[16px] font-bold text-ink">Building something?</p>
-            <p className="text-[12.5px] text-ink/55">Post it here and find collaborators to join you.</p>
-          </>
-        ) : (
-          <>
-            <p className="mt-3 font-display text-[16px] font-bold text-ink">Got an idea?</p>
-            <p className="text-[12.5px] text-ink/55">Share it with the community.</p>
-          </>
-        )}
-      </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Optional Website or Demo Link
+            </label>
+            <input
+              name="link_url"
+              type="url"
+              placeholder="https://..."
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
 
-      <div className="mt-6">
-        <NewIdeaForm defaultLookingForCollaborators={fromTeamFinder} />
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => router.push("/growth/ideas")}
+              className={btn.ghost}
+            >
+              Cancel
+            </button>
+            <button type="submit" disabled={isPending} className={btn.primary}>
+              {isPending ? "Posting…" : "Post idea"}
+            </button>
+          </div>
+        </form>
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -1,41 +1,27 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import Link from "next/link";
-import EditProfileForm from "./edit-profile-form";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, Form, TextArea, TextField } from "@/components/aza/kit";
+import { PageHeader } from "@/components/aza/ui";
+import { me } from "@/lib/aza-data";
+import { api } from "@/lib/aza/api";
 
-export default async function EditProfilePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login?next=/profile/edit");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, avatar_url")
-    .eq("id", user.id)
-    .single();
-
+export default function EditProfilePage() {
   return (
-    <div className="px-5 pt-7">
-      <div className="flex items-center gap-3">
-        <Link href="/profile" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Link>
-        <h1 className="font-display text-[19px] font-bold text-ink">Edit Profile</h1>
-      </div>
-      <p className="mt-2 text-[12.5px] text-ink/55">Update your display name and photo.</p>
-
-      <div className="mt-6">
-        <EditProfileForm
-          currentName={profile?.full_name ?? ""}
-          currentAvatarUrl={profile?.avatar_url ?? null}
-          email={user.email ?? ""}
-        />
-      </div>
-    </div>
+    <AppShell>
+      <BackLink to="/profile" label="Profile" />
+      <PageHeader title="Edit profile" />
+      <Form
+        onSubmit={api.updateProfile}
+        submitLabel="Save changes"
+        success="Profile updated"
+        cancelTo="/profile"
+      >
+        <TextField label="Full name" name="name" required defaultValue={me.name} />
+        <TextField label="Role" name="role" defaultValue={me.role ?? ""} />
+        <TextField label="Location" name="location" defaultValue={me.location ?? ""} />
+        <TextArea label="Bio" name="bio" />
+      </Form>
+    </AppShell>
   );
 }

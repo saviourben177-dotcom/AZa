@@ -214,6 +214,56 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          user_a_id: string
+          user_b_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_a_id: string
+          user_b_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_a_id?: string
+          user_b_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_user_a_id_fkey"
+            columns: ["user_a_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_a_id_fkey"
+            columns: ["user_a_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_id_fkey"
+            columns: ["user_b_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_id_fkey"
+            columns: ["user_b_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cv_documents: {
         Row: {
           created_at: string
@@ -438,28 +488,127 @@ export type Database = {
           },
         ]
       }
+      follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      idea_comment_reactions: {
+        Row: {
+          comment_id: string
+          created_at: string
+          reaction: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          reaction: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          reaction?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_comment_reactions_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "idea_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_comment_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idea_comments: {
         Row: {
           body: string
           created_at: string
+          dislikes_count: number
           id: string
           idea_id: string
+          likes_count: number
+          parent_comment_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           body: string
           created_at?: string
+          dislikes_count?: number
           id?: string
           idea_id: string
+          likes_count?: number
+          parent_comment_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           body?: string
           created_at?: string
+          dislikes_count?: number
           id?: string
           idea_id?: string
+          likes_count?: number
+          parent_comment_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -469,6 +618,13 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "idea_comments"
             referencedColumns: ["id"]
           },
           {
@@ -687,6 +843,8 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          image_url: string | null
+          link_url: string | null
           looking_for_collaborators: boolean
           stage: string
           tags: string[]
@@ -702,6 +860,8 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
           looking_for_collaborators?: boolean
           stage?: string
           tags?: string[]
@@ -717,6 +877,8 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          image_url?: string | null
+          link_url?: string | null
           looking_for_collaborators?: boolean
           stage?: string
           tags?: string[]
@@ -1039,26 +1201,36 @@ export type Database = {
       messages: {
         Row: {
           body: string
+          conversation_id: string | null
           created_at: string
           id: string
-          join_request_id: string
+          join_request_id: string | null
           sender_id: string
         }
         Insert: {
           body: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
-          join_request_id: string
+          join_request_id?: string | null
           sender_id: string
         }
         Update: {
           body?: string
+          conversation_id?: string | null
           created_at?: string
           id?: string
-          join_request_id?: string
+          join_request_id?: string | null
           sender_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_join_request_id_fkey"
             columns: ["join_request_id"]
@@ -1303,6 +1475,7 @@ export type Database = {
           id: string
           industry: string | null
           is_currently_learning: boolean | null
+          is_public: boolean
           job_title: string | null
           learning_context: string[]
           onboarding_completed: boolean
@@ -1332,6 +1505,7 @@ export type Database = {
           id: string
           industry?: string | null
           is_currently_learning?: boolean | null
+          is_public?: boolean
           job_title?: string | null
           learning_context?: string[]
           onboarding_completed?: boolean
@@ -1361,6 +1535,7 @@ export type Database = {
           id?: string
           industry?: string | null
           is_currently_learning?: boolean | null
+          is_public?: boolean
           job_title?: string | null
           learning_context?: string[]
           onboarding_completed?: boolean
@@ -1579,6 +1754,7 @@ export type Database = {
         Row: {
           opportunity_id: string
           saved_at: string
+          seen: boolean
           status: Database["public"]["Enums"]["application_status"]
           status_updated_at: string
           user_id: string
@@ -1586,6 +1762,7 @@ export type Database = {
         Insert: {
           opportunity_id: string
           saved_at?: string
+          seen?: boolean
           status?: Database["public"]["Enums"]["application_status"]
           status_updated_at?: string
           user_id: string
@@ -1593,6 +1770,7 @@ export type Database = {
         Update: {
           opportunity_id?: string
           saved_at?: string
+          seen?: boolean
           status?: Database["public"]["Enums"]["application_status"]
           status_updated_at?: string
           user_id?: string
@@ -1824,6 +2002,7 @@ export type Database = {
       get_push_secret: { Args: { secret_name: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_curator_or_admin: { Args: never; Returns: boolean }
+      is_profile_public: { Args: { p_user_id: string }; Returns: boolean }
       log_admin_action: {
         Args: {
           p_action: string
@@ -1833,6 +2012,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      send_deadline_reminders: { Args: never; Returns: undefined }
+      send_opportunity_match_notifications: { Args: never; Returns: undefined }
     }
     Enums: {
       application_status:
@@ -2001,3 +2182,58 @@ export type CompositeTypes<
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      application_status: [
+        "saved",
+        "applied",
+        "interviewing",
+        "rejected",
+        "accepted",
+      ],
+      article_level: [
+        "welcome",
+        "beginner",
+        "intermediate",
+        "advanced",
+        "practical",
+      ],
+      employment_status: [
+        "student",
+        "employed",
+        "self_employed",
+        "unemployed",
+        "freelancer",
+        "other",
+      ],
+      idea_confidence_level: ["high", "medium", "low"],
+      impact_level: ["low", "medium", "high"],
+      learning_curve_type: ["beginner_friendly", "moderate", "steep"],
+      marketplace_listing_type: ["sell", "buy", "collaborate", "service"],
+      notification_type: [
+        "join_request_received",
+        "join_request_accepted",
+        "join_request_declined",
+        "new_message",
+        "deadline_reminder",
+        "opportunity_match",
+        "idea_upvote",
+        "system",
+      ],
+      opportunity_category: [
+        "scholarship",
+        "grant",
+        "hackathon",
+        "fellowship",
+        "internship",
+        "competition",
+        "job_gig",
+      ],
+      product_category: ["food", "fuel_energy", "building_materials"],
+      skill_level: ["beginner", "intermediate", "advanced"],
+      user_role: ["user", "curator", "admin", "editorial"],
+    },
+  },
+} as const

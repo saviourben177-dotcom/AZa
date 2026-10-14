@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { relativeTime } from "@/lib/types";
 
 export default function IdeaAuthorRow({
@@ -5,16 +6,19 @@ export default function IdeaAuthorRow({
   avatarUrl,
   createdAt,
   size = "sm",
+  profileHref,
 }: {
   name: string;
   avatarUrl: string | null | undefined;
   createdAt: string;
   size?: "sm" | "md";
+  /** When set, the whole row links to that user's profile. */
+  profileHref?: string;
 }) {
   const dims = size === "md" ? "h-11 w-11" : "h-9 w-9";
   const nameSize = size === "md" ? "text-[14.5px]" : "text-[13.5px]";
 
-  return (
+  const row = (
     <div className="flex items-center gap-2.5">
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -38,4 +42,6 @@ export default function IdeaAuthorRow({
       </div>
     </div>
   );
+
+  return profileHref ? <Link href={profileHref}>{row}</Link> : row;
 }

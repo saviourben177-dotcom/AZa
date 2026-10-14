@@ -1,128 +1,149 @@
-import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
-import SearchInput from "@/components/search/search-input";
-import { OPPORTUNITY_CATEGORY_LABELS } from "@/lib/types";
-import { isOpenOpportunity } from "@/lib/opportunity-deadline";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { Search as SearchIcon } from "lucide-react";
+import { useState, useTransition, useEffect } from "react";
+import { AppShell } from "@/components/aza/app-shell";
+import { IdeaCard } from "@/components/aza/idea-card";
+import { Empty, Section } from "@/components/aza/kit";
+import { OpportunityCard, PageHeader } from "@/components/aza/ui";
+import {
+  ideas as mockIdeas,
+  opportunities as mockOpportunities,
+  type Opportunity,
+  type Idea,
+} from "@/lib/aza-data";
+import { createClient } from "@/lib/supabase/client";
+import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
 
-export default async function SearchPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string }>;
-}) {
-  const { q } = await searchParams;
-  const supabase = await createClient();
+export default function SearchPage() {
+  const [q, setQ] = useState("");
+  const [dbOpportunities, setDbOpportunities] = useState<Opportunity[]>([]);
+  const [dbIdeas, setDbIdeas] = useState<Idea[]>([]);
+  const [isPending, startTransition] = useTransition();
 
-  if (!q || !q.trim()) {
-    return (
-      <div className="px-4 pt-6">
-        <SearchInput initialValue="" />
-        <ExploreLinks />
+  const t = q.toLowerCase().trim();
+
+  useEffect(() => {
+    if (!t) {
+      setDbOpportunities([]);
+      setDbIdeas([]);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      startTransition(async () => {
+        try {
+          const supabase = createClient();
+          const clean = t.replace(/[%,]/g, "");
+
+          const [{ data: opps }, { data: ids }] = await Promise.all([
+            supabase
+              .from("opportunities")
+              .select("*")
+              .or(`title.ilike.%${clean}%,org.ilike.%${clean}%,category.ilike.%${clean}%`)
+              .limit(10),
+            supabase
+              .from("ideas")
+              .select("*")
+              .or(`title.ilike.%${clean}%,description.ilike.%${clean}%`)
+              .limit(10),
+          ]);
+
+          if (opps && opps.length > 0) {
+            setDbOpportunities(opps.map((o) => mapDbOpportunityToPrototype(o)));
+          } else {
+            const filteredMock = mockOpportunities.filter((x) =>
+              (x.title + x.org + x.category).toLowerCase().includes(t),
+            );
+            setDbOpportunities(filteredMock);
+          }
+
+          if (ids && ids.length > 0) {
+            setDbIdeas(ids.map((item) => mapDbIdeaToPrototype(item)));
+          } else {
+            const filteredMock = mockIdeas.filter((x) =>
+              (x.pitch + x.ask + x.stage).toLowerCase().includes(t),
+            );
+            setDbIdeas(filteredMock);
+          }
+        } catch {
+          const filteredOpps = mockOpportunities.filter((x) =>
+            (x.title + x.org + x.category).toLowerCase().includes(t),
+          );
+          const filteredIdeas = mockIdeas.filter((x) =>
+            (x.pitch + x.ask + x.stage).toLowerCase().includes(t),
+          );
+          setDbOpportunities(filteredOpps);
+          setDbIdeas(filteredIdeas);
+        }
+      });
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [t]);
+
+  const oppMatches = t ? dbOpportunities : [];
+  const ideaMatches = t ? dbIdeas : [];
+  const total = oppMatches.length + ideaMatches.length;
+
+  return (
+    <AppShell>
+      <PageHeader
+        title="Search"
+        sub="Find grants, scholarships, co-founders and ideas across Aza."
+      />
+
+      <div className="relative mb-8 max-w-xl">
+        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by keyword, organisation, skill or topic..."
+          aria-label="Search"
+          autoFocus
+          className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-4 text-sm text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        {isPending && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+            Searching...
+          </span>
+        )}
       </div>
-    );
-  }
 
-  const term = q.trim().replace(/[%,]/g, "");
+      {!t ? (
+        <Empty
+          title="Start typing to search"
+          sub="Search updates automatically across live opportunities and peer discussions."
+        />
+      ) : total === 0 && !isPending ? (
+        <Empty
+          title={`No matches for "${q}"`}
+          sub="Try broader keywords or browse by category."
+        />
+      ) : (
+        <div className="space-y-8">
+          {oppMatches.length > 0 && (
+            <Section title={`Opportunities (${oppMatches.length})`}>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {oppMatches.map((o) => (
+                  <OpportunityCard key={o.id} o={o} />
+                ))}
+              </div>
+            </Section>
+          )}
 
-  const [{ data: opportunitiesRaw }, { data: ideas }, { data: businesses }, { data: resources }] = await Promise.all([
-    supabase.from("opportunities").select("*").or(`title.ilike.%${term}%,org.ilike.%${term}%`).limit(14),
-    supabase.from("ideas").select("id, title, description, category").ilike("title", `%${term}%`).limit(8),
-    supabase.from("businesses").select("id, name, category").ilike("name", `%${term}%`).limit(8),
-    supabase.from("skill_resources").select("id, title, provider").ilike("title", `%${term}%`).limit(8),
-  ]);
-  const opportunities = (opportunitiesRaw ?? []).filter(isOpenOpportunity).slice(0, 8);
-
-  const totalResults =
-    opportunities.length + (ideas?.length ?? 0) + (businesses?.length ?? 0) + (resources?.length ?? 0);
-
-  return (
-    <div className="px-4 pt-6">
-      <SearchInput initialValue={q} />
-
-      <div className="mt-5">
-        {totalResults === 0 && (
-          <div className="rounded-card bg-surface p-8 text-center shadow-card">
-            <p className="text-[13px] text-ink/55">No results for &quot;{q}&quot;.</p>
-          </div>
-        )}
-
-        {opportunities && opportunities.length > 0 && (
-          <ResultSection title="Opportunities">
-            {opportunities.map((o) => (
-              <ResultRow key={o.id} href={`/opportunities/${o.id}`} title={o.title} subtitle={`${o.org} · ${OPPORTUNITY_CATEGORY_LABELS[o.category as keyof typeof OPPORTUNITY_CATEGORY_LABELS]}`} />
-            ))}
-          </ResultSection>
-        )}
-
-        {ideas && ideas.length > 0 && (
-          <ResultSection title="Ideas">
-            {ideas.map((i) => (
-              <ResultRow key={i.id} href={`/growth/ideas/${i.id}`} title={i.title} subtitle={i.category ?? "Idea"} />
-            ))}
-          </ResultSection>
-        )}
-
-        {businesses && businesses.length > 0 && (
-          <ResultSection title="Businesses">
-            {businesses.map((b) => (
-              <ResultRow key={b.id} href="/businesses/directory" title={b.name} subtitle={b.category} />
-            ))}
-          </ResultSection>
-        )}
-
-        {resources && resources.length > 0 && (
-          <ResultSection title="Skills & Resources">
-            {resources.map((r) => (
-              <ResultRow key={r.id} href="/growth/courses" title={r.title} subtitle={r.provider ?? "Resource"} />
-            ))}
-          </ResultSection>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function ResultSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-5">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink/45">{title}</h2>
-      <div className="mt-2.5 space-y-2.5">{children}</div>
-    </section>
-  );
-}
-
-function ResultRow({ href, title, subtitle }: { href: string; title: string; subtitle: string }) {
-  return (
-    <Link href={href} className="block rounded-card bg-surface p-3.5 shadow-card">
-      <p className="truncate text-[13.5px] font-semibold text-ink">{title}</p>
-      <p className="truncate text-[11.5px] font-medium text-ink/50">{subtitle}</p>
-    </Link>
-  );
-}
-
-const EXPLORE = [
-  { href: "/discover", label: "Opportunities" },
-  { href: "/growth/skills", label: "Skills & Resources" },
-  { href: "/growth/ideas", label: "Ideas" },
-  { href: "/businesses/directory", label: "Businesses" },
-  { href: "/businesses/incubators", label: "Incubators" },
-];
-
-function ExploreLinks() {
-  return (
-    <section className="mt-7">
-      <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink/45">Explore</h2>
-      <div className="mt-2.5 space-y-2.5">
-        {EXPLORE.map((e) => (
-          <Link key={e.href} href={e.href} className="flex items-center justify-between rounded-card bg-surface px-4 py-3.5 shadow-card">
-            <span className="text-[13.5px] font-medium text-ink">{e.label}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="m9 6 6 6-6 6" stroke="rgb(var(--ink) / 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        ))}
-      </div>
-    </section>
+          {ideaMatches.length > 0 && (
+            <Section title={`Ideas & conversations (${ideaMatches.length})`}>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {ideaMatches.map((i) => (
+                  <IdeaCard key={i.id} idea={i} />
+                ))}
+              </div>
+            </Section>
+          )}
+        </div>
+      )}
+    </AppShell>
   );
 }

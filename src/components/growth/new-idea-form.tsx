@@ -71,6 +71,21 @@ export default function NewIdeaForm({ defaultLookingForCollaborators = false }: 
       </div>
 
       <div>
+        <label className="text-[13px] font-semibold text-ink/70">Image (optional)</label>
+        <input name="image" type="file" accept="image/*" className="mt-1.5 w-full text-[12.5px] text-ink/70" />
+      </div>
+
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Link (optional)</label>
+        <input
+          name="link_url"
+          type="text"
+          placeholder="e.g. yourproject.com or a demo link"
+          className="mt-1.5 w-full rounded-card border border-line-strong bg-surface px-4 py-3 text-[14px] text-ink placeholder:text-ink/35 shadow-card"
+        />
+      </div>
+
+      <div>
         <label className="text-[13px] font-semibold text-ink/70">Category</label>
         <select name="category" className="mt-1.5 w-full rounded-card border border-line-strong bg-surface px-4 py-3 text-[14px] text-ink shadow-card">
           <option value="">Select a category</option>
