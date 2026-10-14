@@ -1,27 +1,28 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import EditProfileForm from "./edit-profile-form";
 
-import { AppShell } from "@/components/aza/app-shell";
-import { BackLink, Form, TextArea, TextField } from "@/components/aza/kit";
-import { PageHeader } from "@/components/aza/ui";
-import { me } from "@/lib/aza-data";
-import { api } from "@/lib/aza/api";
+export const dynamic = "force-dynamic";
 
-export default function EditProfilePage() {
+export default async function EditProfilePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login?next=/profile/edit");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, avatar_url")
+    .eq("id", user.id)
+    .single();
+
   return (
-    <AppShell>
-      <BackLink to="/profile" label="Profile" />
-      <PageHeader title="Edit profile" />
-      <Form
-        onSubmit={api.updateProfile}
-        submitLabel="Save changes"
-        success="Profile updated"
-        cancelTo="/profile"
-      >
-        <TextField label="Full name" name="name" required defaultValue={me.name} />
-        <TextField label="Role" name="role" defaultValue={me.role ?? ""} />
-        <TextField label="Location" name="location" defaultValue={me.location ?? ""} />
-        <TextArea label="Bio" name="bio" />
-      </Form>
-    </AppShell>
+    <EditProfileForm
+      currentName={profile?.full_name ?? ""}
+      currentAvatarUrl={profile?.avatar_url ?? null}
+      email={user.email ?? ""}
+    />
   );
 }
