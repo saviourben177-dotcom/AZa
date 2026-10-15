@@ -1,28 +1,27 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { Sparkles } from "lucide-react";
-import { BareShell, btn } from "@/components/aza/kit";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { INTRO_COOKIE } from "@/lib/intro/cookie";
+import WelcomeCard from "./welcome-card";
 
-export const metadata: Metadata = {
-  title: "Welcome — Aza",
-  description: "You're all set on Aza.",
-};
+export const dynamic = "force-dynamic";
 
-export default function WelcomePage() {
-  return (
-    <BareShell narrow>
-      <div className="pt-10 text-center">
-        <span className="emboss-primary mx-auto grid size-16 place-items-center rounded-full border border-primary/20 bg-primary/10 text-primary">
-          <Sparkles className="size-7" />
-        </span>
-        <h1 className="mt-6 text-3xl font-display font-bold text-foreground">You&apos;re in</h1>
-        <p className="mt-2 text-muted-foreground">
-          We found 3 opportunities that match your profile.
-        </p>
-        <Link href="/" className={`${btn.primary} mt-8 inline-flex`}>
-          See my matches
-        </Link>
-      </div>
-    </BareShell>
-  );
+export default async function WelcomePage() {
+  // Authenticated users never need the pre-auth pitch — send them home.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/");
+
+  // Already seen it on this device — don't force it again.
+  const cookieStore = await cookies();
+  const hasSeenIntro = cookieStore.get(INTRO_COOKIE)?.value === "1";
+  if (hasSeenIntro) redirect("/login");
+
+  const { count } = await supabase
+    .from("opportunities")
+    .select("*", { count: "exact", head: true });
+
+  return <WelcomeCard opportunityCount={count ?? 0} />;
 }
