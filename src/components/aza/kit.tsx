@@ -151,11 +151,25 @@ export function Pills<T extends string>({ options, value, onChange }: { options:
 }
 
 export function Stars({ value, onChange }: { value: number; onChange?: (n: number) => void }) {
+  // Read-only usage (no onChange) must stay server-renderable: no event handlers,
+  // so this can be used directly from Server Components like a detail/listing page.
+  if (!onChange) {
+    return (
+      <span className="inline-flex" aria-label={`${value} out of 5 stars`}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span key={n} className={cn("text-lg leading-none", n <= value ? "text-urgent" : "text-border-strong")}>
+            ★
+          </span>
+        ))}
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex" aria-label={`${value} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button" disabled={!onChange} onClick={() => onChange?.(n)} aria-label={`${n} stars`}
-          className={cn("text-lg leading-none", onChange && "grid size-11 place-items-center", n <= value ? "text-urgent" : "text-border-strong")}>★</button>
+        <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n} stars`}
+          className={cn("text-lg leading-none grid size-11 place-items-center", n <= value ? "text-urgent" : "text-border-strong")}>★</button>
       ))}
     </span>
   );

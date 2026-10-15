@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Bell, Briefcase, Compass, Home, Search, Sprout, User } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const tabs = [
   { to: "/", label: "Home", icon: Home, altMatch: null },
@@ -14,8 +16,55 @@ const tabs = [
   { to: "/profile", label: "Profile", icon: User, altMatch: null },
 ] as const;
 
+function useUnreadNotificationCount() {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    let channelCleanup: (() => void) | undefined;
+    const supabase = createClient();
+
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || !isMounted) return;
+
+      const { count } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .is("read_at", null);
+
+      if (isMounted) setUnreadCount(count ?? 0);
+
+      const channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+          () => {
+            if (isMounted) setUnreadCount((c) => c + 1);
+          }
+        )
+        .subscribe();
+
+      channelCleanup = () => supabase.removeChannel(channel);
+    }
+
+    init();
+    return () => {
+      isMounted = false;
+      channelCleanup?.();
+    };
+  }, []);
+
+  return unreadCount;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const unreadCount = useUnreadNotificationCount();
 
   const isTabActive = (tab: (typeof tabs)[number]) => {
     if (tab.to === "/") return pathname === "/";
@@ -65,7 +114,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               className="relative grid size-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <Bell className="size-4" />
-              <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary" />
+              {unreadCount > 0 && (
+                <span className="absolute right-2 top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </Link>
           </div>
         </div>
@@ -89,7 +142,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="relative grid size-11 place-items-center rounded-md text-muted-foreground"
           >
             <Bell className="size-5" />
-            <span className="absolute right-2.5 top-2.5 size-2 rounded-full bg-primary" />
+            {unreadCount > 0 && (
+              <span className="absolute right-2 top-2 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>
