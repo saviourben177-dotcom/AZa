@@ -23,25 +23,40 @@ export default async function BusinessDetailPage({
     .eq("id", id)
     .maybeSingle();
 
+  // A real business id that simply has no row yet (new accounts, fresh
+  // database) is a genuine 404, not a reason to show demo content —
+  // mock fallback is only for ids that were never real to begin with
+  // (prototype links that predate real data).
   const mock = !dbBusiness ? mockBusinesses.find((x) => x.id === id) : null;
   if (!dbBusiness && !mock) {
     notFound();
   }
 
-  const business = dbBusiness
-    ? {
-        id: dbBusiness.id,
-        name: dbBusiness.name,
-        mark: dbBusiness.name.slice(0, 2).toUpperCase(),
-        category: dbBusiness.category ?? "Services",
-        location: dbBusiness.location ?? "Nigeria",
-        rating: 4.8,
-        reviews: 12,
-        description: dbBusiness.description ?? "",
-        phone: dbBusiness.phone ?? "+234 800 000 0000",
-        verified: true,
-      }
-    : mock!;
+  let business;
+  if (dbBusiness) {
+    const { data: ratings } = await supabase
+      .from("business_ratings")
+      .select("stars")
+      .eq("business_id", id);
+    const ratingValues = (ratings ?? []).map((r) => r.stars);
+    const avgRating =
+      ratingValues.length > 0 ? ratingValues.reduce((a, c) => a + c, 0) / ratingValues.length : 0;
+
+    business = {
+      id: dbBusiness.id,
+      name: dbBusiness.name,
+      mark: dbBusiness.name.slice(0, 2).toUpperCase(),
+      category: dbBusiness.category ?? "Services",
+      location: dbBusiness.location ?? "Nigeria",
+      rating: Math.round(avgRating * 10) / 10,
+      reviews: ratingValues.length,
+      description: dbBusiness.description ?? "",
+      phone: dbBusiness.phone ?? null,
+      verified: true,
+    };
+  } else {
+    business = mock!;
+  }
 
   return (
     <AppShell>
@@ -67,10 +82,16 @@ export default async function BusinessDetailPage({
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <Tag>{business.category}</Tag>
-          <Stars value={Math.round(business.rating)} />
-          <span className="text-sm text-foreground">
-            <b className="tabular font-bold">{business.rating}</b> · {business.reviews} reviews
-          </span>
+          {business.reviews > 0 ? (
+            <>
+              <Stars value={Math.round(business.rating)} />
+              <span className="text-sm text-foreground">
+                <b className="tabular font-bold">{business.rating}</b> · {business.reviews} reviews
+              </span>
+            </>
+          ) : (
+            <span className="text-sm text-muted-foreground">No reviews yet</span>
+          )}
         </div>
 
         <p className="mb-6 leading-relaxed text-foreground">{business.description}</p>

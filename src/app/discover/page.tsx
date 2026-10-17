@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { opportunities as mockOpportunities } from "@/lib/aza-data";
 import { mapDbOpportunityToPrototype } from "@/lib/aza/mappers";
 import DiscoverClient from "./discover-client";
 
@@ -19,10 +18,7 @@ export default async function DiscoverPage() {
     .order("deadline", { ascending: true, nullsFirst: false })
     .limit(50);
 
-  const initialOpportunities =
-    dbOpps && dbOpps.length > 0
-      ? dbOpps.map((o) => mapDbOpportunityToPrototype(o))
-      : mockOpportunities;
+  const initialOpportunities = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
 
   return <DiscoverClient initialOpportunities={initialOpportunities} />;
 }

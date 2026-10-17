@@ -26,6 +26,16 @@ export type Idea = {
   pitch: string;
   upvotes: number;
   comments: Comment[];
+  // Present when `author` is a real Supabase user id rather than a mock
+  // person key — lets AuthorLine show/link the real person without
+  // needing a lookup in the mock `people` dictionary.
+  authorName?: string;
+  authorAvatarUrl?: string | null;
+  // Real per-viewer state for real ideas — whether the current (logged
+  // in) user has already upvoted/saved this idea. Undefined for mock
+  // demo ideas, where these actions aren't wired to anything real.
+  isUpvoted?: boolean;
+  isSaved?: boolean;
 };
 
 export const ideas: Idea[] = [

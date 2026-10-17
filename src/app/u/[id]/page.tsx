@@ -1,30 +1,39 @@
-import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import FollowButton from "@/components/follow-button";
-import MessageButton from "@/components/profile/message-button";
+import { mapDbIdeaToPrototype } from "@/lib/aza/mappers";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, Empty } from "@/components/aza/kit";
+import { IdeaCard } from "@/components/aza/idea-card";
+import FollowButton from "./follow-button";
 
 export const dynamic = "force-dynamic";
 
-export default async function PublicProfilePage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ id: string }>;
-}) {
+}): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: profile } = await supabase
+    .from("public_profiles")
+    .select("full_name")
+    .eq("id", id)
+    .maybeSingle();
+  return { title: profile?.full_name ? `${profile.full_name} — Aza` : "Profile — Aza" };
+}
+
+export default async function PublicProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=/u/${id}`);
 
-  // Your own profile lives at /profile.
-  if (user.id === id) redirect("/profile");
-
-  // Private accounts resolve to "not found" so their profile can't be viewed.
-  const { data: isPublic } = await supabase.rpc("is_profile_public", { p_user_id: id });
-  if (!isPublic) notFound();
+  // Viewing your own profile via /u/ sends you to the full private view instead.
+  if (user && user.id === id) redirect("/profile");
 
   const { data: profile } = await supabase
     .from("public_profiles")
@@ -34,53 +43,87 @@ export default async function PublicProfilePage({
 
   if (!profile) notFound();
 
-  const name = profile.full_name ?? "Aza user";
+  const { data: extra } = await supabase
+    .from("profiles")
+    .select("job_title, exact_location, region")
+    .eq("id", id)
+    .maybeSingle();
 
-  const [{ count: followerCount }, { count: followingCount }, { data: followRow }] =
-    await Promise.all([
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
-      supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
-      supabase
-        .from("follows")
-        .select("follower_id")
-        .eq("follower_id", user.id)
-        .eq("following_id", id)
-        .maybeSingle(),
-    ]);
+  const [{ count: followerCount }, { count: followingCount }, { data: dbIdeas }] = await Promise.all([
+    supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", id),
+    supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", id),
+    supabase
+      .from("ideas")
+      .select("*")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
+
+  let isFollowing = false;
+  if (user) {
+    const { data: existingFollow } = await supabase
+      .from("follows")
+      .select("follower_id")
+      .eq("follower_id", user.id)
+      .eq("following_id", id)
+      .maybeSingle();
+    isFollowing = !!existingFollow;
+  }
+
+  const ideas = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({ ...i, author_name: profile.full_name, author_avatar_url: profile.avatar_url })
+  );
 
   return (
-    <div className="px-5 pt-7">
-      <div className="flex items-center gap-3">
-        <Link href="/profile" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Link>
-      </div>
+    <AppShell>
+      <BackLink to="/" label="Back" />
 
-      <div className="mt-6 flex flex-col items-center text-center">
+      <div className="mb-6 flex items-start gap-4">
         {profile.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.avatar_url} alt="" className="h-24 w-24 rounded-full object-cover ring-1 ring-line-strong" />
+          <img
+            src={profile.avatar_url}
+            alt={profile.full_name ?? "Profile"}
+            className="size-16 shrink-0 rounded-full object-cover"
+          />
         ) : (
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-aza-light text-aza ring-1 ring-line-strong">
-            <span className="font-display text-[34px] font-bold">{name.charAt(0).toUpperCase()}</span>
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-full bg-primary-soft font-display text-xl font-extrabold text-primary-strong">
+            {(profile.full_name ?? "?").charAt(0).toUpperCase()}
           </div>
         )}
-        <h1 className="mt-4 font-display text-[21px] font-bold text-ink">{name}</h1>
-
-        <div className="mt-3 flex items-center gap-6 text-[13px] text-ink/60">
-          <p>
-            <span className="font-bold text-ink">{followerCount ?? 0}</span> Followers
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate text-2xl font-display font-bold text-foreground">
+            {profile.full_name ?? "Aza user"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {[extra?.job_title, extra?.exact_location || extra?.region].filter(Boolean).join(" · ")}
           </p>
-          <p>
-            <span className="font-bold text-ink">{followingCount ?? 0}</span> Following
-          </p>
+          <div className="mt-2 flex gap-4 text-sm">
+            <span>
+              <strong className="tabular">{followerCount ?? 0}</strong>{" "}
+              <span className="text-muted-foreground">followers</span>
+            </span>
+            <span>
+              <strong className="tabular">{followingCount ?? 0}</strong>{" "}
+              <span className="text-muted-foreground">following</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 flex gap-2.5">
-        <FollowButton targetUserId={id} initialFollowing={!!followRow} />
-        <MessageButton targetUserId={id} />
-      </div>
-    </div>
+      {user && <FollowButton targetId={id} initialIsFollowing={isFollowing} />}
+
+      <h2 className="mb-3 mt-8 text-lg font-display font-bold text-foreground">Ideas</h2>
+      {ideas.length === 0 ? (
+        <Empty title="No ideas posted yet" />
+      ) : (
+        <div className="grid gap-3">
+          {ideas.map((i) => (
+            <IdeaCard key={i.id} idea={i} />
+          ))}
+        </div>
+      )}
+    </AppShell>
   );
 }

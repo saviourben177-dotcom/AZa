@@ -6,7 +6,42 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { getPerson, timeAgo, type Opportunity } from "@/lib/aza-data";
 
-export function Avatar({ id, size = 40 }: { id: string; size?: number }) {
+export function Avatar({
+  id,
+  size = 40,
+  name,
+  avatarUrl,
+}: {
+  id: string;
+  size?: number;
+  // Real author data, when known (see mapDbIdeaToPrototype), takes
+  // priority over the mock `people` lookup so real users show their
+  // actual photo/initial instead of a mock person's initials.
+  name?: string;
+  avatarUrl?: string | null;
+}) {
+  if (avatarUrl) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return (
+      <img
+        src={avatarUrl}
+        alt={name ?? ""}
+        style={{ width: size, height: size }}
+        className="shrink-0 rounded-full object-cover"
+      />
+    );
+  }
+  if (name) {
+    return (
+      <span
+        aria-hidden
+        style={{ width: size, height: size }}
+        className="grid shrink-0 place-items-center rounded-full emboss-primary font-display text-sm font-bold"
+      >
+        {name.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
   const p = getPerson(id);
   return (
     <span
@@ -83,20 +118,42 @@ export function OpportunityCard({ o }: { o: Opportunity }) {
   );
 }
 
-export function AuthorLine({ id, hoursAgo, op }: { id: string; hoursAgo: number; op?: boolean }) {
-  const p = getPerson(id);
+export function AuthorLine({
+  id,
+  hoursAgo,
+  op,
+  name,
+  avatarUrl,
+  currentUserId,
+}: {
+  id: string;
+  hoursAgo: number;
+  op?: boolean;
+  // Real author data — pass these through from mapDbIdeaToPrototype's
+  // authorName/authorAvatarUrl for real posts. Falls back to the mock
+  // `people` dict only when absent (legacy/demo content).
+  name?: string;
+  avatarUrl?: string | null;
+  // The viewer's own id, if logged in — tapping your own name/avatar
+  // goes to the full /profile view instead of the read-only /u/[id].
+  currentUserId?: string;
+}) {
+  const mock = name ? null : getPerson(id);
+  const displayName = name ?? mock?.name ?? "Aza user";
+  const href = currentUserId && currentUserId === id ? "/profile" : `/u/${id}`;
+
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <Link href="/profile" className="rounded-full" aria-label={`${p.name}'s profile`}>
-        <Avatar id={id} />
+      <Link href={href} className="rounded-full" aria-label={`${displayName}'s profile`}>
+        <Avatar id={id} name={name} avatarUrl={avatarUrl} />
       </Link>
       <div className="min-w-0 text-sm">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <Link href="/profile" className="font-semibold hover:underline">{p.name}</Link>
+          <Link href={href} className="font-semibold hover:underline">{displayName}</Link>
           {op && <span className="rounded-md bg-primary px-1.5 py-0.5 text-xs font-semibold text-primary-foreground">Creator</span>}
         </div>
         <p className="truncate text-muted-foreground">
-          {[p.role, p.location].filter(Boolean).join(" · ")} · {timeAgo(hoursAgo)}
+          {mock ? [mock.role, mock.location].filter(Boolean).join(" · ") + " · " : ""}{timeAgo(hoursAgo)}
         </p>
       </div>
     </div>

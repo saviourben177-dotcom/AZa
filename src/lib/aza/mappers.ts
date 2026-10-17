@@ -37,9 +37,27 @@ export function mapDbIdeaToPrototype(i: any): PrototypeIdea {
     Math.round((Date.now() - new Date(i.created_at || Date.now()).getTime()) / (1000 * 60 * 60)),
   );
 
+  // Real ideas carry a real Supabase user id in author_id. If the query
+  // joined profiles (or author_name/author_avatar_url was attached
+  // manually, e.g. on the public profile page where we already know
+  // the author), pass that through so AuthorLine can show/link the
+  // real person instead of falling back to the mock `people` dict.
+  const joinedProfile = i.profiles ?? i.author;
+  const authorName: string | undefined =
+    i.author_name ?? (typeof joinedProfile === "object" ? joinedProfile?.full_name : undefined) ?? undefined;
+  const authorAvatarUrl: string | null | undefined =
+    i.author_avatar_url ?? (typeof joinedProfile === "object" ? joinedProfile?.avatar_url : undefined);
+
   return {
     id: i.id,
-    author: i.author_id || "ada",
+    // Real ideas carry their author in user_id (not author_id — that
+    // field was wrong and silently fell back to mock data for every
+    // real idea; see mapper fix notes).
+    author: i.user_id || i.author_id || "ada",
+    authorName,
+    authorAvatarUrl,
+    isUpvoted: i.is_upvoted ?? false,
+    isSaved: i.is_saved ?? false,
     hoursAgo,
     ask: i.looking_for_collaborators ? "Seeking Co-Founder" : "Feedback Wanted",
     stage: i.stage || "Validating",

@@ -111,3 +111,21 @@ export async function deleteIdea(ideaId: string, redirectTo: string = "/growth/i
   revalidatePath("/businesses/team-finder");
   redirect(redirectTo);
 }
+
+export async function toggleSaveIdea(ideaId: string, currentlySaved: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  if (currentlySaved) {
+    await supabase.from("saved_ideas").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+  } else {
+    await supabase.from("saved_ideas").upsert({ user_id: user.id, idea_id: ideaId });
+  }
+
+  revalidatePath("/growth/ideas");
+  revalidatePath(`/growth/ideas/${ideaId}`);
+  revalidatePath("/profile/saved");
+}

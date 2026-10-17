@@ -41,6 +41,7 @@ export default function CommentThread({
           name={commenter?.full_name ?? "Aza user"}
           avatarUrl={commenter?.avatar_url}
           createdAt={comment.created_at}
+          profileHref={currentUserId === comment.user_id ? "/profile" : `/u/${comment.user_id}`}
         />
         {currentUserId === comment.user_id && <DeleteCommentButton commentId={comment.id} ideaId={ideaId} />}
       </div>
@@ -96,6 +97,7 @@ export default function CommentThread({
                         name={replyCommenter?.full_name ?? "Aza user"}
                         avatarUrl={replyCommenter?.avatar_url}
                         createdAt={reply.created_at}
+                        profileHref={currentUserId === reply.user_id ? "/profile" : `/u/${reply.user_id}`}
                       />
                       {currentUserId === reply.user_id && (
                         <DeleteCommentButton commentId={reply.id} ideaId={ideaId} />

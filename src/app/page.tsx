@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
+import { Empty } from "@/components/aza/kit";
 import { OpportunityCard } from "@/components/aza/ui";
-import { ideas as mockIdeas, opportunities as mockOpportunities } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/server";
 import { INTRO_COOKIE } from "@/lib/intro/cookie";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
@@ -35,23 +35,16 @@ export default async function HomePage() {
       .limit(20),
     supabase
       .from("ideas")
-      .select("*")
+      .select("*, profiles(full_name, avatar_url)")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);
 
-  const oppList =
-    dbOpps && dbOpps.length > 0
-      ? dbOpps.map((o) => mapDbOpportunityToPrototype(o))
-      : mockOpportunities;
-
+  const oppList = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
   const closing = oppList.filter((o) => o.daysLeft <= 10);
   const displayClosing = closing.length > 0 ? closing : oppList.slice(0, 6);
 
-  const ideaList =
-    dbIdeas && dbIdeas.length > 0
-      ? dbIdeas.map((i) => mapDbIdeaToPrototype(i))
-      : mockIdeas;
+  const ideaList = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
 
   return (
     <AppShell>
@@ -60,24 +53,29 @@ export default async function HomePage() {
         <h1 className="mt-1 text-2xl md:text-3xl font-display font-extrabold text-foreground">
           {displayClosing.length} opportunities close in the next 10 days
         </h1>
-        <p className="mt-2 text-sm text-foreground/75">
-          12 new listings added since Monday · 3 match your profile
-        </p>
       </section>
 
       <SectionHead title="Closing soon" to="/discover" />
-      <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {displayClosing.map((o) => (
-          <OpportunityCard key={o.id} o={o} />
-        ))}
-      </div>
+      {displayClosing.length === 0 ? (
+        <Empty title="No opportunities yet" sub="Check back soon for new listings." />
+      ) : (
+        <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {displayClosing.map((o) => (
+            <OpportunityCard key={o.id} o={o} />
+          ))}
+        </div>
+      )}
 
       <SectionHead title="From the community" to="/growth" />
-      <div className="grid gap-3 lg:grid-cols-2">
-        {ideaList.slice(0, 2).map((i) => (
-          <IdeaCard key={i.id} idea={i} />
-        ))}
-      </div>
+      {ideaList.length === 0 ? (
+        <Empty title="No ideas posted yet" />
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {ideaList.slice(0, 2).map((i) => (
+            <IdeaCard key={i.id} idea={i} currentUserId={user?.id} />
+          ))}
+        </div>
+      )}
     </AppShell>
   );
 }

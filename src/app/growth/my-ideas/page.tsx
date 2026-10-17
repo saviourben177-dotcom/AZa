@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PenLine } from "lucide-react";
 import { AppShell } from "@/components/aza/app-shell";
 import { BackLink, Empty } from "@/components/aza/kit";
 import { IdeaCard } from "@/components/aza/idea-card";
 import { PageHeader } from "@/components/aza/ui";
-import { ideas as mockIdeas } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/server";
 import { mapDbIdeaToPrototype } from "@/lib/aza/mappers";
 
@@ -22,22 +22,15 @@ export default async function MyIdeasPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let myIdeas: ReturnType<typeof mapDbIdeaToPrototype>[] = [];
+  if (!user) redirect("/login?next=/growth/my-ideas");
 
-  if (user) {
-    const { data: dbIdeas } = await supabase
-      .from("ideas")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
+  const { data: dbIdeas } = await supabase
+    .from("ideas")
+    .select("*, profiles(full_name, avatar_url)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
 
-    if (dbIdeas && dbIdeas.length > 0) {
-      myIdeas = dbIdeas.map((i) => mapDbIdeaToPrototype(i));
-    }
-  }
-
-  // Fallback if not authenticated or no ideas yet
-  const list = myIdeas.length > 0 ? myIdeas : mockIdeas.filter((i) => i.author === "You");
+  const list = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
 
   return (
     <AppShell>
@@ -70,7 +63,7 @@ export default async function MyIdeasPage() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {list.map((i) => (
-            <IdeaCard key={i.id} idea={i} />
+            <IdeaCard key={i.id} idea={i} currentUserId={user.id} />
           ))}
         </div>
       )}

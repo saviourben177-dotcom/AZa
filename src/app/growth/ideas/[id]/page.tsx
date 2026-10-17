@@ -189,6 +189,7 @@ export default async function IdeaDetailPage({
               avatarUrl={author?.avatar_url}
               createdAt={idea.created_at}
               size="md"
+              profileHref={isOwner ? "/profile" : `/u/${idea.user_id}`}
             />
             {isOwner && <DeleteIdeaButton ideaId={idea.id} />}
           </div>

@@ -6,22 +6,23 @@ import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
 import { Empty, Section } from "@/components/aza/kit";
 import { OpportunityCard, PageHeader } from "@/components/aza/ui";
-import {
-  ideas as mockIdeas,
-  opportunities as mockOpportunities,
-  type Opportunity,
-  type Idea,
-} from "@/lib/aza-data";
+import type { Opportunity, Idea } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/client";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
 
 export default function SearchPage() {
   const [q, setQ] = useState("");
+  const [userId, setUserId] = useState<string | undefined>();
   const [dbOpportunities, setDbOpportunities] = useState<Opportunity[]>([]);
   const [dbIdeas, setDbIdeas] = useState<Idea[]>([]);
   const [isPending, startTransition] = useTransition();
 
   const t = q.toLowerCase().trim();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id));
+  }, []);
 
   useEffect(() => {
     if (!t) {
@@ -44,37 +45,18 @@ export default function SearchPage() {
               .limit(10),
             supabase
               .from("ideas")
-              .select("*")
+              .select("*, profiles(full_name, avatar_url)")
               .or(`title.ilike.%${clean}%,description.ilike.%${clean}%`)
               .limit(10),
           ]);
 
-          if (opps && opps.length > 0) {
-            setDbOpportunities(opps.map((o) => mapDbOpportunityToPrototype(o)));
-          } else {
-            const filteredMock = mockOpportunities.filter((x) =>
-              (x.title + x.org + x.category).toLowerCase().includes(t),
-            );
-            setDbOpportunities(filteredMock);
-          }
-
-          if (ids && ids.length > 0) {
-            setDbIdeas(ids.map((item) => mapDbIdeaToPrototype(item)));
-          } else {
-            const filteredMock = mockIdeas.filter((x) =>
-              (x.pitch + x.ask + x.stage).toLowerCase().includes(t),
-            );
-            setDbIdeas(filteredMock);
-          }
+          // Zero rows is a real, correct result — it means nothing matched,
+          // not a reason to show unrelated demo content instead.
+          setDbOpportunities((opps ?? []).map((o) => mapDbOpportunityToPrototype(o)));
+          setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
         } catch {
-          const filteredOpps = mockOpportunities.filter((x) =>
-            (x.title + x.org + x.category).toLowerCase().includes(t),
-          );
-          const filteredIdeas = mockIdeas.filter((x) =>
-            (x.pitch + x.ask + x.stage).toLowerCase().includes(t),
-          );
-          setDbOpportunities(filteredOpps);
-          setDbIdeas(filteredIdeas);
+          setDbOpportunities([]);
+          setDbIdeas([]);
         }
       });
     }, 250);
@@ -137,7 +119,7 @@ export default function SearchPage() {
             <Section title={`Ideas & conversations (${ideaMatches.length})`}>
               <div className="grid gap-3 lg:grid-cols-2">
                 {ideaMatches.map((i) => (
-                  <IdeaCard key={i.id} idea={i} />
+                  <IdeaCard key={i.id} idea={i} currentUserId={userId} />
                 ))}
               </div>
             </Section>

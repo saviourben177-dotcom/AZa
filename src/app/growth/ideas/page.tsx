@@ -18,13 +18,35 @@ export const metadata: Metadata = {
 
 export default async function IdeasFeedPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const { data: dbIdeas } = await supabase
     .from("ideas")
-    .select("*")
+    .select("*, profiles(full_name, avatar_url)")
     .order("created_at", { ascending: false })
     .limit(50);
 
-  const list = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
+  const ideaIds = (dbIdeas ?? []).map((i) => i.id);
+  let upvotedSet = new Set<string>();
+  let savedSet = new Set<string>();
+  if (user && ideaIds.length > 0) {
+    const [{ data: upvotes }, { data: saves }] = await Promise.all([
+      supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
+      supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
+    ]);
+    upvotedSet = new Set((upvotes ?? []).map((u) => u.idea_id));
+    savedSet = new Set((saves ?? []).map((s) => s.idea_id));
+  }
+
+  const list = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({
+      ...i,
+      is_upvoted: upvotedSet.has(i.id),
+      is_saved: savedSet.has(i.id),
+    })
+  );
 
   return (
     <AppShell>
@@ -57,7 +79,7 @@ export default async function IdeasFeedPage() {
       ) : (
         <div className="mx-auto grid max-w-5xl gap-3 lg:grid-cols-2">
           {list.map((i) => (
-            <IdeaCard key={i.id} idea={i} />
+            <IdeaCard key={i.id} idea={i} currentUserId={user?.id} />
           ))}
         </div>
       )}

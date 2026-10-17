@@ -3,26 +3,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function followUser(targetUserId: string) {
+export async function followUser(targetId: string) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
-  if (user.id === targetUserId) throw new Error("You can't follow yourself");
+  if (user.id === targetId) throw new Error("You can't follow yourself");
 
   const { error } = await supabase
     .from("follows")
-    .insert({ follower_id: user.id, following_id: targetUserId });
+    .upsert({ follower_id: user.id, following_id: targetId }, { onConflict: "follower_id,following_id" });
+  if (error) throw new Error(error.message);
 
-  // Ignore duplicate-follow conflicts (already following) so double
-  // clicks / re-renders don't surface an error to the user.
-  if (error && error.code !== "23505") throw new Error(error.message);
-
-  revalidatePath(`/u/${targetUserId}`);
+  revalidatePath(`/u/${targetId}`);
+  revalidatePath("/profile/following");
 }
 
-export async function unfollowUser(targetUserId: string) {
+export async function unfollowUser(targetId: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,9 +31,9 @@ export async function unfollowUser(targetUserId: string) {
     .from("follows")
     .delete()
     .eq("follower_id", user.id)
-    .eq("following_id", targetUserId);
-
+    .eq("following_id", targetId);
   if (error) throw new Error(error.message);
 
-  revalidatePath(`/u/${targetUserId}`);
+  revalidatePath(`/u/${targetId}`);
+  revalidatePath("/profile/following");
 }
