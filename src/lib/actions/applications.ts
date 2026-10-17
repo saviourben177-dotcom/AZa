@@ -27,3 +27,19 @@ export async function updateApplicationStatus(opportunityId: string, status: App
   revalidatePath("/profile");
   revalidatePath("/growth");
 }
+
+export async function markSavedOpportunitiesSeen() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { error } = await supabase
+    .from("saved_opportunities")
+    .update({ seen: true })
+    .eq("user_id", user.id)
+    .eq("seen", false);
+
+  if (error) throw new Error(error.message);
+}

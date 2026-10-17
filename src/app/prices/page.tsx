@@ -1,76 +1,76 @@
+import type { Metadata } from "next";
+import { AppShell } from "@/components/aza/app-shell";
+import { PageHeader } from "@/components/aza/ui";
 import { createClient } from "@/lib/supabase/server";
-import { minorToDisplay, PRODUCT_CATEGORY_LABELS, type Price } from "@/lib/types";
+import { prices as mockPrices } from "@/lib/aza-data";
+import { minorToDisplay } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Market prices — Aza",
+  description: "Weekly prices for food, fuel and building materials.",
+};
+
 export default async function PricesPage() {
   const supabase = await createClient();
-  const { data: prices, error } = await supabase
+  const { data: dbPrices } = await supabase
     .from("prices")
     .select("*")
     .order("category")
     .order("product_name");
 
-  const grouped = (prices ?? []).reduce<Record<string, Price[]>>((acc, p) => {
-    (acc[p.category] ??= []).push(p);
-    return acc;
-  }, {});
+  const hasDb = dbPrices && dbPrices.length > 0;
 
   return (
-    <div className="px-4 pt-6">
-      <header className="mb-4">
-        <h1 className="font-display text-2xl font-extrabold text-ink">Prices</h1>
-        <p className="mt-0.5 text-[13px] text-ink/60">
-          National average prices, verified by Aza curators.
-        </p>
-      </header>
-
-      {error && (
-        <p className="rounded-card bg-aza-light p-3 text-[13px] text-aza-dark">
-          Couldn&apos;t load prices right now.
-        </p>
+    <AppShell>
+      <PageHeader title="Market prices" sub="Updated weekly · Lagos averages" />
+      {hasDb ? (
+        <ul className="divide-y overflow-hidden rounded-lg border bg-card shadow-[var(--shadow-card)]">
+          {dbPrices.map((p) => (
+            <li key={p.id} className="grid grid-cols-[1fr_auto] items-center gap-4 p-4">
+              <span>
+                <span className="block font-bold">{p.product_name}</span>
+                <span className="text-sm text-muted-foreground">
+                  {p.category}
+                  {p.unit ? ` · per ${p.unit}` : ""}
+                </span>
+              </span>
+              <span className="tabular font-display font-extrabold text-foreground">
+                {minorToDisplay(p.price_kobo, p.currency)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="divide-y overflow-hidden rounded-lg border bg-card shadow-[var(--shadow-card)]">
+          {mockPrices.map((p) => (
+            <li key={p.id} className="grid grid-cols-[1fr_auto_auto] items-center gap-4 p-4">
+              <span>
+                <span className="block font-bold">{p.product}</span>
+                <span className="text-sm text-muted-foreground">{p.category}</span>
+              </span>
+              <span className="tabular font-display font-extrabold">
+                ₦{p.price.toLocaleString()}
+              </span>
+              <span
+                className={cn(
+                  "tabular w-14 text-right text-sm font-bold",
+                  p.change > 0
+                    ? "text-urgent"
+                    : p.change < 0
+                      ? "text-primary-strong"
+                      : "text-muted-foreground",
+                )}
+              >
+                {p.change > 0 ? "+" : ""}
+                {p.change}%
+              </span>
+            </li>
+          ))}
+        </ul>
       )}
-
-      {!error && Object.keys(grouped).length === 0 && (
-        <div className="rounded-card border border-dashed border-line bg-surface/60 p-8 text-center">
-          <p className="text-[13px] text-ink/60">No prices added yet.</p>
-        </div>
-      )}
-
-      <div className="space-y-6">
-        {Object.entries(grouped).map(([category, items]) => (
-          <section key={category}>
-            <h2 className="font-display text-[14px] font-bold text-ink/80">
-              {PRODUCT_CATEGORY_LABELS[category as keyof typeof PRODUCT_CATEGORY_LABELS]}
-            </h2>
-            <div className="mt-2 divide-y divide-line rounded-card border border-line bg-surface">
-              {items.map((price) => (
-                <div
-                  key={price.id}
-                  className="flex items-center justify-between px-4 py-3"
-                >
-                  <div>
-                    <p className="text-[14px] font-semibold text-ink">
-                      {price.product_name}
-                    </p>
-                    <p className="text-[11.5px] text-ink/45">
-                      Updated{" "}
-                      {new Date(price.last_updated_at).toLocaleDateString("en-NG", {
-                        day: "numeric",
-                        month: "short",
-                      })}
-                      {price.unit ? ` · per ${price.unit}` : ""}
-                    </p>
-                  </div>
-                  <p className="tabular text-[15px] font-bold text-ink">
-                    {minorToDisplay(price.price_kobo, price.currency)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-    </div>
+    </AppShell>
   );
 }

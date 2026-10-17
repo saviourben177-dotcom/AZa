@@ -25,6 +25,21 @@ export async function createIdea(formData: FormData) {
   const visibility = formData.get("visibility") === "private" ? "private" : "public";
   const lookingForCollaborators = formData.get("looking_for_collaborators") === "on";
 
+  const imageFile = formData.get("image") as File | null;
+  let imageUrl: string | null = null;
+  if (imageFile && imageFile.size > 0) {
+    const ext = imageFile.name.split(".").pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("idea-images").upload(path, imageFile);
+    if (!uploadError) {
+      const { data: publicUrlData } = supabase.storage.from("idea-images").getPublicUrl(path);
+      imageUrl = publicUrlData.publicUrl;
+    }
+  }
+
+  const rawLinkUrl = (formData.get("link_url") as string)?.trim();
+  const linkUrl = rawLinkUrl ? (/^https?:\/\//i.test(rawLinkUrl) ? rawLinkUrl : `https://${rawLinkUrl}`) : null;
+
   const { data, error } = await supabase
     .from("ideas")
     .insert({
@@ -35,6 +50,8 @@ export async function createIdea(formData: FormData) {
       tags,
       visibility,
       looking_for_collaborators: lookingForCollaborators,
+      image_url: imageUrl,
+      link_url: linkUrl,
     })
     .select()
     .single();
@@ -87,9 +104,28 @@ export async function updateIdeaStage(ideaId: string, stage: string) {
   revalidatePath(`/growth/ideas/${ideaId}`);
 }
 
-export async function deleteIdea(ideaId: string) {
+export async function deleteIdea(ideaId: string, redirectTo: string = "/growth/ideas") {
   const supabase = await createClient();
   await supabase.from("ideas").delete().eq("id", ideaId);
   revalidatePath("/growth/ideas");
-  redirect("/growth/ideas");
+  revalidatePath("/businesses/team-finder");
+  redirect(redirectTo);
+}
+
+export async function toggleSaveIdea(ideaId: string, currentlySaved: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  if (currentlySaved) {
+    await supabase.from("saved_ideas").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+  } else {
+    await supabase.from("saved_ideas").upsert({ user_id: user.id, idea_id: ideaId });
+  }
+
+  revalidatePath("/growth/ideas");
+  revalidatePath(`/growth/ideas/${ideaId}`);
+  revalidatePath("/profile/saved");
 }

@@ -242,6 +242,8 @@ export interface Idea {
   upvotes_count: number;
   comments_count: number;
   looking_for_collaborators: boolean;
+  image_url: string | null;
+  link_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -311,11 +313,16 @@ export interface SkillResource {
   created_at: string;
 }
 
+export type CommentReaction = "like" | "dislike";
+
 export interface IdeaComment {
   id: string;
   idea_id: string;
   user_id: string;
+  parent_comment_id: string | null;
   body: string;
+  likes_count: number;
+  dislikes_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -328,6 +335,7 @@ export type NotificationType =
   | "deadline_reminder"
   | "opportunity_match"
   | "idea_upvote"
+  | "idea_comment"
   | "system";
 
 export interface AppNotification {

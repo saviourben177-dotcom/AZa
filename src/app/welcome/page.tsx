@@ -2,13 +2,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { INTRO_COOKIE } from "@/lib/intro/cookie";
-import WelcomeFlow from "./welcome-flow";
+import WelcomeCard from "./welcome-card";
 
 export const dynamic = "force-dynamic";
 
 export default async function WelcomePage() {
   // Authenticated users never need the pre-auth pitch — send them home.
-  // This also covers someone manually navigating to /welcome while logged in.
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,5 +19,9 @@ export default async function WelcomePage() {
   const hasSeenIntro = cookieStore.get(INTRO_COOKIE)?.value === "1";
   if (hasSeenIntro) redirect("/login");
 
-  return <WelcomeFlow />;
+  const { count } = await supabase
+    .from("opportunities")
+    .select("*", { count: "exact", head: true });
+
+  return <WelcomeCard opportunityCount={count ?? 0} />;
 }

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createIdeaComment(ideaId: string, body: string) {
+export async function createIdeaComment(ideaId: string, body: string, parentCommentId?: string | null) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,6 +18,7 @@ export async function createIdeaComment(ideaId: string, body: string) {
     idea_id: ideaId,
     user_id: user.id,
     body: trimmed,
+    parent_comment_id: parentCommentId ?? null,
   });
 
   if (error) throw new Error(error.message);

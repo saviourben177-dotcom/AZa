@@ -17,7 +17,7 @@ const TABS = [
 // nav controls below the fold, forcing an unwanted scroll.
 const HIDDEN_ON = ["/welcome", "/login", "/signup"];
 
-export default function BottomNav() {
+export default function BottomNav({ unseenSavedCount = 0 }: { unseenSavedCount?: number }) {
   const pathname = usePathname();
 
   if (HIDDEN_ON.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
@@ -33,6 +33,7 @@ export default function BottomNav() {
         {TABS.map((tab) => {
           const active =
             tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
+          const showBadge = tab.href === "/profile" && unseenSavedCount > 0;
           return (
             <li key={tab.href} className="flex-1">
               <Link
@@ -41,11 +42,19 @@ export default function BottomNav() {
                 aria-current={active ? "page" : undefined}
               >
                 <span
-                  className={`flex items-center justify-center rounded-pill px-3.5 py-1.5 transition-colors ${
+                  className={`relative flex items-center justify-center rounded-pill px-3.5 py-1.5 transition-colors ${
                     active ? "bg-aza-light" : ""
                   }`}
                 >
                   <tab.icon active={active} />
+                  {showBadge && (
+                    <span
+                      aria-label={`${unseenSavedCount} unseen saved opportunities`}
+                      className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-danger px-1 text-[9px] font-bold leading-none text-white shadow-card"
+                    >
+                      {unseenSavedCount > 9 ? "9+" : unseenSavedCount}
+                    </span>
+                  )}
                 </span>
                 <span className={active ? "text-aza" : "text-ink/45"}>
                   {tab.label}

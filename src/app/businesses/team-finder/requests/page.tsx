@@ -98,6 +98,7 @@ export default async function JoinRequestsPage({
             ideaTitle={ideaTitleMap.get(r.idea_id) ?? "Project"}
             roleName={r.idea_roles?.role_name ?? "Collaborator"}
             requesterName={r.profiles?.full_name ?? "Aza user"}
+            requesterId={r.requester_id}
             avatarUrl={r.profiles?.avatar_url}
             message={r.message}
             status={r.status}

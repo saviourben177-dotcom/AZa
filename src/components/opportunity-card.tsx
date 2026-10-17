@@ -37,13 +37,12 @@ export default function OpportunityCard({
             {opportunity.curator_verified && <VerifiedBadge />}
           </div>
         </div>
-      </Link>
-      <div className="absolute -bottom-3 left-3 z-10">
-        <DeadlinePill deadline={opportunity.deadline} />
-      </div>
 
-      <div className="px-4 pb-4 pt-6">
-        <Link href={`/opportunities/${opportunity.id}`} className="block">
+        <div className="absolute -bottom-3 left-3 z-10">
+          <DeadlinePill deadline={opportunity.deadline} />
+        </div>
+
+        <div className="px-4 pb-4 pt-6">
           <div className="mb-1.5 flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-aza" />
             <p className="text-[12px] font-semibold text-ink/55">{opportunity.org}</p>
@@ -51,30 +50,30 @@ export default function OpportunityCard({
           <h3 className="font-display text-[17px] font-bold leading-snug text-ink">
             {opportunity.title}
           </h3>
-        </Link>
 
-        <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/65">
-          {opportunity.description}
-        </p>
+          <p className="mt-2 line-clamp-2 text-[13px] leading-relaxed text-ink/65">
+            {opportunity.description}
+          </p>
 
-        <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-          <span className="text-[11.5px] font-medium text-ink/50">
-            {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Location not specified"}
-          </span>
-          <SaveButton
-            opportunityId={opportunity.id}
-            initialSaved={isSaved}
-            isAuthed={isAuthed}
-          />
-        </div>
-
-        {applicationStatus && (
-          <div className="mt-2.5 flex items-center justify-between">
-            <span className="text-[11px] font-semibold text-ink/40">Status</span>
-            <ApplicationStatusControl opportunityId={opportunity.id} currentStatus={applicationStatus} />
+          <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+            <span className="text-[11.5px] font-medium text-ink/50">
+              {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Location not specified"}
+            </span>
+            <SaveButton
+              opportunityId={opportunity.id}
+              initialSaved={isSaved}
+              isAuthed={isAuthed}
+            />
           </div>
-        )}
-      </div>
+
+          {applicationStatus && (
+            <div className="mt-2.5 flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-ink/40">Status</span>
+              <ApplicationStatusControl opportunityId={opportunity.id} currentStatus={applicationStatus} />
+            </div>
+          )}
+        </div>
+      </Link>
     </div>
   );
 }

@@ -11,6 +11,7 @@ export default function RequestRow({
   ideaTitle,
   roleName,
   requesterName,
+  requesterId,
   avatarUrl,
   message,
   status,
@@ -22,6 +23,7 @@ export default function RequestRow({
   ideaTitle: string;
   roleName: string;
   requesterName: string;
+  requesterId?: string;
   avatarUrl?: string | null;
   message: string;
   status: "pending" | "accepted" | "declined";
@@ -49,7 +51,13 @@ export default function RequestRow({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-[13.5px] font-bold text-ink">{requesterName}</p>
+            {requesterId ? (
+              <Link href={`/u/${requesterId}`} className="truncate text-[13.5px] font-bold text-ink">
+                {requesterName}
+              </Link>
+            ) : (
+              <p className="truncate text-[13.5px] font-bold text-ink">{requesterName}</p>
+            )}
             {isNew && localStatus === "pending" && (
               <span className="shrink-0 rounded-pill bg-aza px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
                 New

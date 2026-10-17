@@ -1,10 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BadgeCheck, Phone } from "lucide-react";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, btn, Stars } from "@/components/aza/kit";
+import { Tag } from "@/components/aza/ui";
+import { businesses as mockBusinesses } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/server";
-import VerifiedBadge from "@/components/verified-badge";
-import StarRatingDisplay from "@/components/business/star-rating-display";
-import RatingForm from "@/components/business/rating-form";
-import { relativeTime } from "@/lib/types";
+import { BusinessRatingSection } from "./rating-section";
 
 export const dynamic = "force-dynamic";
 
@@ -16,133 +17,93 @@ export default async function BusinessDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: business, error } = await supabase.from("businesses").select("*").eq("id", id).single();
-  if (error || !business) notFound();
+  const { data: dbBusiness } = await supabase
+    .from("businesses")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // A real business id that simply has no row yet (new accounts, fresh
+  // database) is a genuine 404, not a reason to show demo content —
+  // mock fallback is only for ids that were never real to begin with
+  // (prototype links that predate real data).
+  const mock = !dbBusiness ? mockBusinesses.find((x) => x.id === id) : null;
+  if (!dbBusiness && !mock) {
+    notFound();
+  }
 
-  const { data: ratings } = await supabase
-    .from("business_ratings")
-    .select("id, user_id, stars, comment, created_at, profiles(full_name)")
-    .eq("business_id", id)
-    .order("created_at", { ascending: false });
+  let business;
+  if (dbBusiness) {
+    const { data: ratings } = await supabase
+      .from("business_ratings")
+      .select("stars")
+      .eq("business_id", id);
+    const ratingValues = (ratings ?? []).map((r) => r.stars);
+    const avgRating =
+      ratingValues.length > 0 ? ratingValues.reduce((a, c) => a + c, 0) / ratingValues.length : 0;
 
-  const ratingRows = ratings ?? [];
-  const ratingCount = ratingRows.length;
-  const average = ratingCount > 0 ? ratingRows.reduce((sum, r) => sum + r.stars, 0) / ratingCount : 0;
-  const myRating = user ? ratingRows.find((r) => r.user_id === user.id) : undefined;
-  const otherRatings = ratingRows.filter((r) => r.user_id !== user?.id);
+    business = {
+      id: dbBusiness.id,
+      name: dbBusiness.name,
+      mark: dbBusiness.name.slice(0, 2).toUpperCase(),
+      category: dbBusiness.category ?? "Services",
+      location: dbBusiness.location ?? "Nigeria",
+      rating: Math.round(avgRating * 10) / 10,
+      reviews: ratingValues.length,
+      description: dbBusiness.description ?? "",
+      phone: dbBusiness.phone ?? null,
+      verified: true,
+    };
+  } else {
+    business = mock!;
+  }
 
   return (
-    <div className="px-5 pb-10 pt-7">
-      <Link href="/businesses/directory" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </Link>
+    <AppShell>
+      <BackLink to="/businesses/directory" label="Directory" />
+      <div className="max-w-2xl">
+        <div className="mb-4 flex items-center gap-4">
+          <span className="emboss grid size-16 place-items-center rounded-lg border font-display text-xl font-bold text-foreground">
+            {business.mark}
+          </span>
+          <div>
+            <h1 className="flex items-center gap-2 text-2xl font-display font-bold text-foreground">
+              {business.name}
+              {business.verified && (
+                <BadgeCheck
+                  aria-label="Verified"
+                  className="size-5 text-primary"
+                />
+              )}
+            </h1>
+            <p className="text-sm text-muted-foreground">{business.location}</p>
+          </div>
+        </div>
 
-      <div className="mt-4 flex items-start gap-4">
-        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-card-sm bg-aza-light">
-          {business.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={business.logo_url} alt={`${business.name} logo`} className="h-full w-full object-cover" />
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Tag>{business.category}</Tag>
+          {business.reviews > 0 ? (
+            <>
+              <Stars value={Math.round(business.rating)} />
+              <span className="text-sm text-foreground">
+                <b className="tabular font-bold">{business.rating}</b> · {business.reviews} reviews
+              </span>
+            </>
           ) : (
-            <div className="flex h-full w-full items-center justify-center font-display text-xl font-bold text-aza">
-              {business.name.charAt(0)}
-            </div>
+            <span className="text-sm text-muted-foreground">No reviews yet</span>
           )}
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display text-[19px] font-bold leading-tight text-ink">{business.name}</h1>
-            {business.curator_verified && <VerifiedBadge />}
-          </div>
-          <p className="mt-1 text-[12.5px] font-medium text-ink/50">
-            {business.category}
-            {business.location ? ` · ${business.location}` : ""}
-          </p>
-          <div className="mt-1.5">
-            <StarRatingDisplay average={average} count={ratingCount} size="md" />
-          </div>
-        </div>
-      </div>
 
-      {!business.curator_verified && (
-        <p className="mt-4 rounded-card-sm bg-paper-dim px-3.5 py-3 text-[11.5px] leading-relaxed text-ink/55">
-          This listing hasn&apos;t been verified by Aza yet. Check the reviews below and confirm details before doing business.
-        </p>
-      )}
+        <p className="mb-6 leading-relaxed text-foreground">{business.description}</p>
 
-      {business.description && (
-        <section className="mt-4 rounded-card border border-line-strong bg-surface p-4 shadow-card">
-          <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-ink/70">{business.description}</p>
-        </section>
-      )}
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {business.whatsapp && (
-          <a
-            href={`https://wa.me/${business.whatsapp.replace(/[^0-9]/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-pill bg-aza-light px-4 py-2 text-[12.5px] font-bold text-aza"
-          >
-            WhatsApp
-          </a>
-        )}
         {business.phone && (
-          <a href={`tel:${business.phone}`} className="rounded-pill bg-paper-dim px-4 py-2 text-[12.5px] font-bold text-ink/70">
-            Call
+          <a href={`tel:${business.phone}`} className={btn.primary}>
+            <Phone className="size-4" /> Call {business.phone}
           </a>
         )}
-        {business.email && (
-          <a href={`mailto:${business.email}`} className="rounded-pill bg-paper-dim px-4 py-2 text-[12.5px] font-bold text-ink/70">
-            Email
-          </a>
-        )}
-      </div>
 
-      <div className="mt-7">
-        {user ? (
-          <RatingForm
-            businessId={business.id}
-            existingStars={myRating?.stars ?? null}
-            existingComment={myRating?.comment ?? null}
-          />
-        ) : (
-          <Link
-            href={`/login?next=/businesses/directory/${business.id}`}
-            className="block rounded-card border border-line-strong bg-surface p-4 text-center text-[13px] font-bold text-aza shadow-card"
-          >
-            Log in to rate this business
-          </Link>
-        )}
+        <BusinessRatingSection businessId={business.id} />
       </div>
-
-      <section className="mt-6">
-        <p className="text-[13px] font-bold text-ink">
-          Reviews {ratingCount > 0 && `(${ratingCount})`}
-        </p>
-        {otherRatings.length === 0 && !myRating && (
-          <p className="mt-2 text-[12.5px] text-ink/50">No reviews yet. Be the first to rate this business.</p>
-        )}
-        <div className="mt-3 space-y-2.5">
-          {otherRatings.map((r) => (
-            <div key={r.id} className="rounded-card-sm border border-line-strong bg-surface p-3.5">
-              <div className="flex items-center justify-between">
-                <p className="text-[12.5px] font-bold text-ink/80">
-                  {(r.profiles as unknown as { full_name: string | null } | null)?.full_name ?? "Aza user"}
-                </p>
-                <span className="text-[11px] text-ink/40">{relativeTime(r.created_at)}</span>
-              </div>
-              <div className="mt-1">
-                <StarRatingDisplay average={r.stars} count={1} />
-              </div>
-              {r.comment && <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink/65">{r.comment}</p>}
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
+    </AppShell>
   );
 }

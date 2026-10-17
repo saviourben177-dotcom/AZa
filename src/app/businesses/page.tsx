@@ -1,49 +1,261 @@
+"use client";
+
+import {
+  ArrowLeftRight,
+  Building2,
+  Calculator,
+  FileText,
+  Landmark,
+  Rocket,
+  ShoppingBag,
+  Store,
+  Users,
+} from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Users, Building2, LayoutGrid, HandCoins, Store, Sprout, ArrowRight } from "lucide-react";
+import { AppShell } from "@/components/aza/app-shell";
+import { Tile } from "@/components/aza/kit";
+import { PageHeader, Tag } from "@/components/aza/ui";
+import { cn } from "@/lib/utils";
 
-export default function BusinessHubPage() {
+const sections = [
+  { id: "breakeven", label: "Break-even", icon: Calculator },
+  { id: "currency", label: "Currency", icon: ArrowLeftRight },
+  { id: "team", label: "Team Finder", icon: Users },
+  { id: "listings", label: "Listings", icon: Store },
+] as const;
+
+type S = (typeof sections)[number]["id"];
+
+export default function BusinessPage() {
+  const [s, setS] = useState<S>("breakeven");
+
   return (
-    <div className="px-5 pt-7">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Business Hub</p>
-      <h1 className="mt-1 font-display text-[24px] font-bold leading-tight text-ink">Build. Launch. Scale.</h1>
+    <AppShell>
+      <PageHeader title="Business" sub="Tools you'll use every week" />
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <Tile to="/businesses/directory" icon={Building2} title="Directory" sub="Local businesses" />
+        <Tile to="/businesses/marketplace" icon={ShoppingBag} title="Marketplace" sub="Buy, sell, collaborate" />
+        <Tile to="/businesses/team-finder" icon={Users} title="Team Finder" sub="Join or build a team" />
+        <Tile to="/businesses/funding" icon={Landmark} title="Funding" sub="Loans, grants, equity" />
+        <Tile to="/businesses/incubators" icon={Rocket} title="Incubators" sub="Programmes near you" />
+        <Tile to="/businesses/plan" icon={FileText} title="Business plan" sub="Generate a draft" />
+      </div>
 
-      <Link
-        href="/businesses/marketplace/new"
-        className="mt-6 flex items-center gap-4 rounded-card bg-gradient-to-br from-aza to-aza-dark p-5 shadow-glow-accent transition-transform active:scale-[0.98]"
+      <div
+        role="tablist"
+        className="sticky top-0 z-20 -mx-4 mb-6 flex gap-1 overflow-x-auto border-b bg-background px-4 md:top-16 md:mx-0 md:px-0"
       >
-        <Image
-          src="/icons/start-business-rocket.png"
-          alt=""
-          width={56}
-          height={56}
-          className="h-14 w-14 shrink-0 rounded-2xl"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-[16px] font-bold text-white">Start your business</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-white/85">Turn your idea into a real, impactful business</p>
-        </div>
-        <ArrowRight size={18} strokeWidth={2} className="shrink-0 text-white/90" />
-      </Link>
+        {sections.map((t) => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={s === t.id}
+            onClick={() => setS(t.id)}
+            className={cn(
+              "-mb-px inline-flex h-12 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors",
+              s === t.id
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <t.icon className="size-4" /> {t.label}
+          </button>
+        ))}
+      </div>
 
-      <div className="mt-5 grid grid-cols-2 gap-3">
-        <HubCard href="/businesses/team-finder" title="Team Finder" subtitle="Find people, build together" icon={<Users size={19} strokeWidth={1.8} className="text-aza" />} />
-        <HubCard href="/businesses/directory" title="Business Directory" subtitle="Browse local businesses" icon={<Building2 size={19} strokeWidth={1.8} className="text-aza" />} />
-        <HubCard href="/businesses/tools" title="Business Tools" subtitle="Templates, calculators, guides" icon={<LayoutGrid size={19} strokeWidth={1.8} className="text-aza" />} />
-        <HubCard href="/businesses/funding" title="Funding & Grants" subtitle="Find capital and funding" icon={<HandCoins size={19} strokeWidth={1.8} className="text-aza" />} />
-        <HubCard href="/businesses/marketplace" title="Marketplace" subtitle="Buy, sell and collaborate" icon={<Store size={19} strokeWidth={1.8} className="text-aza" />} />
-        <HubCard href="/businesses/incubators" title="Incubators" subtitle="Join programs and accelerators" icon={<Sprout size={19} strokeWidth={1.8} className="text-aza" />} />
+      <div className="max-w-3xl">
+        {s === "breakeven" && <BreakEven />}
+        {s === "currency" && <Currency />}
+        {s === "team" && <Team />}
+        {s === "listings" && <Listings />}
+      </div>
+    </AppShell>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  suffix,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  suffix?: string;
+}) {
+  return (
+    <label className="block text-sm">
+      <span className="font-medium text-foreground">{label}</span>
+      <div className="relative mt-1.5">
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="tabular h-11 w-full rounded-md border border-input bg-background px-3 pr-12 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        {suffix && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            {suffix}
+          </span>
+        )}
+      </div>
+    </label>
+  );
+}
+
+function BreakEven() {
+  const [fixed, setFixed] = useState(150000);
+  const [price, setPrice] = useState(2500);
+  const [cost, setCost] = useState(1400);
+  const margin = price - cost;
+  const units = margin > 0 ? Math.ceil(fixed / margin) : null;
+
+  return (
+    <div className="grid gap-6 md:grid-cols-2">
+      <div className="space-y-4">
+        <Field label="Monthly fixed costs" value={fixed} onChange={setFixed} suffix="₦" />
+        <Field label="Selling price per unit" value={price} onChange={setPrice} suffix="₦" />
+        <Field label="Cost per unit" value={cost} onChange={setCost} suffix="₦" />
+      </div>
+      <div className="rounded-lg border bg-muted/60 p-5 shadow-[var(--shadow-card)]">
+        <p className="text-sm text-muted-foreground">You break even at</p>
+        <p className="tabular mt-1 font-display text-4xl font-semibold text-foreground">
+          {units ? units.toLocaleString() : "—"}
+        </p>
+        <p className="text-sm text-muted-foreground">units a month</p>
+        {units && (
+          <p className="mt-4 text-sm text-foreground">
+            That&apos;s about <strong className="tabular font-bold">{Math.ceil(units / 26)}</strong>{" "}
+            sales per working day, earning{" "}
+            <strong className="tabular font-bold">₦{margin.toLocaleString()}</strong> margin each.
+          </p>
+        )}
+        {!units && (
+          <p className="mt-4 text-sm text-destructive">
+            Your price must be higher than your unit cost.
+          </p>
+        )}
       </div>
     </div>
   );
 }
 
-function HubCard({ href, title, subtitle, icon }: { href: string; title: string; subtitle: string; icon: React.ReactNode }) {
+const rates: Record<string, number> = {
+  NGN: 1,
+  USD: 1540,
+  GBP: 1960,
+  EUR: 1680,
+  GHS: 102,
+  KES: 11.9,
+};
+
+function Currency() {
+  const [amt, setAmt] = useState(100);
+  const [from, setFrom] = useState("USD");
+  const [to, setTo] = useState("NGN");
+  const out = (amt * (rates[from] ?? 1)) / (rates[to] ?? 1);
+  const sel = "h-11 rounded-md border border-input bg-background px-3 text-sm text-foreground";
+
   return (
-    <Link href={href} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card transition-transform active:scale-95">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">{icon}</div>
-      <p className="mt-3 font-display text-[14px] font-bold text-ink">{title}</p>
-      <p className="mt-1 text-[11.5px] leading-relaxed text-ink/55">{subtitle}</p>
-    </Link>
+    <div className="space-y-4">
+      <div className="grid grid-cols-[1fr_auto] gap-2">
+        <Field label="Amount" value={amt} onChange={setAmt} />
+        <label className="text-sm">
+          <span className="font-medium text-foreground">From</span>
+          <select
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className={cn(sel, "mt-1.5 block")}
+          >
+            {Object.keys(rates).map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="block text-sm">
+        <span className="font-medium text-foreground">To</span>
+        <select
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+          className={cn(sel, "mt-1.5 block w-full")}
+        >
+          {Object.keys(rates).map((c) => (
+            <option key={c}>{c}</option>
+          ))}
+        </select>
+      </label>
+      <div className="rounded-lg border bg-muted/60 p-5 shadow-[var(--shadow-card)]">
+        <p className="tabular font-display text-3xl font-semibold text-foreground">
+          {out.toLocaleString(undefined, { maximumFractionDigits: 2 })} {to}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Sample rates for preview only</p>
+      </div>
+    </div>
+  );
+}
+
+const teams = [
+  {
+    name: "Cold-chain for tomato farmers",
+    need: "Backend developer",
+    where: "Enugu · Hybrid",
+    members: 2,
+  },
+  {
+    name: "WhatsApp JAMB tutor",
+    need: "Content writer (Maths)",
+    where: "Remote",
+    members: 1,
+  },
+  { name: "Street diesel sharing", need: "Field sales lead", where: "Accra", members: 3 },
+];
+
+function Team() {
+  return (
+    <ul className="divide-y rounded-lg border bg-card">
+      {teams.map((t) => (
+        <li
+          key={t.name}
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4"
+        >
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground">{t.name}</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <Tag tone="primary">Needs: {t.need}</Tag>
+              <Tag>{t.where}</Tag>
+              <Tag>{t.members} on team</Tag>
+            </div>
+          </div>
+          <Link
+            href="/businesses/team-finder"
+            className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground hover:bg-accent"
+          >
+            Request to join
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Listings() {
+  const items = [
+    ["Mama Nkechi's Kitchen", "Food · Yaba"],
+    ["Bright Solar Supplies", "Fuel & energy · Ikeja"],
+    ["Danjuma Blocks", "Building materials · Kaduna"],
+  ];
+  return (
+    <ul className="grid gap-3 sm:grid-cols-2">
+      {items.map(([n, m]) => (
+        <li key={n} className="rounded-lg border bg-card p-4">
+          <p className="font-semibold text-foreground">{n}</p>
+          <p className="text-sm text-muted-foreground">{m}</p>
+        </li>
+      ))}
+    </ul>
   );
 }

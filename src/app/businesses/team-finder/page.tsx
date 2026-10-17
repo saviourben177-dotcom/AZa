@@ -1,167 +1,119 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { relativeTime } from "@/lib/types";
-import { Users, Search, User, Heart } from "lucide-react";
+import { AppShell } from "@/components/aza/app-shell";
+import { BackLink, btn, Empty } from "@/components/aza/kit";
+import { PageHeader, Tag } from "@/components/aza/ui";
 
 export const dynamic = "force-dynamic";
 
+export const metadata: Metadata = {
+  title: "Team Finder — Aza",
+  description: "Find founders looking for teammates, or recruit for your own idea.",
+};
+
 const ROLE_FILTERS = ["All", "Developer", "Designer", "Marketing", "AI/ML", "Finance"];
 
-export default async function TeamFinderHomePage({
+interface IdeaRole {
+  role_name: string;
+  slots_needed: number;
+  slots_filled: number;
+}
+
+export default async function TeamFinderPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string; q?: string }>;
+  searchParams: Promise<{ role?: string }>;
 }) {
-  const { role, q } = await searchParams;
+  const { role } = await searchParams;
   const supabase = await createClient();
 
-  let query = supabase
+  const { data: ideasRaw } = await supabase
     .from("ideas")
-    .select("*, idea_roles(*), join_requests(id)")
+    .select("id, title, category, created_at, idea_roles(role_name, slots_needed, slots_filled)")
     .eq("looking_for_collaborators", true)
     .eq("visibility", "public")
-    .order("created_at", { ascending: false });
-
-  if (q) query = query.ilike("title", `%${q}%`);
-
-  const { data: ideasRaw } = await query.limit(50);
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   let ideas = ideasRaw ?? [];
   if (role && role !== "All") {
     ideas = ideas.filter((idea) =>
-      (idea.idea_roles ?? []).some((r: { role_name: string }) =>
+      ((idea.idea_roles as unknown as IdeaRole[]) ?? []).some((r) =>
         r.role_name.toLowerCase().includes(role.toLowerCase())
       )
     );
   }
 
   return (
-    <div className="px-5 pt-7 pb-4">
-      <div className="flex items-center gap-3">
-        <Link href="/businesses" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </Link>
-        <h1 className="font-display text-[19px] font-bold text-ink">Team Finder</h1>
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
-            <Users size={16} strokeWidth={1.8} className="text-aza" />
-          </div>
-        </div>
-        <Link href="/growth/ideas/new?team=1" className="rounded-pill bg-aza px-4 py-2 text-[12.5px] font-bold text-white shadow-glow-accent">
-          + Post
-        </Link>
-      </div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-ink/50">
-        Find people. Build together. Grow your ideas.
-      </p>
+    <AppShell>
+      <BackLink to="/businesses" label="Business" />
+      <PageHeader
+        title="Team Finder"
+        sub="Teams looking for people like you"
+        action={
+          <Link href="/businesses/team-finder/my-requests" className={btn.secondary}>
+            My requests
+          </Link>
+        }
+      />
 
-      <form className="mt-5 flex items-center gap-2.5 rounded-card-sm border border-line-strong bg-surface px-4 py-3 shadow-card">
-        <Search size={16} strokeWidth={1.8} className="shrink-0 text-ink/35" />
-        <input
-          name="q"
-          defaultValue={q}
-          placeholder="Search projects, skills or keywords..."
-          className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-ink/35 focus:outline-none"
+      <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">
+        {ROLE_FILTERS.map((r) => (
+          <Link
+            key={r}
+            href={r === "All" ? "/businesses/team-finder" : `/businesses/team-finder?role=${r}`}
+            className={`h-11 shrink-0 rounded-md border px-3.5 text-sm font-medium flex items-center ${
+              (role ?? "All") === r
+                ? "border-primary bg-primary-soft font-semibold text-primary-strong"
+                : "bg-background text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {r}
+          </Link>
+        ))}
+      </div>
+
+      {ideas.length === 0 ? (
+        <Empty
+          title="No open teams right now"
+          sub="Check back soon, or post your own project to find collaborators."
+          action={
+            <Link href="/growth/ideas/new?team=1" className={btn.primary}>
+              Post a project
+            </Link>
+          }
         />
-      </form>
-
-      <div className="mt-4 -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {ROLE_FILTERS.map((r) => {
-          const active = (role ?? "All") === r;
-          return (
-            <Link
-              key={r}
-              href={r === "All" ? "/businesses/team-finder" : `/businesses/team-finder?role=${encodeURIComponent(r)}`}
-              className={`shrink-0 rounded-pill border px-4 py-2 text-[12.5px] font-bold transition-colors ${
-                active
-                  ? "border-aza bg-aza text-white shadow-glow-accent"
-                  : "border-line-strong bg-surface text-ink/60"
-              }`}
-            >
-              {r}
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 space-y-3">
-        {ideas.length === 0 && (
-          <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
-              <Users size={22} strokeWidth={1.6} className="text-aza" />
-            </div>
-            <p className="text-[13px] text-ink/55">
-              No open projects match yet — check back soon or{" "}
-              <Link href="/growth/ideas/new?team=1" className="font-bold text-aza underline">
-                post your own idea
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2">
+          {ideas.map((idea) => {
+            const roles = (idea.idea_roles as unknown as IdeaRole[]) ?? [];
+            const openRoles = roles.filter((r) => r.slots_filled < r.slots_needed);
+            const totalMembersNeeded = roles.reduce((sum, r) => sum + r.slots_needed, 0);
+            return (
+              <Link
+                key={idea.id}
+                href={`/businesses/team-finder/${idea.id}`}
+                className="card-lift flex flex-col gap-2 rounded-lg border bg-card p-4 transition-colors hover:border-border-strong"
+              >
+                <p className="text-xs font-bold uppercase tracking-wide text-primary-strong">
+                  {openRoles.length > 0
+                    ? `Needs ${openRoles.map((r) => r.role_name).join(", ")}`
+                    : "Team full"}
+                </p>
+                <h3 className="text-base font-semibold text-foreground">{idea.title}</h3>
+                <div className="mt-auto flex flex-wrap gap-1.5 pt-1">
+                  {idea.category && <Tag>{idea.category}</Tag>}
+                  <Tag icon={<Users className="size-3.5" />}>
+                    {totalMembersNeeded} {totalMembersNeeded === 1 ? "spot" : "spots"}
+                  </Tag>
+                </div>
               </Link>
-              .
-            </p>
-          </div>
-        )}
-
-        {ideas.map((idea) => {
-          const roles = (idea.idea_roles ?? []) as { id: string; role_name: string; slots_needed: number; slots_filled: number }[];
-          const requestCount = (idea.join_requests ?? []).length;
-          const openRoles = roles.filter((r) => r.slots_filled < r.slots_needed);
-
-          return (
-            <Link
-              key={idea.id}
-              href={`/businesses/team-finder/${idea.id}`}
-              className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card transition-transform active:scale-[0.98]"
-            >
-              <div className="flex gap-3.5">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-aza to-aza-dark shadow-glow-accent">
-                  <span className="font-display text-[19px] font-bold text-white">
-                    {idea.title.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-[14px] font-bold text-ink">{idea.title}</p>
-                  </div>
-                  <p className="mt-0.5 line-clamp-2 text-[12px] leading-relaxed text-ink/55">
-                    {idea.description}
-                  </p>
-                </div>
-              </div>
-
-              {openRoles.length > 0 && (
-                <div className="mt-3">
-                  <p className="text-[10.5px] font-bold uppercase tracking-wide text-ink/40">Needs:</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {openRoles.slice(0, 3).map((r) => (
-                      <span
-                        key={r.id}
-                        className="rounded-lg bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza"
-                      >
-                        {r.role_name} ({r.slots_needed - r.slots_filled})
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="mt-3 flex items-center gap-3 border-t border-line pt-2.5 text-[11px] font-medium text-ink/45">
-                <span className="rounded-md bg-paper-dim px-2 py-0.5 font-bold uppercase tracking-wide text-ink/50">
-                  {idea.stage}
-                </span>
-                <span className="flex items-center gap-1">
-                  <User size={13} strokeWidth={1.7} /> {requestCount}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart size={13} strokeWidth={1.6} /> {idea.upvotes_count}
-                </span>
-                <span className="ml-auto">{relativeTime(idea.created_at)}</span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+            );
+          })}
+        </div>
+      )}
+    </AppShell>
   );
 }
-

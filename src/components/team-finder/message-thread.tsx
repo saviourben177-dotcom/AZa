@@ -3,7 +3,6 @@
 import { useRef, useTransition } from "react";
 import { sendMessage } from "@/lib/actions/team-finder";
 import { relativeTime } from "@/lib/types";
-import ReportOnLongPress from "@/components/reports/report-on-long-press";
 
 interface MessageItem {
   id: string;
@@ -16,17 +15,21 @@ export default function MessageThread({
   joinRequestId,
   messages,
   currentUserId,
+  onSend,
 }: {
-  joinRequestId: string;
+  joinRequestId?: string;
   messages: MessageItem[];
   currentUserId: string;
+  /** Optional override used by direct (profile) messaging. Defaults to the team-finder send action. */
+  onSend?: (formData: FormData) => Promise<void>;
 }) {
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await sendMessage(joinRequestId, formData);
+      if (onSend) await onSend(formData);
+      else if (joinRequestId) await sendMessage(joinRequestId, formData);
       formRef.current?.reset();
     });
   }
@@ -43,23 +46,16 @@ export default function MessageThread({
           const mine = m.sender_id === currentUserId;
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-              {mine ? (
-                <div className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
+              <div
+                className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
                   mine ? "bg-aza text-white" : "border border-line-strong bg-surface text-ink"
-                }`}>
-                  <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
-                  <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>{relativeTime(m.created_at)}</p>
-                </div>
-              ) : (
-                <ReportOnLongPress contentType="message" contentId={m.id}>
-                  <div className={`max-w-[78%] rounded-card-sm px-3.5 py-2.5 shadow-card ${
-                    mine ? "bg-aza text-white" : "border border-line-strong bg-surface text-ink"
-                  }`}>
-                    <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
-                    <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>{relativeTime(m.created_at)}</p>
-                  </div>
-                </ReportOnLongPress>
-              )}
+                }`}
+              >
+                <p className="whitespace-pre-line text-[13px] leading-relaxed">{m.body}</p>
+                <p className={`mt-1 text-[10px] font-medium ${mine ? "text-white/60" : "text-ink/35"}`}>
+                  {relativeTime(m.created_at)}
+                </p>
+              </div>
             </div>
           );
         })}

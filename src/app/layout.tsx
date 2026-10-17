@@ -1,15 +1,22 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Sora, Inter } from "next/font/google";
+import { Sora, Manrope, Inter } from "next/font/google";
 import "./globals.css";
-import BottomNav from "@/components/bottom-nav";
 import PushNotificationsMount from "@/components/push-notifications-mount";
 import { THEME_COOKIE, isValidTheme } from "@/lib/theme/cookie";
+import { Toaster } from "sonner";
 
 const sora = Sora({
   subsets: ["latin"],
   weight: ["600", "700", "800"],
   variable: "--font-sora",
+  display: "swap",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-manrope",
   display: "swap",
 });
 
@@ -21,7 +28,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Aza — Opportunities, prices & businesses",
+  title: "Aza — Opportunities, ideas and tools for young African founders",
   description:
     "Find scholarships, grants, hackathons, fellowships, internships, competitions and gigs. Curator-verified prices and businesses, built out of Nigeria for opportunity-seekers everywhere.",
 };
@@ -45,13 +52,11 @@ export default async function RootLayout({
   const theme = isValidTheme(raw) ? raw : "light";
 
   return (
-    <html lang="en" data-theme={theme} className={`${sora.variable} ${inter.variable}`}>
-      <body className="font-body antialiased">
-        <div className="bg-ambient mx-auto flex min-h-screen max-w-md flex-col bg-paper">
-          <PushNotificationsMount />
-          <main className="flex-1 pb-20">{children}</main>
-          <BottomNav />
-        </div>
+    <html lang="en" data-theme={theme} className={`${sora.variable} ${manrope.variable} ${inter.variable}`}>
+      <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <PushNotificationsMount />
+        {children}
+        <Toaster position="top-center" />
       </body>
     </html>
   );

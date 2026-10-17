@@ -1,17 +1,19 @@
-import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Target, Globe } from "lucide-react";
+import { AppShell } from "@/components/aza/app-shell";
+import { Tag } from "@/components/aza/ui";
+import { ideas as mockIdeas } from "@/lib/aza-data";
+import { createClient } from "@/lib/supabase/server";
 import UpvoteButton from "@/components/growth/upvote-button";
 import IdeaStageControl from "@/components/growth/idea-stage-control";
 import DeleteIdeaButton from "@/components/growth/delete-idea-button";
 import SaveIdeaButton from "@/components/save-idea-button";
 import ShareIdeaButton from "@/components/growth/share-idea-button";
 import CommentForm from "@/components/growth/comment-form";
-import DeleteCommentButton from "@/components/growth/delete-comment-button";
+import CommentThread from "@/components/growth/comment-thread";
 import IdeaAuthorRow from "@/components/growth/idea-author-row";
-import ReportButton from "@/components/reports/report-button";
-import ReportOnLongPress from "@/components/reports/report-on-long-press";
-import type { IdeaComment } from "@/lib/types";
+import type { CommentReaction, IdeaComment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +25,73 @@ export default async function IdeaDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: idea, error } = await supabase.from("ideas").select("*").eq("id", id).single();
-  if (error || !idea) notFound();
+  const { data: dbIdea } = await supabase
+    .from("ideas")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  // If not in database, check mock prototype ideas
+  const mockIdea = !dbIdea ? mockIdeas.find((i) => i.id === id) : null;
+  if (!dbIdea && !mockIdea) {
+    notFound();
+  }
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // If mock idea
+  if (!dbIdea && mockIdea) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-2xl">
+          <Link
+            href="/growth/ideas"
+            className="-ml-2 mb-4 inline-flex h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" /> Ideas
+          </Link>
+
+          <article className="border-b pb-4">
+            <IdeaAuthorRow
+              name={mockIdea.author}
+              avatarUrl={null}
+              createdAt={new Date(Date.now() - mockIdea.hoursAgo * 3600000).toISOString()}
+              size="md"
+            />
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              <Tag tone="primary" icon={<Target className="size-3.5" />}>
+                {mockIdea.ask}
+              </Tag>
+              <Tag>{mockIdea.stage}</Tag>
+            </div>
+            <p className="mt-4 text-lg leading-relaxed text-foreground">{mockIdea.pitch}</p>
+          </article>
+
+          <h2 className="mt-6 text-base font-semibold text-foreground">
+            {mockIdea.comments.length ? "Conversation" : "No replies yet"}
+          </h2>
+          <ul className="mt-4 space-y-6">
+            {mockIdea.comments.map((c) => (
+              <li key={c.id} className="rounded-lg border bg-card p-4">
+                <IdeaAuthorRow
+                  name={c.author}
+                  avatarUrl={null}
+                  createdAt={new Date(Date.now() - c.hoursAgo * 3600000).toISOString()}
+                  size="sm"
+                />
+                <p className="mt-2 text-base leading-relaxed text-foreground">{c.body}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // Real DB idea
+  const idea = dbIdea!;
   const { data: author } = await supabase
     .from("public_profiles")
     .select("full_name, avatar_url")
@@ -40,8 +102,18 @@ export default async function IdeaDetailPage({
   let isSaved = false;
   if (user) {
     const [{ data: upvoteRow }, { data: savedRow }] = await Promise.all([
-      supabase.from("idea_upvotes").select("user_id").eq("user_id", user.id).eq("idea_id", id).maybeSingle(),
-      supabase.from("saved_ideas").select("user_id").eq("user_id", user.id).eq("idea_id", id).maybeSingle(),
+      supabase
+        .from("idea_upvotes")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .eq("idea_id", id)
+        .maybeSingle(),
+      supabase
+        .from("saved_ideas")
+        .select("user_id")
+        .eq("user_id", user.id)
+        .eq("idea_id", id)
+        .maybeSingle(),
     ]);
     upvoted = !!upvoteRow;
     isSaved = !!savedRow;
@@ -64,126 +136,151 @@ export default async function IdeaDetailPage({
       .in("id", commenterIds);
     commenters = new Map(
       (commenterProfiles ?? [])
-        .filter((p): p is { id: string; full_name: string | null; avatar_url: string | null } => p.id !== null)
-        .map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }])
+        .filter(
+          (p): p is { id: string; full_name: string | null; avatar_url: string | null } =>
+            p.id !== null,
+        )
+        .map((p) => [p.id, { full_name: p.full_name, avatar_url: p.avatar_url }]),
     );
+  }
+
+  let reactionsByCommentId = new Map<string, CommentReaction>();
+  if (user && commentList.length > 0) {
+    const { data: myReactions } = await supabase
+      .from("idea_comment_reactions")
+      .select("comment_id, reaction")
+      .eq("user_id", user.id)
+      .in(
+        "comment_id",
+        commentList.map((c) => c.id),
+      );
+    reactionsByCommentId = new Map(
+      (myReactions ?? []).map((r) => [r.comment_id, r.reaction as CommentReaction]),
+    );
+  }
+
+  const topLevelComments = commentList.filter((c) => !c.parent_comment_id);
+  const repliesByParentId = new Map<string, IdeaComment[]>();
+  for (const c of commentList) {
+    if (c.parent_comment_id) {
+      const arr = repliesByParentId.get(c.parent_comment_id) ?? [];
+      arr.push(c);
+      repliesByParentId.set(c.parent_comment_id, arr);
+    }
   }
 
   const isOwner = user?.id === idea.user_id;
   const authorName = author?.full_name ?? "Aza user";
 
   return (
-    <div className="px-5 pt-7">
-      <div className="flex items-center justify-between">
-        <Link href="/growth/ideas" aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    <AppShell>
+      <div className="mx-auto max-w-2xl">
+        <Link
+          href="/growth/ideas"
+          className="-ml-2 mb-4 inline-flex h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" /> Ideas
         </Link>
-      </div>
 
-      {/* Post — person leads, same identity treatment as the feed card */}
-      <div className="mt-4">
-        <IdeaAuthorRow name={authorName} avatarUrl={author?.avatar_url} createdAt={idea.created_at} size="md" />
-      </div>
-
-      <h1 className="mt-4 font-display text-[20px] font-bold leading-tight text-ink">{idea.title}</h1>
-
-      <section className="mt-3">
-        <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/70">{idea.description}</p>
-      </section>
-
-      {/* Engagement — same row shape as the feed card, right under the post */}
-      <div className="mt-4 flex items-center gap-1 border-y border-line-strong py-3">
-        <span className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-bold text-ink/50">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <path d="M4 4h16v12H8l-4 4V4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-          </svg>
-          {idea.comments_count}
-        </span>
-        <UpvoteButton ideaId={idea.id} count={idea.upvotes_count} upvoted={upvoted} isAuthed={!!user} />
-        <div className="ml-auto flex items-center gap-1">
-          <SaveIdeaButton ideaId={idea.id} initialSaved={isSaved} isAuthed={!!user} />
-          <ShareIdeaButton ideaId={idea.id} title={idea.title} />
-          {user && !isOwner && <ReportButton contentType="idea" contentId={idea.id} />}
-        </div>
-      </div>
-
-      {/* Structured details — secondary now, collapsed into one quiet block */}
-      <details className="mt-4 rounded-card-sm border border-line-strong bg-surface open:pb-4">
-        <summary className="cursor-pointer list-none px-4 py-3 text-[12px] font-bold uppercase tracking-wide text-ink/45">
-          Idea details
-        </summary>
-        <div className="px-4">
-          {idea.category && (
-            <span className="inline-block rounded-pill bg-aza-light px-3 py-1.5 text-[11px] font-bold text-aza">
-              {idea.category}
-            </span>
-          )}
-
-          {idea.tags?.length > 0 && (
-            <div className="mt-3">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ink/45">Skills needed</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {idea.tags.map((tag: string) => (
-                  <span key={tag} className="rounded-lg bg-aza-light px-2.5 py-1 text-[11px] font-bold text-aza">{tag}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-3">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ink/45">Stage</p>
-            <div className="mt-2">
-              <IdeaStageControl ideaId={idea.id} currentStage={idea.stage} canEdit={isOwner} />
-            </div>
+        <article className="border-b pb-4">
+          <div className="flex items-center justify-between">
+            <IdeaAuthorRow
+              name={authorName}
+              avatarUrl={author?.avatar_url}
+              createdAt={idea.created_at}
+              size="md"
+              profileHref={isOwner ? "/profile" : `/u/${idea.user_id}`}
+            />
+            {isOwner && <DeleteIdeaButton ideaId={idea.id} />}
           </div>
 
-          <p className="mt-3 text-[11px] font-medium text-ink/40">
-            Last updated {new Date(idea.updated_at).toLocaleDateString("en-NG", { day: "numeric", month: "short" })}
+          <h1 className="mt-4 font-display text-xl font-bold leading-tight text-foreground">
+            {idea.title}
+          </h1>
+
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {idea.category && (
+              <Tag tone="primary" icon={<Target className="size-3.5" />}>
+                {idea.category}
+              </Tag>
+            )}
+            {idea.stage && <Tag>{idea.stage}</Tag>}
+          </div>
+
+          <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-foreground">
+            {idea.description}
           </p>
-        </div>
-      </details>
 
-      {/* Comments — a direct continuation of the post, not a separate footer section */}
-      <section className="mt-6">
-        <div>
-          <CommentForm ideaId={idea.id} isAuthed={!!user} />
-        </div>
-
-        <div className="mt-4 space-y-3">
-          {commentList.length === 0 && (
-            <p className="text-[12.5px] text-ink/45">No comments yet — be the first to weigh in.</p>
+          {idea.image_url && (
+            <div className="mt-4 overflow-hidden rounded-lg border">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={idea.image_url} alt={idea.title} className="w-full object-cover" />
+            </div>
           )}
-          {commentList.map((comment) => {
-            const commenter = commenters.get(comment.user_id);
-            const card = (
-              <div className="rounded-card-sm border border-line-strong bg-surface p-3.5 shadow-card">
-                <div className="flex items-center justify-between">
-                  <IdeaAuthorRow
-                    name={commenter?.full_name ?? "Aza user"}
-                    avatarUrl={commenter?.avatar_url}
-                    createdAt={comment.created_at}
-                  />
-                  {user?.id === comment.user_id && (
-                    <DeleteCommentButton commentId={comment.id} ideaId={idea.id} />
-                  )}
-                </div>
-                <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-ink/70">{comment.body}</p>
-              </div>
-            );
-            return user?.id === comment.user_id ? (
-              <div key={comment.id}>{card}</div>
-            ) : (
-              <ReportOnLongPress key={comment.id} contentType="idea_comment" contentId={comment.id}>{card}</ReportOnLongPress>
-            );
-          })}
-        </div>
-      </section>
 
-      {isOwner && (
-        <div className="mt-6">
-          <DeleteIdeaButton ideaId={idea.id} />
-        </div>
-      )}
-    </div>
+          {idea.link_url && (
+            <a
+              href={idea.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-2 rounded-lg border bg-card p-3 text-sm font-semibold text-primary hover:border-border-strong"
+            >
+              <Globe className="size-4 shrink-0" />
+              <span className="truncate">{idea.link_url}</span>
+            </a>
+          )}
+
+          <div className="mt-4 flex items-center gap-2 border-t pt-3">
+            <UpvoteButton
+              ideaId={idea.id}
+              count={idea.upvotes_count}
+              upvoted={upvoted}
+              isAuthed={!!user}
+            />
+            <SaveIdeaButton ideaId={idea.id} initialSaved={isSaved} isAuthed={!!user} />
+            <ShareIdeaButton ideaId={idea.id} title={idea.title} />
+          </div>
+
+          {isOwner && (
+            <div className="mt-4 rounded-lg border bg-muted/40 p-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1.5">
+                Update Stage
+              </p>
+              <IdeaStageControl ideaId={idea.id} currentStage={idea.stage} canEdit={isOwner} />
+            </div>
+          )}
+        </article>
+
+        <section className="mt-6">
+          <h2 className="text-base font-semibold text-foreground">
+            {topLevelComments.length ? "Conversation" : "No replies yet"}
+          </h2>
+          {topLevelComments.length === 0 && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Be the first. Have you seen this problem up close, or tried something similar?
+            </p>
+          )}
+
+          <div className="mt-4 space-y-4">
+            {topLevelComments.map((comment) => (
+              <CommentThread
+                key={comment.id}
+                ideaId={idea.id}
+                comment={comment}
+                replies={repliesByParentId.get(comment.id) ?? []}
+                commenters={commenters}
+                reactionsByCommentId={reactionsByCommentId}
+                currentUserId={user?.id}
+                isAuthed={!!user}
+              />
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <CommentForm ideaId={idea.id} isAuthed={!!user} />
+          </div>
+        </section>
+      </div>
+    </AppShell>
   );
 }

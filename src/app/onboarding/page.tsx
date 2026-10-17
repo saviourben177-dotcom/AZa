@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import OnboardingFlow from "./onboarding-flow";
+import OnboardingForm from "./onboarding-form";
 
 export const dynamic = "force-dynamic";
 
@@ -18,5 +18,5 @@ export default async function OnboardingPage() {
     .eq("id", user.id)
     .single();
 
-  return <OnboardingFlow initialFullName={profile?.full_name ?? null} />;
+  return <OnboardingForm initialFullName={profile?.full_name ?? null} />;
 }

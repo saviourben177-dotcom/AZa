@@ -13,6 +13,7 @@ const TYPE_ICON: Record<NotificationType, string> = {
   deadline_reminder: "⏰",
   opportunity_match: "🎯",
   idea_upvote: "💡",
+  idea_comment: "💬",
   system: "🔔",
 };
 
