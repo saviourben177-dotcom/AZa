@@ -73,7 +73,7 @@ export default function SearchPage() {
           // Zero rows is a real result, not a reason to show unrelated demo content.
           setDbOpportunities((opps ?? []).map((o) => mapDbOpportunityToPrototype(o)));
           setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
-          setAccounts((people ?? []).filter((person) => person.id !== userId));
+          setAccounts((people ?? []).filter((person): person is typeof person & { id: string } => person.id !== null && person.id !== userId));
           setSearchFailed(false);
         } catch {
           setDbOpportunities([]);
