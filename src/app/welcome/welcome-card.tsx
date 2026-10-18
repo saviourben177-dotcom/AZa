@@ -36,10 +36,7 @@ export default function WelcomeCard({ opportunityCount: _opportunityCount }: { o
       />
 
       <div className="relative z-10 text-center">
-        <span
-          className="aza-splash-logo inline-block font-display text-2xl font-extrabold tracking-tight text-foreground"
-          aria-label="Aza"
-        >
+        <span className="font-display text-2xl font-extrabold tracking-tight text-foreground">
           aza<span className="text-primary">.</span>
         </span>
 

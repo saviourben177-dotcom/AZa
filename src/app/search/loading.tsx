@@ -1,10 +1,11 @@
 import { Skeleton } from "@/components/skeleton/skeleton";
 import { SkeletonListRow } from "@/components/skeleton/skeleton-card";
+import { AppShell } from "@/components/aza/app-shell";
 
 export default function SearchLoading() {
   return (
-    <div className="px-4 pt-6">
-      <Skeleton className="h-12 w-full rounded-pill" />
+    <AppShell>
+      <Skeleton className="h-12 w-full rounded-full" />
 
       <div className="mt-6 space-y-6">
         <div>
@@ -21,6 +22,6 @@ export default function SearchLoading() {
           </div>
         </div>
       </div>
-    </div>
+    </AppShell>
   );
 }

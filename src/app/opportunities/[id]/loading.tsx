@@ -8,7 +8,7 @@ export default function OpportunityDetailLoading() {
       <div className="mt-4">
         <SkeletonDetailHeader />
       </div>
-      <Skeleton className="mt-6 h-12 w-full rounded-pill" />
+      <Skeleton className="mt-6 h-12 w-full rounded-full" />
     </div>
   );
 }

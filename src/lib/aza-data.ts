@@ -107,15 +107,12 @@ export type Opportunity = {
   verified: boolean;
   category: string;
   location: string;
-  // null means no real deadline / rolling basis — distinct from a
-  // specific day count, so the UI can say "Rolling" instead of
-  // inventing a plausible-looking number of days.
-  daysLeft: number | null;
+  daysLeft: number;
   amount?: string;
   summary?: string;
   description?: string;
-  eligibility?: string | null;
-  applyUrl?: string | null;
+  eligibility?: string;
+  applyUrl?: string;
   saved?: boolean;
 };
 
@@ -134,13 +131,13 @@ export function timeAgo(h: number) {
   return `${Math.round(h / 24)}d ago`;
 }
 
-// ---- Secondary-screen sample data (demo/prototype opportunities only —
-// real opportunities never read from this; see opportunities/[id]/page.tsx) ----
-export const opportunityDetails: Record<string, { description: string; eligibility: string; applyUrl: string }> = Object.fromEntries(
+// ---- Secondary-screen sample data ----
+export const opportunityDetails: Record<string, { description: string; eligibility: string; applyUrl: string; applicants: number }> = Object.fromEntries(
   opportunities.map((o) => [o.id, {
     description: `${o.title} supports young Africans with funding, mentorship and a peer network. Selected applicants join a cohort and receive structured support over the programme.`,
     eligibility: "Ages 18–35 · Resident in an eligible country · Early-stage idea or business",
     applyUrl: "https://example.com/apply",
+    applicants: 120 + o.daysLeft * 7,
   }]),
 );
 

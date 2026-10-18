@@ -1,31 +1,39 @@
 import { Skeleton } from "@/components/skeleton/skeleton";
+import { SkeletonTile } from "@/components/skeleton/skeleton-card";
+import { AppShell } from "@/components/aza/app-shell";
 
 export default function ProfileLoading() {
   return (
-    <div className="px-5 pt-7">
-      <div className="flex items-center gap-4 rounded-card border border-line-strong bg-surface p-4 shadow-card">
-        <Skeleton className="h-16 w-16 rounded-full" />
-        <div className="min-w-0 flex-1">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="mt-2 h-3 w-40" />
+    <AppShell>
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-16 rounded-full" />
+          <div>
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="mt-2 h-3.5 w-40" />
+          </div>
         </div>
-        <Skeleton className="h-7 w-14 rounded-pill" />
+        <div className="flex gap-2">
+          <Skeleton className="size-11 rounded-md" />
+          <Skeleton className="size-11 rounded-md" />
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-px overflow-hidden rounded-card border border-line-strong bg-line shadow-card">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface p-3">
-            <Skeleton className="mx-auto h-4 w-6" />
-            <Skeleton className="mx-auto mt-2 h-2.5 w-10" />
+      <div className="mb-8 grid grid-cols-3 divide-x rounded-lg border bg-card text-center shadow-[var(--shadow-card)]">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="p-4">
+            <Skeleton className="mx-auto h-7 w-8" />
+            <Skeleton className="mx-auto mt-2 h-3 w-12" />
           </div>
         ))}
       </div>
 
-      <div className="mt-7 space-y-2.5">
-        <Skeleton className="h-12 w-full rounded-card-sm" />
-        <Skeleton className="h-12 w-full rounded-card-sm" />
-        <Skeleton className="h-12 w-full rounded-card-sm" />
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <SkeletonTile />
+        <SkeletonTile />
+        <SkeletonTile />
+        <SkeletonTile />
       </div>
-    </div>
+    </AppShell>
   );
 }

@@ -9,5 +9,5 @@ function cx(...classes: (string | false | undefined)[]) {
  * e.g. <Skeleton className="h-4 w-32 rounded-full" />
  */
 export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cx("skeleton rounded-card-sm", className)} {...props} />;
+  return <div className={cx("animate-pulse rounded-md bg-muted", className)} {...props} />;
 }
