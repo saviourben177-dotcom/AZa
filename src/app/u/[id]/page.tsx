@@ -6,6 +6,7 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink, Empty } from "@/components/aza/kit";
 import { IdeaCard } from "@/components/aza/idea-card";
 import FollowButton from "./follow-button";
+import MessageButton from "./message-button";
 
 export const dynamic = "force-dynamic";
 
@@ -112,7 +113,12 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {user && <FollowButton targetId={id} initialIsFollowing={isFollowing} />}
+      {user && (
+        <div className="flex gap-2">
+          <FollowButton targetId={id} initialIsFollowing={isFollowing} />
+          <MessageButton targetId={id} />
+        </div>
+      )}
 
       <h2 className="mb-3 mt-8 text-lg font-display font-bold text-foreground">Ideas</h2>
       {ideas.length === 0 ? (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bookmark, FileText, Lightbulb, PenLine, Settings } from "lucide-react";
+import { Bookmark, FileText, Lightbulb, PenLine, Settings, Users } from "lucide-react";
 import { Tile, Empty } from "@/components/aza/kit";
 import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
@@ -93,13 +93,22 @@ export default async function ProfilePage() {
             </p>
           </div>
         </div>
-        <Link
-          href="/profile/settings"
-          aria-label="Settings"
-          className="grid size-11 place-items-center rounded-md border border-input bg-background hover:bg-accent text-foreground transition-colors"
-        >
-          <Settings className="size-4" />
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/profile/following"
+            aria-label="Following"
+            className="grid size-11 place-items-center rounded-md border border-input bg-background hover:bg-accent text-foreground transition-colors"
+          >
+            <Users className="size-4" />
+          </Link>
+          <Link
+            href="/profile/settings"
+            aria-label="Settings"
+            className="grid size-11 place-items-center rounded-md border border-input bg-background hover:bg-accent text-foreground transition-colors"
+          >
+            <Settings className="size-4" />
+          </Link>
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-3 divide-x rounded-lg border bg-card text-center shadow-[var(--shadow-card)]">

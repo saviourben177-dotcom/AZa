@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import MessageThread from "@/components/team-finder/message-thread";
 import { sendDirectMessage } from "@/lib/actions/messages";
@@ -45,16 +46,31 @@ export default async function DirectMessagePage({
 
   return (
     <div className="flex h-dvh flex-col">
-      <div className="flex items-center gap-3 border-b border-line px-5 pb-4 pt-7">
-        <Link href={`/u/${otherUserId}`} aria-label="Back" className="flex h-9 w-9 items-center justify-center rounded-full border border-line-strong bg-surface text-ink/60 shadow-card">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      <div className="flex items-center gap-3 border-b bg-background px-4 pb-4 pt-[calc(env(safe-area-inset-top)+16px)] md:px-5">
+        <Link
+          href={`/u/${otherUserId}`}
+          aria-label="Back to profile"
+          className="grid size-9 shrink-0 place-items-center rounded-full border text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" strokeWidth={2} />
         </Link>
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-aza-light font-display text-[13px] font-bold text-aza">
-          {(otherProfile?.full_name ?? "?").charAt(0).toUpperCase()}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-[13.5px] font-bold text-ink">{otherProfile?.full_name ?? "Aza user"}</p>
-        </div>
+        {otherProfile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={otherProfile.avatar_url}
+            alt={otherProfile.full_name ?? "Profile"}
+            className="size-9 shrink-0 rounded-full object-cover"
+          />
+        ) : (
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft font-display text-sm font-bold text-primary-strong">
+            {(otherProfile?.full_name ?? "?").charAt(0).toUpperCase()}
+          </div>
+        )}
+        <Link href={`/u/${otherUserId}`} className="min-w-0 hover:underline">
+          <p className="truncate text-sm font-bold text-foreground">
+            {otherProfile?.full_name ?? "Aza user"}
+          </p>
+        </Link>
       </div>
 
       <MessageThread

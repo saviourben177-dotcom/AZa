@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Bell, Briefcase, Compass, Home, Search, Sprout, User } from "lucide-react";
+import { Bell, Briefcase, Compass, Home, MessageCircle, Search, Sprout, User } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -109,6 +109,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Search className="size-4" />
             </Link>
             <Link
+              href="/messages"
+              aria-label="Messages"
+              className="grid size-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <MessageCircle className="size-4" />
+            </Link>
+            <Link
               href="/notifications"
               aria-label="Notifications"
               className="relative grid size-11 place-items-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -135,6 +142,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="grid size-11 place-items-center rounded-md text-muted-foreground"
           >
             <Search className="size-5" />
+          </Link>
+          <Link
+            href="/messages"
+            aria-label="Messages"
+            className="grid size-11 place-items-center rounded-md text-muted-foreground"
+          >
+            <MessageCircle className="size-5" />
           </Link>
           <Link
             href="/notifications"
