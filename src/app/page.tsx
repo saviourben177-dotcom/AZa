@@ -108,7 +108,9 @@ export default async function HomePage() {
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
             {categories.map((category) => {
               const Icon = category.icon;
-              const href = "href" in category ? category.href : `/discover?category=${encodeURIComponent(category.query)}`;
+              const href = "href" in category && category.href
+                ? category.href
+                : `/discover?category=${encodeURIComponent("query" in category ? category.query : "")}`;
               return (
                 <Link
                   key={category.label}
