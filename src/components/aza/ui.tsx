@@ -71,7 +71,12 @@ export function Tag({ children, icon, tone = "neutral" }: { children: ReactNode;
   );
 }
 
-export function Deadline({ days }: { days: number }) {
+export function Deadline({ days }: { days: number | null }) {
+  if (days === null) {
+    return (
+      <Tag icon={<Clock className="size-3.5" strokeWidth={2} />}>Rolling basis</Tag>
+    );
+  }
   const urgent = days <= 7;
   return (
     <Tag tone={urgent ? "urgent" : "neutral"} icon={<Clock className="size-3.5" strokeWidth={2} />}>
@@ -95,7 +100,7 @@ export function PageHeader({ title, sub, action }: { title: string; sub?: string
 export function OpportunityCard({ o }: { o: Opportunity }) {
   return (
     <Link href={`/opportunities/${o.id}`} className="card-lift relative flex flex-col gap-3 overflow-hidden rounded-lg border bg-card p-4 pt-5">
-      <span aria-hidden className={cn("absolute inset-x-0 top-0 h-1", o.daysLeft <= 7 ? "bg-urgent" : "bg-primary")} />
+      <span aria-hidden className={cn("absolute inset-x-0 top-0 h-1", o.daysLeft !== null && o.daysLeft <= 7 ? "bg-urgent" : "bg-primary")} />
       <div className="flex min-w-0 items-start gap-3">
         <span className="emboss grid size-10 shrink-0 place-items-center rounded-md border font-display text-sm font-bold">
           {o.orgMark}

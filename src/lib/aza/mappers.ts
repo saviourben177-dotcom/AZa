@@ -4,9 +4,13 @@ export function mapDbOpportunityToPrototype(
   o: any,
   isSaved = false,
 ): PrototypeOpportunity {
+  // A missing deadline means "no deadline" / rolling — it must not be
+  // rendered as a real number of days, which previously defaulted every
+  // such row to exactly 30 and made coincidental runs of real opportunities
+  // (all with null deadline) look identical and suspicious.
   const daysLeft = o.deadline
     ? Math.max(0, Math.ceil((new Date(o.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 30;
+    : null;
 
   const orgMark = (o.org || "AZ")
     .split(/\s+/)
@@ -19,14 +23,19 @@ export function mapDbOpportunityToPrototype(
     title: o.title,
     org: o.org,
     orgMark,
-    verified: o.curator_verified ?? o.verified ?? true,
+    // Only a real curator_verified flag counts as verified — previously
+    // this defaulted to true whenever the column was absent, so every
+    // real (unverified) opportunity still showed a verified badge.
+    verified: o.curator_verified ?? false,
     category: o.category ? o.category.charAt(0).toUpperCase() + o.category.slice(1).replace("_", " ") : "Grant",
     location: o.location || "Nigeria",
     daysLeft,
     amount: o.amount_display || undefined,
     summary: o.summary || o.description || "",
-    eligibility: o.eligibility || "Open to all qualified applicants.",
-    applyUrl: o.apply_url || "#",
+    // No invented default — real missing eligibility is shown as
+    // genuinely unspecified, not a plausible-sounding made-up line.
+    eligibility: o.eligibility || null,
+    applyUrl: o.apply_url || null,
     saved: isSaved,
   };
 }

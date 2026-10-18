@@ -41,7 +41,7 @@ export default async function HomePage() {
   ]);
 
   const oppList = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
-  const closing = oppList.filter((o) => o.daysLeft <= 10);
+  const closing = oppList.filter((o) => o.daysLeft !== null && o.daysLeft <= 10);
   const displayClosing = closing.length > 0 ? closing : oppList.slice(0, 6);
 
   const ideaList = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));

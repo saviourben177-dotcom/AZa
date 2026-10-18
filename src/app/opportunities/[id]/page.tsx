@@ -66,14 +66,14 @@ export default async function OpportunityDetailPage({
     const o = mapDbOpportunityToPrototype(dbOpp, isSaved);
     const d = {
       description: dbOpp.description || "Full details available at official application portal.",
-      eligibility: dbOpp.eligibility || "Open to all qualified applicants.",
-      applyUrl: dbOpp.apply_url || "#",
-      applicants: 12,
+      eligibility: dbOpp.eligibility || null,
+      applyUrl: dbOpp.apply_url || null,
     };
     return <OpportunityDetailClient o={o} d={d} initialSaved={isSaved} />;
   }
 
-  // Try mock data fallback
+  // Try mock data fallback — only reached when the id was never a real
+  // row to begin with (a stale link to prototype demo content).
   const mock = mockOpportunities.find((x) => x.id === id);
   const mockD = mockDetails[id];
 
@@ -81,5 +81,11 @@ export default async function OpportunityDetailPage({
     notFound();
   }
 
-  return <OpportunityDetailClient o={mock} d={mockD} initialSaved={false} />;
+  return (
+    <OpportunityDetailClient
+      o={mock}
+      d={{ description: mockD.description, eligibility: mockD.eligibility, applyUrl: mockD.applyUrl }}
+      initialSaved={false}
+    />
+  );
 }

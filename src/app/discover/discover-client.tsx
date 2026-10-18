@@ -20,7 +20,14 @@ export default function DiscoverClient({
   const list = initialOpportunities
     .filter((o) => cat === "All" || o.category.toLowerCase() === cat.toLowerCase())
     .filter((o) => (o.title + o.org).toLowerCase().includes(q.toLowerCase()))
-    .sort((a, b) => a.daysLeft - b.daysLeft);
+    .sort((a, b) => {
+      // Rolling-basis (null deadline) opportunities sort after everything
+      // with a real deadline, not at a misleading fixed position.
+      if (a.daysLeft === null && b.daysLeft === null) return 0;
+      if (a.daysLeft === null) return 1;
+      if (b.daysLeft === null) return -1;
+      return a.daysLeft - b.daysLeft;
+    });
 
   return (
     <AppShell>

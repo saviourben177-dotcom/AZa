@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Bookmark, ExternalLink, Sparkles, Users } from "lucide-react";
+import { BadgeCheck, Bookmark, ExternalLink, Sparkles } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/aza/app-shell";
@@ -21,9 +21,8 @@ export default function OpportunityDetailClient({
   o: Opportunity;
   d: {
     description: string;
-    eligibility: string;
-    applyUrl: string;
-    applicants: number;
+    eligibility: string | null;
+    applyUrl: string | null;
   };
   initialSaved?: boolean;
 }) {
@@ -66,7 +65,7 @@ export default function OpportunityDetailClient({
     <AppShell>
       <div className="mb-4 flex items-center justify-between">
         <BackLink to="/discover" label="Discover" />
-        <ReportButton target={{ type: "idea", id: o.id, userId: "system", content: o.title }} />
+        <ReportButton target={{ type: "idea", id: o.id, userId: o.id, content: o.title }} />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -96,25 +95,32 @@ export default function OpportunityDetailClient({
             <Tag>{o.location}</Tag>
             {o.amount && <Tag tone="primary">{o.amount}</Tag>}
             <Deadline days={o.daysLeft} />
-            <Tag icon={<Users className="size-3.5" />}>{d.applicants} applied</Tag>
           </div>
 
           <h2 className="mb-2 mt-8 text-lg font-display font-bold">About</h2>
           <p className="leading-relaxed text-foreground/85">{d.description}</p>
 
           <h2 className="mb-2 mt-6 text-lg font-display font-bold">Who can apply</h2>
-          <p className="leading-relaxed text-foreground/85">{d.eligibility}</p>
+          <p className="leading-relaxed text-foreground/85">
+            {d.eligibility ?? "Eligibility details not provided — check the application page."}
+          </p>
         </article>
 
         <aside className="h-fit space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)] lg:sticky lg:top-24">
-          <a
-            href={d.applyUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(btn.primary, "w-full justify-center")}
-          >
-            Apply now <ExternalLink className="size-4" />
-          </a>
+          {d.applyUrl ? (
+            <a
+              href={d.applyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(btn.primary, "w-full justify-center")}
+            >
+              Apply now <ExternalLink className="size-4" />
+            </a>
+          ) : (
+            <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+              No application link provided yet.
+            </p>
+          )}
 
           <button
             className={cn(btn.secondary, "w-full justify-center")}
