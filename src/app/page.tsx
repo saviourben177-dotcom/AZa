@@ -24,11 +24,11 @@ import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/map
 export const dynamic = "force-dynamic";
 
 const categories = [
-  { label: "Scholarships", icon: GraduationCap, query: "scholarship" },
-  { label: "Grants", icon: HandCoins, query: "grant" },
-  { label: "Jobs", icon: BriefcaseBusiness, query: "job" },
-  { label: "Internships", icon: Laptop, query: "internship" },
-  { label: "Hackathons", icon: Trophy, query: "hackathon" },
+  { label: "Scholarships", icon: GraduationCap, href: "/discover?category=scholarship" },
+  { label: "Grants", icon: HandCoins, href: "/discover?category=grant" },
+  { label: "Jobs", icon: BriefcaseBusiness, href: "/discover?category=job" },
+  { label: "Internships", icon: Laptop, href: "/discover?category=internship" },
+  { label: "Hackathons", icon: Trophy, href: "/discover?category=hackathon" },
   { label: "Ideas", icon: Lightbulb, href: "/growth" },
 ];
 
@@ -108,9 +108,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-6">
             {categories.map((category) => {
               const Icon = category.icon;
-              const href = "href" in category && category.href
-                ? category.href
-                : `/discover?category=${encodeURIComponent("query" in category ? category.query : "")}`;
+              const href = category.href;
               return (
                 <Link
                   key={category.label}
