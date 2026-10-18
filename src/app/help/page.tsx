@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BareShell } from "@/components/aza/kit";
 import { infoPages } from "@/lib/aza/info";
+import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
 
 export const metadata: Metadata = {
   title: "Help — Aza",
@@ -12,6 +13,9 @@ export default function HelpPage() {
     <BareShell>
       <h1 className="mb-2 text-3xl font-display font-extrabold tracking-tight">Help</h1>
       <p className="mb-8 text-muted-foreground">Answers to common questions about using Aza.</p>
+      <div className="mb-8">
+        <ReplayGuideRow />
+      </div>
       <div className="space-y-6">
         {infoPages.help.map(([h, b]) => (
           <section key={h}>

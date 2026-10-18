@@ -13,7 +13,7 @@ import {
   Trophy,
 } from "lucide-react";
 import { AppShell } from "@/components/aza/app-shell";
-import AppGuideGate from "@/components/app-guide/app-guide-gate";
+import GettingStartedCard from "@/components/aza/getting-started-card";
 import { IdeaCard } from "@/components/aza/idea-card";
 import { Empty } from "@/components/aza/kit";
 import { OpportunityCard } from "@/components/aza/ui";
@@ -45,7 +45,7 @@ export default async function HomePage() {
     if (!hasSeenIntro) redirect("/welcome");
   }
 
-  const [{ data: dbOpps }, { data: dbIdeas }, { data: profile }] = await Promise.all([
+  const [{ data: dbOpps }, { data: dbIdeas }] = await Promise.all([
     supabase
       .from("opportunities")
       .select("*")
@@ -56,11 +56,6 @@ export default async function HomePage() {
       .select("*, profiles(full_name, avatar_url)")
       .order("created_at", { ascending: false })
       .limit(6),
-    supabase
-      .from("profiles")
-      .select("has_seen_app_guide")
-      .eq("id", user?.id ?? "")
-      .maybeSingle(),
   ]);
 
   const oppList = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
@@ -70,7 +65,6 @@ export default async function HomePage() {
 
   return (
     <AppShell>
-      {user && <AppGuideGate shouldShow={!profile?.has_seen_app_guide} />}
       <div className="mx-auto w-full max-w-5xl">
         <section className="mb-7">
           <div className="flex items-start justify-between gap-3">
@@ -97,6 +91,8 @@ export default async function HomePage() {
             <span className="rounded-lg bg-muted px-2 py-1 text-[11px] font-semibold">Search</span>
           </Link>
         </section>
+
+        {user && <GettingStartedCard />}
 
         <section className="mb-8" aria-labelledby="categories-heading">
           <div className="mb-3 flex items-center justify-between gap-3">

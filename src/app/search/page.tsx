@@ -10,6 +10,9 @@ import { OpportunityCard, PageHeader } from "@/components/aza/ui";
 import type { Opportunity, Idea } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/client";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
+import type { Database } from "@/lib/supabase/database.types";
+
+type OpportunityCategory = Database["public"]["Enums"]["opportunity_category"];
 
 export default function SearchPage() {
   const [q, setQ] = useState("");
@@ -53,7 +56,7 @@ export default function SearchPage() {
           // opportunity.category is a PostgreSQL enum, so applying ilike to it
           // causes a database operator error and makes the entire search appear unavailable.
           // Search text columns with ilike, and match categories separately using enum equality.
-          const categoryAliases: Record<string, string[]> = {
+          const categoryAliases: Record<string, OpportunityCategory[]> = {
             scholarship: ["scholarship"],
             scholarships: ["scholarship"],
             grant: ["grant"],
@@ -71,7 +74,7 @@ export default function SearchPage() {
             competition: ["competition"],
             competitions: ["competition"],
           };
-          const categoryValues = categoryAliases[clean.toLowerCase()] ?? [];
+          const categoryValues: OpportunityCategory[] = categoryAliases[clean.toLowerCase()] ?? [];
           const [oppTextResult, oppCategoryResult, ideaResult, peopleResult] = await Promise.all([
             supabase
               .from("opportunities")
