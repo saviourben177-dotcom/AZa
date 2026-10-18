@@ -50,12 +50,37 @@ export default function SearchPage() {
             return;
           }
 
-          const [{ data: opps, error: oppError }, { data: ids, error: ideaError }, { data: people, error: peopleError }] = await Promise.all([
+          // opportunity.category is a PostgreSQL enum, so applying ilike to it
+          // causes a database operator error and makes the entire search appear unavailable.
+          // Search text columns with ilike, and match categories separately using enum equality.
+          const categoryAliases: Record<string, string[]> = {
+            scholarship: ["scholarship"],
+            scholarships: ["scholarship"],
+            grant: ["grant"],
+            grants: ["grant"],
+            job: ["job_gig"],
+            jobs: ["job_gig"],
+            gig: ["job_gig"],
+            gigs: ["job_gig"],
+            internship: ["internship"],
+            internships: ["internship"],
+            hackathon: ["hackathon"],
+            hackathons: ["hackathon"],
+            fellowship: ["fellowship"],
+            fellowships: ["fellowship"],
+            competition: ["competition"],
+            competitions: ["competition"],
+          };
+          const categoryValues = categoryAliases[clean.toLowerCase()] ?? [];
+          const [oppTextResult, oppCategoryResult, ideaResult, peopleResult] = await Promise.all([
             supabase
               .from("opportunities")
               .select("*")
-              .or(`title.ilike.%${clean}%,org.ilike.%${clean}%,category.ilike.%${clean}%`)
+              .or(`title.ilike.%${clean}%,org.ilike.%${clean}%,description.ilike.%${clean}%,location.ilike.%${clean}%`)
               .limit(10),
+            categoryValues.length
+              ? supabase.from("opportunities").select("*").in("category", categoryValues).limit(10)
+              : Promise.resolve({ data: [], error: null }),
             supabase
               .from("ideas")
               .select("*, profiles(full_name, avatar_url)")
@@ -69,11 +94,18 @@ export default function SearchPage() {
               .limit(10),
           ]);
 
-          if (oppError || ideaError || peopleError) throw new Error("Search query failed");
+          if (oppTextResult.error || oppCategoryResult.error || ideaResult.error || peopleResult.error) {
+            throw new Error("Search query failed");
+          }
+          // Merge text and category matches without duplicating opportunity cards.
+          const opportunityRows = new Map<string, (typeof oppTextResult.data extends (infer T)[] | null ? T : never)>();
+          for (const item of [...(oppTextResult.data ?? []), ...(oppCategoryResult.data ?? [])]) {
+            opportunityRows.set(item.id, item);
+          }
           // Zero rows is a real result, not a reason to show unrelated demo content.
-          setDbOpportunities((opps ?? []).map((o) => mapDbOpportunityToPrototype(o)));
-          setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
-          setAccounts((people ?? []).filter((person): person is typeof person & { id: string } => person.id !== null && person.id !== userId));
+          setDbOpportunities(Array.from(opportunityRows.values()).map((o) => mapDbOpportunityToPrototype(o)));
+          setDbIdeas((ideaResult.data ?? []).map((item) => mapDbIdeaToPrototype(item)));
+          setAccounts((peopleResult.data ?? []).filter((person): person is typeof person & { id: string } => person.id !== null && person.id !== userId));
           setSearchFailed(false);
         } catch {
           setDbOpportunities([]);
