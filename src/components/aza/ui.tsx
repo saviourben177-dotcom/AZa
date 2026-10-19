@@ -5,6 +5,7 @@ import { BadgeCheck, Clock } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { getPerson, timeAgo, type Opportunity } from "@/lib/aza-data";
+import AvatarImg from "@/components/aza/avatar-img";
 
 export function Avatar({
   id,
@@ -21,15 +22,10 @@ export function Avatar({
   avatarUrl?: string | null;
 }) {
   if (avatarUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return (
-      <img
-        src={avatarUrl}
-        alt={name ?? ""}
-        style={{ width: size, height: size }}
-        className="shrink-0 rounded-full object-cover"
-      />
-    );
+    // Client component: catches a broken/expired URL (e.g. deleted
+    // storage object) and falls back to the initial/silhouette instead
+    // of a broken-image icon.
+    return <AvatarImg src={avatarUrl} alt={name ?? ""} size={size} fallbackInitial={name?.charAt(0).toUpperCase()} />;
   }
   if (name) {
     return (

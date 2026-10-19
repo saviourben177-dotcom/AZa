@@ -4,13 +4,20 @@
  * neutral filled circle. Themed with the app's ink/paper tokens so it adapts
  * to light/dark mode automatically.
  */
-export default function DefaultAvatar({ className = "" }: { className?: string }) {
+export default function DefaultAvatar({
+  className = "",
+  style,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
     <svg
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={style}
       role="img"
       aria-label="Default profile picture"
     >
