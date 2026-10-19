@@ -1,182 +1,407 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { Bookmark, FileText, Lightbulb, PenLine, Settings, Users } from "lucide-react";
-import { Tile, Empty } from "@/components/aza/kit";
-import { AppShell } from "@/components/aza/app-shell";
-import { IdeaCard } from "@/components/aza/idea-card";
-import { Avatar, OpportunityCard } from "@/components/aza/ui";
 import { createClient } from "@/lib/supabase/server";
-import { mapDbIdeaToPrototype, mapDbOpportunityToPrototype } from "@/lib/aza/mappers";
+import Link from "next/link";
+import { Search, Bookmark, Send, Lightbulb, Target } from "lucide-react";
+import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
+import OpportunityCard from "@/components/opportunity-card";
+import BusinessCard from "@/components/business-card";
+import SaveIdeaButton from "@/components/save-idea-button";
+import SaveResourceButton from "@/components/save-resource-button";
+import SignOutButton from "@/components/sign-out-button";
+import ThemeToggle from "@/components/theme-toggle";
+import AvatarImage from "@/components/avatar-image";
+import type { Opportunity, Idea, SkillResource, Business, ApplicationStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Your profile — Aza",
-  description: "Your ideas, saved opportunities and CV on Aza.",
-};
+type ProfileTab = "overview" | "saved";
+type SavedCategory = "opportunities" | "ideas" | "resources" | "businesses";
 
-function cvCompletionPercent(cv: {
-  summary: string | null;
-  skills: string[] | null;
-  education: unknown;
-  experience: unknown;
-} | null): number {
-  if (!cv) return 0;
-  const sections = [
-    !!cv.summary?.trim(),
-    (cv.skills?.length ?? 0) > 0,
-    Array.isArray(cv.education) && cv.education.length > 0,
-    Array.isArray(cv.experience) && cv.experience.length > 0,
-  ];
-  const filled = sections.filter(Boolean).length;
-  return Math.round((filled / sections.length) * 100);
-}
+const PROFILE_TABS: { key: ProfileTab; label: string }[] = [
+  { key: "overview", label: "Overview" },
+  { key: "saved", label: "Saved" },
+];
 
-export default async function ProfilePage() {
+const SAVED_CATEGORIES: { key: SavedCategory; label: string }[] = [
+  { key: "opportunities", label: "Opportunities" },
+  { key: "ideas", label: "Ideas" },
+  { key: "resources", label: "Resources" },
+  { key: "businesses", label: "Businesses" },
+];
+
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; category?: string; q?: string }>;
+}) {
+  const { tab: rawTab, category: rawCategory, q } = await searchParams;
+  const tab: ProfileTab = rawTab === "saved" ? "saved" : "overview";
+  const category: SavedCategory = (SAVED_CATEGORIES.some((c) => c.key === rawCategory)
+    ? rawCategory
+    : "opportunities") as SavedCategory;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login?next=/profile");
-
-  const [{ data: p }, { data: dbIdeas }, { data: dbSaved }, { data: dbApps }, { data: cv }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      supabase
-        .from("ideas")
-        .select("*, profiles(full_name, avatar_url)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false }),
-      supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id),
-      supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id).eq("status", "applied"),
-      supabase.from("cv_profiles").select("summary, skills, education, experience").eq("user_id", user.id).maybeSingle(),
-    ]);
-
-  const profileData = {
-    id: user.id,
-    name: p?.full_name || user.email?.split("@")[0] || "User",
-    role: p?.job_title || "Founder & Builder",
-    location: p?.exact_location || p?.region || "Nigeria",
-    avatarUrl: p?.avatar_url ?? null,
-  };
-
-  const myIdeas = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
-  const ideasCount = myIdeas.length;
-  const savedCount = dbSaved?.length ?? 0;
-  const appliedCount = dbApps?.length ?? 0;
-  const cvPercent = cvCompletionPercent(cv);
-
-  let savedOpportunities: ReturnType<typeof mapDbOpportunityToPrototype>[] = [];
-  if (dbSaved && dbSaved.length > 0) {
-    const oppIds = dbSaved.map((s) => s.opportunity_id);
-    const { data: dbOpps } = await supabase
-      .from("opportunities")
-      .select("*")
-      .in("id", oppIds)
-      .limit(3);
-    savedOpportunities = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
+  if (!user) {
+    return (
+      <div className="px-5 pt-16 text-center">
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 text-3xl shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+          👋
+        </div>
+        <h1 className="mt-5 font-display text-[21px] font-bold text-ink">You&apos;re not logged in</h1>
+        <p className="mt-2 text-[13.5px] leading-relaxed text-ink/55">
+          Log in to save opportunities and manage your account.
+        </p>
+        <Link
+          href="/login"
+          className="mt-6 inline-block w-full rounded-pill bg-aza px-6 py-3.5 text-[14.5px] font-bold text-white shadow-glow-accent"
+        >
+          Log in
+        </Link>
+        <div className="mt-10 text-left"><ThemeToggle /></div>
+      </div>
+    );
   }
 
-  return (
-    <AppShell>
-      <div className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <Avatar id={profileData.id} size={64} />
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-display font-bold text-foreground">
-              {profileData.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {profileData.role} · {profileData.location}
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Link
-            href="/profile/following"
-            aria-label="Following"
-            className="grid size-11 place-items-center rounded-md border border-input bg-background hover:bg-accent text-foreground transition-colors"
-          >
-            <Users className="size-4" />
-          </Link>
-          <Link
-            href="/profile/settings"
-            aria-label="Settings"
-            className="grid size-11 place-items-center rounded-md border border-input bg-background hover:bg-accent text-foreground transition-colors"
-          >
-            <Settings className="size-4" />
-          </Link>
-        </div>
-      </div>
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+  const avatarUrl = profile?.avatar_url as string | null | undefined;
 
-      <div className="mb-8 grid grid-cols-3 divide-x rounded-lg border bg-card text-center shadow-[var(--shadow-card)]">
-        {[
-          ["Ideas", ideasCount],
-          ["Saved", savedCount],
-          ["Applied", appliedCount],
-        ].map(([l, n]) => (
-          <div key={l as string} className="p-4">
-            <p className="tabular font-display text-2xl font-extrabold text-foreground">{n}</p>
-            <p className="text-sm text-muted-foreground">{l}</p>
-          </div>
+  const [{ count: savedOppCount }, { count: ideaCount }, { count: skillCount }, { count: applicationCount }] = await Promise.all([
+    supabase.from("saved_opportunities").select("opportunity_id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("ideas").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("user_skills").select("skill_id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase
+      .from("saved_opportunities")
+      .select("opportunity_id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .neq("status", "saved"),
+  ]);
+
+  return (
+    <div className="px-5 pt-7">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-aza">Profile</p>
+
+      <div className="mt-4 flex gap-2">
+        {PROFILE_TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={t.key === "overview" ? "/profile" : "/profile?tab=saved"}
+            className={`flex-1 rounded-pill border py-2.5 text-center text-[13.5px] font-bold ${
+              tab === t.key ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"
+            }`}
+          >
+            {t.label}
+          </Link>
         ))}
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile to="/profile/edit" icon={PenLine} title="Edit profile" sub="Name, role, bio" />
-        <Tile to="/profile/cv" icon={FileText} title="CV" sub="View and tailor" />
-        <Tile to="/profile/saved" icon={Bookmark} title="Saved" sub="Opportunities, ideas" />
-        <Tile to="/growth/my-ideas" icon={Lightbulb} title="My ideas" sub="Manage posts" />
-      </div>
-
-      <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-        <div>
-          <h2 className="mb-3 flex items-center gap-2 text-lg font-display font-bold text-foreground">
-            <Bookmark className="size-4 text-primary" /> Saved
-          </h2>
-          {savedOpportunities.length === 0 ? (
-            <Empty title="No saved opportunities yet" sub="Bookmark one from Discover to see it here." />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {savedOpportunities.map((o) => (
-                <OpportunityCard key={o.id} o={o} />
-              ))}
-            </div>
-          )}
-
-          <h2 className="mb-3 mt-8 text-lg font-display font-bold text-foreground">Your ideas</h2>
-          <div className="grid gap-3">
-            {myIdeas.length > 0 ? (
-              myIdeas.map((i) => <IdeaCard key={i.id} idea={i} currentUserId={user.id} />)
-            ) : (
-              <p className="text-sm text-muted-foreground">No ideas posted yet.</p>
-            )}
-          </div>
-        </div>
-
-        <aside className="h-fit rounded-lg border bg-card p-5 shadow-[var(--shadow-card)]">
-          <FileText className="size-5 text-primary" />
-          <h2 className="mt-3 text-base font-display font-bold text-foreground">
-            Your CV is {cvPercent}% complete
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {cvPercent < 100
-              ? "Add education and experience to tailor applications automatically."
-              : "Your CV is ready to tailor applications automatically."}
-          </p>
-          <div className="mt-4 h-2 rounded-full bg-muted">
-            <div className="h-2 rounded-full bg-primary" style={{ width: `${cvPercent}%` }} />
-          </div>
-          <Link
-            href="/profile/cv"
-            className="mt-4 inline-flex h-11 items-center text-sm font-bold text-primary-strong hover:underline"
-          >
-            {cvPercent < 100 ? "Finish CV →" : "View CV →"}
-          </Link>
-        </aside>
-      </div>
-    </AppShell>
+      {tab === "overview" ? (
+        <OverviewTab
+          user={{ email: user.email ?? "" }}
+          profile={profile}
+          avatarUrl={avatarUrl}
+          savedOppCount={savedOppCount ?? 0}
+          applicationCount={applicationCount ?? 0}
+          ideaCount={ideaCount ?? 0}
+          skillCount={skillCount ?? 0}
+        />
+      ) : (
+        <SavedTab userId={user.id} category={category} query={q} />
+      )}
+    </div>
   );
 }
+
+function OverviewTab({
+  user,
+  profile,
+  avatarUrl,
+  savedOppCount,
+  applicationCount,
+  ideaCount,
+  skillCount,
+}: {
+  user: { email: string };
+  profile: { full_name: string | null; role: string } | null;
+  avatarUrl: string | null | undefined;
+  savedOppCount: number;
+  applicationCount: number;
+  ideaCount: number;
+  skillCount: number;
+}) {
+  return (
+    <>
+      <div className="mt-5 flex items-center gap-4 rounded-card border border-line-strong bg-surface p-4 shadow-card">
+        <AvatarImage src={avatarUrl} className="h-16 w-16 rounded-full ring-2 ring-aza/30" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-display text-[16px] font-bold text-ink">{profile?.full_name ?? "Aza user"}</p>
+          <p className="truncate text-[12.5px] text-ink/50">{user.email}</p>
+          {profile?.role !== "user" && (
+            <span className="mt-1.5 inline-block rounded-pill bg-aza-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-aza">
+              {profile?.role}
+            </span>
+          )}
+        </div>
+        <Link
+          href="/profile/edit"
+          className="shrink-0 rounded-pill border border-line-strong px-3.5 py-1.5 text-[12px] font-bold text-ink/70"
+        >
+          Edit
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-4 divide-x divide-line rounded-card border border-line-strong bg-surface shadow-card">
+        <StatBox label="Saved" value={savedOppCount} icon={<Bookmark size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Applied" value={applicationCount} icon={<Send size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Ideas" value={ideaCount} icon={<Lightbulb size={15} strokeWidth={1.8} className="text-aza" />} />
+        <StatBox label="Skills" value={skillCount} icon={<Target size={15} strokeWidth={1.8} className="text-aza" />} />
+      </div>
+
+      {(profile?.role === "curator" || profile?.role === "admin") && (
+        <Link href="/curator" className="mt-4 block rounded-card bg-ink px-4 py-3.5 text-center text-[14px] font-bold text-paper shadow-card">
+          Open curator dashboard →
+        </Link>
+      )}
+
+      <section className="mt-7 space-y-2.5">
+        <ProfileLinkRow href="/profile/cv" label="CV Builder" />
+        <ProfileLinkRow href="/growth/ideas?filter=mine" label="My Ideas" />
+        <ProfileLinkRow href="/businesses/team-finder/my-requests" label="My Join Requests" />
+        <ProfileLinkRow href="/growth/skills" label="My Skills" />
+        <ProfileLinkRow href="/businesses/marketplace" label="My Listings" />
+      </section>
+
+      <section className="mt-7 space-y-2.5">
+        <ThemeToggle />
+        <ReplayGuideRow />
+        <ProfileLinkRow href="/help" label="Help & Support" />
+        <ProfileLinkRow href="/about" label="About Aza" />
+        <ProfileLinkRow href="/profile/settings" label="Settings" />
+      </section>
+
+      <div className="mt-7"><SignOutButton /></div>
+    </>
+  );
+}
+
+async function SavedTab({ userId, category, query }: { userId: string; category: SavedCategory; query?: string }) {
+  return (
+    <>
+      <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {SAVED_CATEGORIES.map((c) => (
+          <Link
+            key={c.key}
+            href={`/profile?tab=saved&category=${c.key}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+            className={`shrink-0 rounded-pill border px-4 py-2 text-[13px] font-bold ${
+              category === c.key ? "border-aza bg-aza text-white shadow-glow-accent" : "border-line-strong bg-surface text-ink/60"
+            }`}
+          >
+            {c.label}
+          </Link>
+        ))}
+      </div>
+
+      <form action="/profile" method="get" className="mt-4 flex items-center gap-2.5 rounded-card-sm border border-line-strong bg-surface px-4 py-3 shadow-card">
+        <input type="hidden" name="tab" value="saved" />
+        <input type="hidden" name="category" value={category} />
+        <Search size={16} strokeWidth={1.8} className="shrink-0 text-ink/35" />
+        <input
+          name="q"
+          defaultValue={query ?? ""}
+          placeholder={`Search saved ${category}...`}
+          className="min-w-0 flex-1 bg-transparent text-[13.5px] text-ink placeholder:text-ink/35 focus:outline-none"
+        />
+        {query && (
+          <Link href={`/profile?tab=saved&category=${category}`} aria-label="Clear search" className="text-ink/35">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </Link>
+        )}
+      </form>
+
+      <div className="mt-4">
+        {category === "opportunities" && <SavedOpportunities userId={userId} query={query} />}
+        {category === "ideas" && <SavedIdeas userId={userId} query={query} />}
+        {category === "resources" && <SavedResources userId={userId} query={query} />}
+        {category === "businesses" && <SavedBusinesses userId={userId} query={query} />}
+      </div>
+    </>
+  );
+}
+
+async function SavedOpportunities({ userId, query }: { userId: string; query?: string }) {
+  const supabase = await createClient();
+  const { data: saved } = await supabase
+    .from("saved_opportunities")
+    .select("opportunity_id, saved_at, status, opportunities(*)")
+    .eq("user_id", userId)
+    .order("saved_at", { ascending: false });
+
+  let rows = (saved ?? []).filter((s) => s.opportunities);
+
+  if (query?.trim()) {
+    const q = query.trim().toLowerCase();
+    rows = rows.filter((r) => {
+      const o = r.opportunities as unknown as { title: string; org: string };
+      return o.title.toLowerCase().includes(q) || o.org.toLowerCase().includes(q);
+    });
+  }
+
+  if (rows.length === 0) {
+    return <EmptyState label={query ? `No saved opportunities match "${query}".` : "No saved opportunities yet."} />;
+  }
+
+  return (
+    <div className="space-y-4">
+      {rows.map((row) => (
+        <OpportunityCard
+          key={row.opportunity_id}
+          opportunity={row.opportunities as unknown as Opportunity}
+          isSaved={true}
+          isAuthed={true}
+          applicationStatus={row.status as ApplicationStatus}
+        />
+      ))}
+    </div>
+  );
+}
+
+async function SavedIdeas({ userId, query }: { userId: string; query?: string }) {
+  const supabase = await createClient();
+  const { data: saved } = await supabase
+    .from("saved_ideas")
+    .select("idea_id, saved_at, ideas(*)")
+    .eq("user_id", userId)
+    .order("saved_at", { ascending: false });
+
+  let items = (saved ?? []).map((s) => s.ideas).filter(Boolean) as unknown as Idea[];
+
+  if (query?.trim()) {
+    const q = query.trim().toLowerCase();
+    items = items.filter((i) => i.title.toLowerCase().includes(q));
+  }
+
+  if (items.length === 0) {
+    return <EmptyState label={query ? `No saved ideas match "${query}".` : "No saved ideas yet."} />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((idea) => (
+        <Link key={idea.id} href={`/growth/ideas/${idea.id}`} className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[14px] font-bold text-ink">{idea.title}</p>
+              {idea.category && <p className="mt-1 text-[11px] font-semibold text-ink/45">{idea.category}</p>}
+            </div>
+            <SaveIdeaButton ideaId={idea.id} initialSaved={true} isAuthed={true} />
+          </div>
+          <p className="mt-2 line-clamp-2 text-[12.5px] leading-relaxed text-ink/65">{idea.description}</p>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+async function SavedResources({ userId, query }: { userId: string; query?: string }) {
+  const supabase = await createClient();
+  const { data: saved } = await supabase
+    .from("saved_resources")
+    .select("resource_id, saved_at, skill_resources(*, skills(name))")
+    .eq("user_id", userId)
+    .order("saved_at", { ascending: false });
+
+  let items = (saved ?? []).map((s) => s.skill_resources).filter(Boolean) as unknown as (SkillResource & { skills: { name: string } })[];
+
+  if (query?.trim()) {
+    const q = query.trim().toLowerCase();
+    items = items.filter((r) => r.title.toLowerCase().includes(q) || (r.provider ?? "").toLowerCase().includes(q));
+  }
+
+  if (items.length === 0) {
+    return <EmptyState label={query ? `No saved resources match "${query}".` : "No saved resources yet."} />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((r) => (
+        <div key={r.id} className="rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+          <a href={r.url} target="_blank" rel="noopener noreferrer" className="block">
+            <p className="text-[14px] font-bold text-ink">{r.title}</p>
+            <p className="mt-1 text-[11.5px] font-medium text-ink/50">
+              {r.skills?.name} · {r.provider ?? "Unknown provider"}
+            </p>
+          </a>
+          <div className="mt-2 flex justify-end">
+            <SaveResourceButton resourceId={r.id} initialSaved={true} isAuthed={true} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function SavedBusinesses({ userId, query }: { userId: string; query?: string }) {
+  const supabase = await createClient();
+  const { data: saved } = await supabase
+    .from("saved_businesses")
+    .select("business_id, saved_at, businesses(*)")
+    .eq("user_id", userId)
+    .order("saved_at", { ascending: false });
+
+  let items = (saved ?? []).map((s) => s.businesses).filter(Boolean) as unknown as Business[];
+
+  if (query?.trim()) {
+    const q = query.trim().toLowerCase();
+    items = items.filter((b) => b.name.toLowerCase().includes(q));
+  }
+
+  if (items.length === 0) {
+    return <EmptyState label={query ? `No saved businesses match "${query}".` : "No saved businesses yet."} />;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((b) => (
+        <BusinessCard key={b.id} business={b} isSaved={true} isAuthed={true} />
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="rounded-card border border-line-strong bg-surface p-8 text-center shadow-card">
+      <p className="text-[13px] text-ink/55">{label}</p>
+    </div>
+  );
+}
+
+function StatBox({ label, value, icon }: { label: string; value: number; icon: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 py-4 text-center">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-aza-light to-aza-light/40 shadow-[inset_0_1px_0_rgb(255_255_255/0.4),0_2px_6px_-2px_rgb(var(--accent)/0.35)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.06),0_2px_6px_-2px_rgb(var(--accent)/0.45)]">
+        {icon}
+      </div>
+      <div>
+        <p className="font-display text-[19px] font-bold text-ink tabular">{value}</p>
+        <p className="text-[10.5px] font-semibold text-ink/50">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function ProfileLinkRow({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} className="flex w-full items-center justify-between rounded-card-sm border border-line-strong bg-surface px-4 py-4 shadow-card">
+      <span className="text-[14px] font-semibold text-ink">{label}</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="m9 6 6 6-6 6" stroke="rgb(var(--ink) / 0.4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </Link>
+  );
+}
+

@@ -1,12 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { AppShell } from "@/components/aza/app-shell";
-import { BackLink, btn } from "@/components/aza/kit";
-import { PageHeader } from "@/components/aza/ui";
 import { updateProfile } from "@/lib/actions/profile";
+import DefaultAvatar from "@/components/default-avatar";
 
 export default function EditProfileForm({
   currentName,
@@ -21,6 +18,7 @@ export default function EditProfileForm({
   const [isPending, startTransition] = useTransition();
   const [name, setName] = useState(currentName);
   const [preview, setPreview] = useState<string | null>(currentAvatarUrl);
+  const [previewFailed, setPreviewFailed] = useState(false);
   const [removeAvatar, setRemoveAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,11 +27,13 @@ export default function EditProfileForm({
     const file = e.target.files?.[0];
     if (!file) return;
     setRemoveAvatar(false);
+    setPreviewFailed(false);
     setPreview(URL.createObjectURL(file));
   }
 
   function handleRemovePhoto() {
     setPreview(null);
+    setPreviewFailed(false);
     setRemoveAvatar(true);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
@@ -44,102 +44,100 @@ export default function EditProfileForm({
     startTransition(async () => {
       try {
         await updateProfile(formData);
-        toast.success("Profile updated");
         router.push("/profile");
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Something went wrong. Try again.";
-        setError(message);
-        toast.error(message);
+        setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
       }
     });
   }
 
   return (
-    <AppShell>
-      <BackLink to="/profile" label="Profile" />
-      <PageHeader title="Edit profile" />
+    <form action={handleSubmit} className="mt-6 space-y-5">
+      <div className="flex flex-col items-center gap-3">
+        <div className="relative">
+          {preview && !previewFailed ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview}
+              alt="Profile avatar"
+              className="h-24 w-24 rounded-full object-cover"
+              onError={() => setPreviewFailed(true)}
+            />
+          ) : (
+            <DefaultAvatar className="h-24 w-24" />
+          )}
+        </div>
 
-      <form action={handleSubmit} className="space-y-5">
-        <div className="flex flex-col items-center gap-3">
-          <div className="relative">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={preview}
-                alt="Profile avatar"
-                className="h-24 w-24 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-muted font-display text-3xl font-extrabold text-muted-foreground">
-                {(name || email || "?").charAt(0).toUpperCase()}
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-[13px] font-semibold text-aza"
+          >
+            {preview ? "Change photo" : "Add photo"}
+          </button>
+          {preview && (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="text-sm font-semibold text-primary"
+              onClick={handleRemovePhoto}
+              className="text-[13px] font-semibold text-ink/50"
             >
-              {preview ? "Change photo" : "Add photo"}
+              Remove photo
             </button>
-            {preview && (
-              <button
-                type="button"
-                onClick={handleRemovePhoto}
-                className="text-sm font-semibold text-muted-foreground"
-              >
-                Remove photo
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            name="avatar"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={handleFileChange}
-            className="hidden"
-          />
+          )}
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          name="avatar"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </div>
 
-        <label className="block text-sm">
-          <span className="font-medium">
-            Full name<span className="text-destructive"> *</span>
-          </span>
-          <input
-            name="full_name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={100}
-            className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
-          />
-        </label>
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Display name</label>
+        <input
+          name="full_name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={100}
+          className="mt-1 w-full rounded-card border border-line bg-surface px-4 py-3 text-[14px]"
+        />
+      </div>
 
-        <label className="block text-sm">
-          <span className="font-medium">Email</span>
-          <input
-            value={email}
-            disabled
-            className="mt-1.5 h-11 w-full rounded-md border border-input bg-muted px-3 text-sm text-muted-foreground"
-          />
-          <span className="mt-1 block text-xs text-muted-foreground">
-            Email can&apos;t be changed here.
-          </span>
-        </label>
+      <div>
+        <label className="text-[13px] font-semibold text-ink/70">Email</label>
+        <input
+          value={email}
+          disabled
+          className="mt-1 w-full rounded-card border border-line bg-paper-dim px-4 py-3 text-[14px] text-ink/50"
+        />
+        <p className="mt-1 text-[11px] text-ink/40">Email can&apos;t be changed here.</p>
+      </div>
 
-        {error && <p className="rounded-md bg-destructive/10 p-2.5 text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="rounded-card bg-aza-light p-2.5 text-[13px] text-aza-dark">{error}</p>
+      )}
 
-        <div className="flex gap-2.5">
-          <button type="button" onClick={() => router.back()} className={`flex-1 ${btn.secondary}`}>
-            Cancel
-          </button>
-          <button type="submit" disabled={isPending} className={`flex-1 ${btn.primary}`}>
-            {isPending ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-      </form>
-    </AppShell>
+      <div className="flex gap-2.5">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="flex-1 rounded-card border border-line py-3.5 text-[14px] font-bold text-ink"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex-1 rounded-card bg-aza py-3.5 text-[14px] font-bold text-white disabled:opacity-60"
+        >
+          {isPending ? "Saving..." : "Save changes"}
+        </button>
+      </div>
+    </form>
   );
 }
