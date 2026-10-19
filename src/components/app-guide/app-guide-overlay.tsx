@@ -5,11 +5,10 @@ import { BadgeCheck, Bookmark, Check, Clock, ThumbsUp } from "lucide-react";
 import { markGuideSeen } from "@/lib/actions/app-guide";
 import { GUIDE_STEPS } from "@/lib/app-guide-steps";
 
-// Small, simplified previews of the real screen each step describes —
-// built from the app's actual card patterns and tokens (OpportunityCard,
-// IdeaCard, Skills progress bar), not screenshots of live data, since
-// this component can't capture the running app. Every label matches a
-// real feature name, nothing invented.
+// Small previews of the real screen each step describes, built from the
+// app's actual card patterns and tokens (OpportunityCard, IdeaCard, the
+// skills progress bar) — not live data, since this overlay can't capture
+// the running app, but every label matches a real feature name.
 const PREVIEWS: Record<string, React.ReactNode> = {
   welcome: (
     <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 px-6 text-center">
@@ -71,7 +70,7 @@ const PREVIEWS: Record<string, React.ReactNode> = {
   ideas: (
     <div className="flex h-full w-full items-center justify-center px-8">
       <div className="w-full max-w-[220px] rounded-lg border border-white/15 bg-white/10 p-3 backdrop-blur-sm">
-        <p className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white w-fit">
+        <p className="w-fit rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white">
           Feedback wanted
         </p>
         <p className="mt-2 line-clamp-2 text-[11.5px] leading-snug text-white/90">
@@ -113,51 +112,49 @@ const PREVIEWS: Record<string, React.ReactNode> = {
   ),
 };
 
+const SWIPE_THRESHOLD = 50;
+
 export default function AppGuideOverlay({ onDone }: { onDone?: () => void }) {
   const [index, setIndex] = useState(0);
   const [isPending, startTransition] = useTransition();
   const touchStartX = useRef<number | null>(null);
 
-  const isLast = index === GUIDE_STEPS.length - 1;
   const step = GUIDE_STEPS[index];
+  const isFirst = index === 0;
+  const isLast = index === GUIDE_STEPS.length - 1;
 
-  function finish() {
-    startTransition(() => markGuideSeen());
-    onDone?.();
-  }
+  const finish = () => {
+    startTransition(async () => {
+      await markGuideSeen();
+      onDone?.();
+    });
+  };
 
-  function goNext() {
+  const next = () => {
     if (isLast) {
       finish();
     } else {
       setIndex((i) => Math.min(i + 1, GUIDE_STEPS.length - 1));
     }
-  }
+  };
 
-  function goBack() {
-    setIndex((i) => Math.max(i - 1, 0));
-  }
+  const back = () => setIndex((i) => Math.max(i - 1, 0));
 
-  function handleTouchStart(e: React.TouchEvent) {
+  const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
-  }
+  };
 
-  function handleTouchEnd(e: React.TouchEvent) {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (delta < -50) goNext();
-    else if (delta > 50) goBack();
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    if (deltaX <= -SWIPE_THRESHOLD) next();
+    else if (deltaX >= SWIPE_THRESHOLD) back();
     touchStartX.current = null;
-  }
+  };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col bg-ink/60 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      aria-label="App guide"
-    >
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-5 pb-[calc(env(safe-area-inset-bottom)+20px)] sm:justify-center sm:pb-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm">
         <div
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -166,7 +163,7 @@ export default function AppGuideOverlay({ onDone }: { onDone?: () => void }) {
           <button
             onClick={finish}
             disabled={isPending}
-            className="absolute right-4 top-4 z-10 rounded-pill bg-ink/25 px-3 py-1.5 text-[11.5px] font-bold text-white backdrop-blur-sm"
+            className="absolute right-4 top-4 z-10 rounded-full bg-white/15 px-3 py-1.5 text-[12.5px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/25 disabled:opacity-60"
           >
             Skip
           </button>
@@ -186,34 +183,37 @@ export default function AppGuideOverlay({ onDone }: { onDone?: () => void }) {
             <h2 className="mt-1.5 font-display text-[19px] font-bold leading-tight text-ink">{step.title}</h2>
             <p className="mt-2.5 text-[13.5px] leading-relaxed text-ink/65">{step.body}</p>
 
-            <div className="mt-6 flex items-center justify-center gap-1.5">
+            <div className="mt-5 flex items-center justify-center gap-1.5">
               {GUIDE_STEPS.map((s, i) => (
                 <span
                   key={s.key}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === index ? "w-5 bg-aza" : "w-1.5 bg-line-strong"
+                    i === index ? "w-6 bg-aza" : "w-1.5 bg-ink/15"
                   }`}
                 />
               ))}
             </div>
 
-            <div className="mt-6 flex gap-2.5">
-              {index > 0 && (
+            <div className="mt-5 flex gap-2.5">
+              {!isFirst && (
                 <button
-                  onClick={goBack}
-                  className="rounded-card border border-line-strong bg-surface px-5 py-3 text-[13.5px] font-bold text-ink/60 shadow-card"
+                  onClick={back}
+                  disabled={isPending}
+                  className="flex-1 rounded-card border border-ink/15 py-3 text-[14px] font-bold text-ink disabled:opacity-60"
                 >
                   Back
                 </button>
               )}
               <button
-                onClick={goNext}
+                onClick={next}
                 disabled={isPending}
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-card bg-aza py-3 text-[14px] font-bold text-white shadow-glow-accent disabled:opacity-60"
               >
                 {isLast ? "Done" : "Next"}
                 {!isLast && (
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 )}
               </button>
             </div>

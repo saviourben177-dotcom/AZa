@@ -1,10 +1,11 @@
-export interface GuideStep {
+export type GuideStep = {
   key: string;
   eyebrow: string;
   title: string;
   body: string;
-}
+};
 
+// Content matches the live 7-step tour exactly (eyebrow, title, body).
 export const GUIDE_STEPS: GuideStep[] = [
   {
     key: "welcome",

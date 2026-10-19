@@ -10,6 +10,18 @@ import type { Opportunity, Idea } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/client";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
 
+// Real values of the `category` column (see src/app/welcome/welcome-card.tsx
+// and src/lib/aza/mappers.ts for confirmed usage). `category` is a Postgres
+// enum, and ilike against an enum column inside an `.or()` filter string is
+// rejected by PostgREST — that silently failed the whole opportunities
+// query, which is why searching "internship", "hackathon" etc. above
+// returned zero results. Matched separately below via `.eq()` instead.
+const CATEGORY_VALUES = ["scholarship", "internship", "hackathon", "competition", "grant", "fellowship"];
+
+function matchedCategory(term: string): string | null {
+  return CATEGORY_VALUES.find((c) => c === term || `${c}s` === term) ?? null;
+}
+
 export default function SearchPage() {
   const [q, setQ] = useState("");
   const [userId, setUserId] = useState<string | undefined>();
@@ -36,12 +48,13 @@ export default function SearchPage() {
         try {
           const supabase = createClient();
           const clean = t.replace(/[%,]/g, "");
+          const category = matchedCategory(t);
 
           const [{ data: opps }, { data: ids }] = await Promise.all([
             supabase
               .from("opportunities")
               .select("*")
-              .or(`title.ilike.%${clean}%,org.ilike.%${clean}%,category.ilike.%${clean}%`)
+              .or(`title.ilike.%${clean}%,org.ilike.%${clean}%,location.ilike.%${clean}%`)
               .limit(10),
             supabase
               .from("ideas")
@@ -50,9 +63,25 @@ export default function SearchPage() {
               .limit(10),
           ]);
 
+          let oppRows = opps ?? [];
+          if (category) {
+            const { data: categoryOpps } = await supabase
+              .from("opportunities")
+              .select("*")
+              .eq("category", category)
+              .limit(10);
+            const seen = new Set(oppRows.map((o) => o.id));
+            for (const row of categoryOpps ?? []) {
+              if (!seen.has(row.id)) {
+                oppRows = [...oppRows, row];
+                seen.add(row.id);
+              }
+            }
+          }
+
           // Zero rows is a real, correct result — it means nothing matched,
           // not a reason to show unrelated demo content instead.
-          setDbOpportunities((opps ?? []).map((o) => mapDbOpportunityToPrototype(o)));
+          setDbOpportunities(oppRows.map((o) => mapDbOpportunityToPrototype(o)));
           setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
         } catch {
           setDbOpportunities([]);

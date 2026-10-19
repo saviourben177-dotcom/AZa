@@ -8,9 +8,9 @@ import { useState } from "react";
 import AppGuideOverlay from "./app-guide-overlay";
 
 export default function AppGuideGate({ shouldShow }: { shouldShow: boolean }) {
-  const [visible, setVisible] = useState(shouldShow);
+  const [open, setOpen] = useState(shouldShow);
 
-  if (!visible) return null;
+  if (!open) return null;
 
-  return <AppGuideOverlay onDone={() => setVisible(false)} />;
+  return <AppGuideOverlay onDone={() => setOpen(false)} />;
 }

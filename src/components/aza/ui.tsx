@@ -6,12 +6,17 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { getPerson, timeAgo, type Opportunity } from "@/lib/aza-data";
 import AvatarImg from "@/components/aza/avatar-img";
+import DefaultAvatar from "@/components/default-avatar";
 
 export function Avatar({
   id,
   size = 40,
   name,
   avatarUrl,
+  // Pass true for the signed-in user's own avatar (e.g. on /profile),
+  // where there's no mock person to fall back to and a missing photo
+  // should show the TikTok/Facebook-style silhouette, not initials.
+  isRealUser = false,
 }: {
   id: string;
   size?: number;
@@ -20,12 +25,16 @@ export function Avatar({
   // actual photo/initial instead of a mock person's initials.
   name?: string;
   avatarUrl?: string | null;
+  isRealUser?: boolean;
 }) {
   if (avatarUrl) {
     // Client component: catches a broken/expired URL (e.g. deleted
-    // storage object) and falls back to the initial/silhouette instead
-    // of a broken-image icon.
-    return <AvatarImg src={avatarUrl} alt={name ?? ""} size={size} fallbackInitial={name?.charAt(0).toUpperCase()} />;
+    // storage object) and falls back to the silhouette instead of a
+    // broken-image icon.
+    return <AvatarImg src={avatarUrl} alt={name ?? ""} size={size} />;
+  }
+  if (isRealUser) {
+    return <DefaultAvatar className="shrink-0" style={{ width: size, height: size }} />;
   }
   if (name) {
     return (

@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/aza/ui";
 import { api } from "@/lib/aza/api";
 import PrivacySection from "@/components/settings/PrivacySection";
 import ThemeToggle from "@/components/theme-toggle";
+import ReplayGuideRow from "@/components/app-guide/replay-guide-row";
 
 export default function SettingsForm({ initialIsPublic }: { initialIsPublic: boolean }) {
   const router = useRouter();
@@ -20,6 +21,14 @@ export default function SettingsForm({ initialIsPublic }: { initialIsPublic: boo
         <section>
           <h2 className="mb-2 text-base font-display font-bold text-foreground">Appearance</h2>
           <ThemeToggle />
+        </section>
+
+        <section className="rounded-lg border bg-card p-5 shadow-[var(--shadow-card)]">
+          <h2 className="mb-2 text-base font-display font-bold text-foreground">App Guide</h2>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Replay the welcome tour that covers Discover, CV Builder, Growth Hub and Business Hub.
+          </p>
+          <ReplayGuideRow />
         </section>
 
         <section className="rounded-lg border bg-card p-5 shadow-[var(--shadow-card)]">

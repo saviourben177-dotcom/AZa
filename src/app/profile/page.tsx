@@ -83,7 +83,7 @@ export default async function ProfilePage() {
     <AppShell>
       <div className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
         <div className="flex min-w-0 items-center gap-4">
-          <Avatar id={profileData.id} size={64} />
+          <Avatar id={profileData.id} size={64} avatarUrl={profileData.avatarUrl} isRealUser />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-display font-bold text-foreground">
               {profileData.name}
