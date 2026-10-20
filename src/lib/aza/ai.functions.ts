@@ -1,7 +1,7 @@
 "use server";
 
 // Server-only Groq calls. GROQ_API_KEY never reaches the browser.
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "openai/gpt-oss-120b";
 
 async function groq(system: string, user: string) {
   const key = process.env.GROQ_API_KEY;
