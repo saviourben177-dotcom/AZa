@@ -9,17 +9,28 @@ import { OpportunityCard, PageHeader } from "@/components/aza/ui";
 import type { Opportunity, Idea } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/client";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
+import type { OpportunityCategory } from "@/lib/types";
 
-// Real values of the `category` column (see src/app/welcome/welcome-card.tsx
-// and src/lib/aza/mappers.ts for confirmed usage). `category` is a Postgres
-// enum, and ilike against an enum column inside an `.or()` filter string is
-// rejected by PostgREST — that silently failed the whole opportunities
-// query, which is why searching "internship", "hackathon" etc. above
-// returned zero results. Matched separately below via `.eq()` instead.
-const CATEGORY_VALUES = ["scholarship", "internship", "hackathon", "competition", "grant", "fellowship"];
+// Real values of the `category` column (see src/lib/types.ts for the
+// authoritative enum). `category` is a Postgres enum, and ilike against
+// an enum column inside an `.or()` filter string is rejected by
+// PostgREST — that silently failed the whole opportunities query, which
+// is why searching "internship", "hackathon" etc. above returned zero
+// results. Matched separately below via `.eq()` instead.
+const CATEGORY_VALUES: OpportunityCategory[] = [
+  "scholarship",
+  "grant",
+  "hackathon",
+  "fellowship",
+  "internship",
+  "competition",
+  "job_gig",
+];
 
-function matchedCategory(term: string): string | null {
-  return CATEGORY_VALUES.find((c) => c === term || `${c}s` === term) ?? null;
+function matchedCategory(term: string): OpportunityCategory | null {
+  return (
+    CATEGORY_VALUES.find((c) => c === term || `${c}s` === term || c.replace("_", " ") === term) ?? null
+  );
 }
 
 export default function SearchPage() {
