@@ -57,10 +57,10 @@ export default function WelcomeCard({ opportunityCount: _opportunityCount }: { o
       */}
       <div className="relative z-10 my-10 flex-1" />
 
-      <div className="relative z-10 mb-8 grid grid-cols-5 gap-2">
+      <div className="relative z-10 mb-8 grid grid-cols-3 gap-x-2 gap-y-5 sm:grid-cols-5">
         {categories.map(({ label, icon: Icon, href }) => (
           <Link key={label} href={href} className="flex flex-col items-center gap-2 text-center">
-            <span className="grid size-14 place-items-center rounded-full bg-primary-soft text-primary-strong">
+            <span className="grid size-14 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong">
               <Icon className="size-5" strokeWidth={1.75} />
             </span>
             <span className="text-[11px] font-medium leading-tight text-foreground">{label}</span>

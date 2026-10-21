@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { createIdea } from "@/lib/actions/ideas";
 
 const CATEGORIES = ["Education", "Energy", "Health", "Agriculture", "Fintech", "Sustainability", "Logistics", "Other"];
@@ -18,8 +19,21 @@ interface RoleRow {
   slots: number;
 }
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex w-full items-center justify-center gap-2 rounded-card bg-aza py-3.5 text-[15px] font-bold text-white shadow-glow-accent disabled:opacity-60"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m3 11 18-8-8 18-2-8-8-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
+      {pending ? "Posting..." : "Publish Project"}
+    </button>
+  );
+}
+
 export default function NewIdeaForm({ defaultLookingForCollaborators = false }: { defaultLookingForCollaborators?: boolean }) {
-  const [isPending, startTransition] = useTransition();
   const [lookingForCollaborators, setLookingForCollaborators] = useState(defaultLookingForCollaborators);
   const [roles, setRoles] = useState<RoleRow[]>([{ key: 0, name: "", slots: 1 }]);
   const [nextKey, setNextKey] = useState(1);
@@ -41,12 +55,8 @@ export default function NewIdeaForm({ defaultLookingForCollaborators = false }: 
     setRoles((r) => r.map((role) => (role.key === key ? { ...role, [field]: value } : role)));
   }
 
-  function handleSubmit(formData: FormData) {
-    startTransition(() => createIdea(formData));
-  }
-
   return (
-    <form action={handleSubmit} className="mt-6 space-y-5">
+    <form action={createIdea} className="mt-6 space-y-5">
       <input type="hidden" name="stage" value={stage} />
 
       <div>
@@ -249,14 +259,7 @@ export default function NewIdeaForm({ defaultLookingForCollaborators = false }: 
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="flex w-full items-center justify-center gap-2 rounded-card bg-aza py-3.5 text-[15px] font-bold text-white shadow-glow-accent disabled:opacity-60"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m3 11 18-8-8 18-2-8-8-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" /></svg>
-        {isPending ? "Posting..." : "Publish Project"}
-      </button>
+      <SubmitButton />
     </form>
   );
 }

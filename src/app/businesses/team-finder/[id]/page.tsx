@@ -4,6 +4,7 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink, btn } from "@/components/aza/kit";
 import { AuthorLine, Tag } from "@/components/aza/ui";
 import { createClient } from "@/lib/supabase/server";
+import DeleteIdeaButton from "@/components/growth/delete-idea-button";
 
 export const dynamic = "force-dynamic";
 
@@ -26,14 +27,21 @@ export default async function TeamDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Fetch by id alone first — an owner viewing their own listing should never
+  // 404 just because they've since turned recruiting off. Visibility for
+  // non-owners (and for recruiting status) is enforced just below instead.
   const { data: idea } = await supabase
     .from("ideas")
-    .select("id, title, user_id, category, created_at, idea_roles(id, role_name, slots_needed, slots_filled), profiles(full_name, avatar_url)")
+    .select(
+      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, idea_roles(id, role_name, slots_needed, slots_filled), profiles(full_name, avatar_url)"
+    )
     .eq("id", id)
-    .eq("looking_for_collaborators", true)
     .maybeSingle();
 
+  const isOwner = !!user && idea?.user_id === user.id;
+
   if (!idea) notFound();
+  if (!isOwner && (!idea.looking_for_collaborators || idea.visibility !== "public")) notFound();
 
   const roles = (idea.idea_roles as unknown as IdeaRole[]) ?? [];
   const authorProfile = idea.profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
@@ -43,7 +51,10 @@ export default async function TeamDetailPage({
     <AppShell>
       <BackLink to="/businesses/team-finder" label="Team Finder" />
       <div className="max-w-2xl">
-        <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">{idea.title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">{idea.title}</h1>
+          {isOwner && <DeleteIdeaButton ideaId={idea.id} redirectTo="/businesses/team-finder" />}
+        </div>
         <div className="my-4">
           <AuthorLine
             id={idea.user_id}

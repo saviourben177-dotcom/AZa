@@ -106,7 +106,15 @@ export async function updateIdeaStage(ideaId: string, stage: string) {
 
 export async function deleteIdea(ideaId: string, redirectTo: string = "/growth/ideas") {
   const supabase = await createClient();
-  await supabase.from("ideas").delete().eq("id", ideaId);
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/growth/ideas");
+
+  // Only the idea's own author may delete it. Scoping the delete with
+  // .eq("user_id", user.id) means the query matches zero rows (and silently
+  // does nothing) for anyone else, rather than deleting someone else's post.
+  await supabase.from("ideas").delete().eq("id", ideaId).eq("user_id", user.id);
   revalidatePath("/growth/ideas");
   revalidatePath("/businesses/team-finder");
   redirect(redirectTo);

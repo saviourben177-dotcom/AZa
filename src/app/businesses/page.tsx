@@ -11,12 +11,13 @@ import {
   Store,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/aza/app-shell";
 import { Tile } from "@/components/aza/kit";
 import { PageHeader, Tag } from "@/components/aza/ui";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 const sections = [
   { id: "breakeven", label: "Break-even", icon: Calculator },
@@ -143,21 +144,55 @@ function BreakEven() {
   );
 }
 
-const rates: Record<string, number> = {
-  NGN: 1,
-  USD: 1540,
-  GBP: 1960,
-  EUR: 1680,
-  GHS: 102,
-  KES: 11.9,
-};
+// Currencies offered in the picker. Real rates for all of these are fetched
+// live from Frankfurter (api.frankfurter.dev) — free, no API key, sourced
+// from ~100 central banks and official sources, NGN included.
+const CURRENCY_CODES = ["NGN", "USD", "GBP", "EUR", "GHS", "KES"];
 
 function Currency() {
   const [amt, setAmt] = useState(100);
   const [from, setFrom] = useState("USD");
   const [to, setTo] = useState("NGN");
-  const out = (amt * (rates[from] ?? 1)) / (rates[to] ?? 1);
+  const [rate, setRate] = useState<number | null>(null);
+  const [rateDate, setRateDate] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const sel = "h-11 rounded-md border border-input bg-background px-3 text-sm text-foreground";
+
+  useEffect(() => {
+    if (from === to) {
+      setRate(1);
+      setRateDate(null);
+      setStatus("idle");
+      return;
+    }
+
+    let cancelled = false;
+    setStatus("loading");
+
+    fetch(`https://api.frankfurter.dev/v2/rate/${from.toLowerCase()}/${to.toLowerCase()}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("rate lookup failed");
+        return res.json();
+      })
+      .then((data: { rate: number; date: string }) => {
+        if (cancelled) return;
+        setRate(data.rate);
+        setRateDate(data.date);
+        setStatus("idle");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setRate(null);
+        setRateDate(null);
+        setStatus("error");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [from, to]);
+
+  const out = rate !== null ? amt * rate : null;
 
   return (
     <div className="space-y-4">
@@ -170,7 +205,7 @@ function Currency() {
             onChange={(e) => setFrom(e.target.value)}
             className={cn(sel, "mt-1.5 block")}
           >
-            {Object.keys(rates).map((c) => (
+            {CURRENCY_CODES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </select>
@@ -183,79 +218,198 @@ function Currency() {
           onChange={(e) => setTo(e.target.value)}
           className={cn(sel, "mt-1.5 block w-full")}
         >
-          {Object.keys(rates).map((c) => (
+          {CURRENCY_CODES.map((c) => (
             <option key={c}>{c}</option>
           ))}
         </select>
       </label>
       <div className="rounded-lg border bg-muted/60 p-5 shadow-[var(--shadow-card)]">
-        <p className="tabular font-display text-3xl font-semibold text-foreground">
-          {out.toLocaleString(undefined, { maximumFractionDigits: 2 })} {to}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">Sample rates for preview only</p>
+        {status === "loading" && (
+          <p className="tabular font-display text-2xl font-semibold text-muted-foreground">
+            Loading rate…
+          </p>
+        )}
+        {status === "error" && (
+          <p className="text-sm text-destructive">
+            Couldn&apos;t fetch a live rate right now. Try again in a moment.
+          </p>
+        )}
+        {status === "idle" && out !== null && (
+          <>
+            <p className="tabular font-display text-3xl font-semibold text-foreground">
+              {out.toLocaleString(undefined, { maximumFractionDigits: 2 })} {to}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {rateDate ? `Live rate as of ${rateDate}` : "Same currency"} · via Frankfurter
+            </p>
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-const teams = [
-  {
-    name: "Cold-chain for tomato farmers",
-    need: "Backend developer",
-    where: "Enugu · Hybrid",
-    members: 2,
-  },
-  {
-    name: "WhatsApp JAMB tutor",
-    need: "Content writer (Maths)",
-    where: "Remote",
-    members: 1,
-  },
-  { name: "Street diesel sharing", need: "Field sales lead", where: "Accra", members: 3 },
-];
+interface IdeaRole {
+  role_name: string;
+  slots_needed: number;
+  slots_filled: number;
+}
+
+interface TeamIdea {
+  id: string;
+  title: string;
+  idea_roles: IdeaRole[];
+}
 
 function Team() {
+  const [ideas, setIdeas] = useState<TeamIdea[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("ideas")
+      .select("id, title, idea_roles(role_name, slots_needed, slots_filled)")
+      .eq("looking_for_collaborators", true)
+      .eq("visibility", "public")
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .then(({ data }) => {
+        if (!cancelled) setIdeas((data as unknown as TeamIdea[]) ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (ideas === null) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading teams…</p>;
+  }
+
+  if (ideas.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card p-6 text-center">
+        <p className="font-semibold text-foreground">No open teams right now</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Check back soon, or post your own project to find collaborators.
+        </p>
+        <Link
+          href="/growth/ideas/new?team=1"
+          className="mt-4 inline-flex h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground"
+        >
+          Post a project
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <ul className="divide-y rounded-lg border bg-card">
-      {teams.map((t) => (
-        <li
-          key={t.name}
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4"
-        >
-          <div className="min-w-0">
-            <p className="font-semibold text-foreground">{t.name}</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <Tag tone="primary">Needs: {t.need}</Tag>
-              <Tag>{t.where}</Tag>
-              <Tag>{t.members} on team</Tag>
+      {ideas.map((idea) => {
+        const roles = idea.idea_roles ?? [];
+        const openRoles = roles.filter((r) => r.slots_filled < r.slots_needed);
+        const totalMembersNeeded = roles.reduce((sum, r) => sum + r.slots_needed, 0);
+        return (
+          <li key={idea.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
+            <div className="min-w-0">
+              <p className="font-semibold text-foreground">{idea.title}</p>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {openRoles.length > 0 ? (
+                  openRoles.map((r) => (
+                    <Tag key={r.role_name} tone="primary">
+                      Needs: {r.role_name}
+                    </Tag>
+                  ))
+                ) : (
+                  <Tag>Team full</Tag>
+                )}
+                <Tag>
+                  {totalMembersNeeded} {totalMembersNeeded === 1 ? "spot" : "spots"}
+                </Tag>
+              </div>
             </div>
-          </div>
-          <Link
-            href="/businesses/team-finder"
-            className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground hover:bg-accent"
-          >
-            Request to join
-          </Link>
-        </li>
-      ))}
+            <Link
+              href={`/businesses/team-finder/${idea.id}`}
+              className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-semibold text-foreground hover:bg-accent"
+            >
+              View
+            </Link>
+          </li>
+        );
+      })}
+      <li className="p-3 text-center">
+        <Link href="/businesses/team-finder" className="text-sm font-semibold text-primary-strong">
+          See all teams →
+        </Link>
+      </li>
     </ul>
   );
 }
 
+interface DbBusiness {
+  id: string;
+  name: string;
+  category: string | null;
+  location: string | null;
+}
+
 function Listings() {
-  const items = [
-    ["Mama Nkechi's Kitchen", "Food · Yaba"],
-    ["Bright Solar Supplies", "Fuel & energy · Ikeja"],
-    ["Danjuma Blocks", "Building materials · Kaduna"],
-  ];
+  const [businesses, setBusinesses] = useState<DbBusiness[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const supabase = createClient();
+    supabase
+      .from("businesses")
+      .select("id, name, category, location")
+      .order("name")
+      .limit(5)
+      .then(({ data }) => {
+        if (!cancelled) setBusinesses(data ?? []);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (businesses === null) {
+    return <p className="p-4 text-sm text-muted-foreground">Loading listings…</p>;
+  }
+
+  if (businesses.length === 0) {
+    return (
+      <div className="rounded-lg border bg-card p-6 text-center">
+        <p className="font-semibold text-foreground">No businesses listed yet</p>
+        <p className="mt-1 text-sm text-muted-foreground">Be the first to add yours to the directory.</p>
+        <Link
+          href="/businesses/directory/new"
+          className="mt-4 inline-flex h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground"
+        >
+          List yours
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <ul className="grid gap-3 sm:grid-cols-2">
-      {items.map(([n, m]) => (
-        <li key={n} className="rounded-lg border bg-card p-4">
-          <p className="font-semibold text-foreground">{n}</p>
-          <p className="text-sm text-muted-foreground">{m}</p>
-        </li>
+      {businesses.map((b) => (
+        <Link
+          key={b.id}
+          href={`/businesses/directory/${b.id}`}
+          className="rounded-lg border bg-card p-4 transition-colors hover:border-border-strong"
+        >
+          <p className="font-semibold text-foreground">{b.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {[b.category, b.location].filter(Boolean).join(" · ")}
+          </p>
+        </Link>
       ))}
+      <li className="col-span-full p-1 text-center">
+        <Link href="/businesses/directory" className="text-sm font-semibold text-primary-strong">
+          See all businesses →
+        </Link>
+      </li>
     </ul>
   );
 }

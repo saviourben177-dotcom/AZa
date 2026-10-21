@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Search as SearchIcon } from "lucide-react";
 import { useState, useTransition, useEffect } from "react";
 import { AppShell } from "@/components/aza/app-shell";
@@ -10,6 +11,12 @@ import type { Opportunity, Idea } from "@/lib/aza-data";
 import { createClient } from "@/lib/supabase/client";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
 import type { OpportunityCategory } from "@/lib/types";
+
+interface ProfileMatch {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+}
 
 // Real values of the `category` column (see src/lib/types.ts for the
 // authoritative enum). `category` is a Postgres enum, and ilike against
@@ -38,6 +45,7 @@ export default function SearchPage() {
   const [userId, setUserId] = useState<string | undefined>();
   const [dbOpportunities, setDbOpportunities] = useState<Opportunity[]>([]);
   const [dbIdeas, setDbIdeas] = useState<Idea[]>([]);
+  const [dbProfiles, setDbProfiles] = useState<ProfileMatch[]>([]);
   const [isPending, startTransition] = useTransition();
 
   const t = q.toLowerCase().trim();
@@ -51,6 +59,7 @@ export default function SearchPage() {
     if (!t) {
       setDbOpportunities([]);
       setDbIdeas([]);
+      setDbProfiles([]);
       return;
     }
 
@@ -61,7 +70,7 @@ export default function SearchPage() {
           const clean = t.replace(/[%,]/g, "");
           const category = matchedCategory(t);
 
-          const [{ data: opps }, { data: ids }] = await Promise.all([
+          const [{ data: opps }, { data: ids }, { data: profileRows }] = await Promise.all([
             supabase
               .from("opportunities")
               .select("*")
@@ -71,6 +80,14 @@ export default function SearchPage() {
               .from("ideas")
               .select("*, profiles(full_name, avatar_url)")
               .or(`title.ilike.%${clean}%,description.ilike.%${clean}%`)
+              .limit(10),
+            // public_profiles is the privacy-filtered view (excludes accounts set
+            // to Private in Settings) — matches the pattern used on the
+            // Following page, never query the raw profiles table here.
+            supabase
+              .from("public_profiles")
+              .select("id, full_name, avatar_url")
+              .ilike("full_name", `%${clean}%`)
               .limit(10),
           ]);
 
@@ -94,9 +111,11 @@ export default function SearchPage() {
           // not a reason to show unrelated demo content instead.
           setDbOpportunities(oppRows.map((o) => mapDbOpportunityToPrototype(o)));
           setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
+          setDbProfiles((profileRows ?? []).filter((p): p is ProfileMatch => p.id !== null));
         } catch {
           setDbOpportunities([]);
           setDbIdeas([]);
+          setDbProfiles([]);
         }
       });
     }, 250);
@@ -106,7 +125,8 @@ export default function SearchPage() {
 
   const oppMatches = t ? dbOpportunities : [];
   const ideaMatches = t ? dbIdeas : [];
-  const total = oppMatches.length + ideaMatches.length;
+  const profileMatches = t ? dbProfiles : [];
+  const total = oppMatches.length + ideaMatches.length + profileMatches.length;
 
   return (
     <AppShell>
@@ -145,6 +165,34 @@ export default function SearchPage() {
         />
       ) : (
         <div className="space-y-8">
+          {profileMatches.length > 0 && (
+            <Section title={`People (${profileMatches.length})`}>
+              <ul className="divide-y overflow-hidden rounded-lg border">
+                {profileMatches.map((p) => (
+                  <li key={p.id}>
+                    <Link href={`/u/${p.id}`} className="flex items-center gap-3 p-4 hover:bg-accent">
+                      {p.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={p.avatar_url}
+                          alt={p.full_name ?? "Profile"}
+                          className="size-10 shrink-0 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft font-display text-sm font-bold text-primary-strong">
+                          {(p.full_name ?? "?").charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="truncate font-medium text-foreground">
+                        {p.full_name ?? "Aza user"}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+
           {oppMatches.length > 0 && (
             <Section title={`Opportunities (${oppMatches.length})`}>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
