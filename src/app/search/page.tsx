@@ -70,6 +70,10 @@ export default function SearchPage() {
           const clean = t.replace(/[%,]/g, "");
           const category = matchedCategory(t);
 
+          // public_profiles has no declared foreign key back to
+          // ideas.user_id, so PostgREST can't resolve it as an embed —
+          // embedding it (public_profiles(...)) fails the whole ideas
+          // query. Fetch idea author profiles as a separate lookup below.
           const [{ data: opps }, { data: ids }, { data: profileRows }] = await Promise.all([
             supabase
               .from("opportunities")
@@ -78,7 +82,7 @@ export default function SearchPage() {
               .limit(10),
             supabase
               .from("ideas")
-              .select("*, public_profiles(full_name, avatar_url)")
+              .select("*")
               .or(`title.ilike.%${clean}%,description.ilike.%${clean}%`)
               .limit(10),
             // public_profiles is the privacy-filtered view (excludes accounts set
@@ -90,6 +94,18 @@ export default function SearchPage() {
               .ilike("full_name", `%${clean}%`)
               .limit(10),
           ]);
+
+          let ideaAuthorMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+          const ideaAuthorIds = Array.from(new Set((ids ?? []).map((i) => i.user_id).filter(Boolean)));
+          if (ideaAuthorIds.length > 0) {
+            const { data: ideaAuthors } = await supabase
+              .from("public_profiles")
+              .select("id, full_name, avatar_url")
+              .in("id", ideaAuthorIds);
+            ideaAuthorMap = new Map(
+              (ideaAuthors ?? []).map((p) => [p.id as string, { full_name: p.full_name, avatar_url: p.avatar_url }])
+            );
+          }
 
           let oppRows = opps ?? [];
           if (category) {
@@ -110,7 +126,11 @@ export default function SearchPage() {
           // Zero rows is a real, correct result — it means nothing matched,
           // not a reason to show unrelated demo content instead.
           setDbOpportunities(oppRows.map((o) => mapDbOpportunityToPrototype(o)));
-          setDbIdeas((ids ?? []).map((item) => mapDbIdeaToPrototype(item)));
+          setDbIdeas(
+            (ids ?? []).map((item) =>
+              mapDbIdeaToPrototype({ ...item, public_profiles: ideaAuthorMap.get(item.user_id) })
+            )
+          );
           setDbProfiles((profileRows ?? []).filter((p): p is ProfileMatch => p.id !== null));
         } catch {
           setDbOpportunities([]);

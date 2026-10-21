@@ -27,18 +27,20 @@ export default async function TeamDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch the idea and its roles as two separate queries rather than one
-  // nested join. A nested idea_roles(...) join is subject to idea_roles'
-  // own RLS policy — if that policy is stricter than the one on ideas
-  // itself (e.g. no owner exception), the whole combined query can come
-  // back empty even when the parent idea row is genuinely visible, which
-  // would incorrectly 404 the owner's own listing. Querying separately
-  // means a roles-table permission quirk can't take down the whole page.
+  // Fetch the idea, its roles, and the author's public profile as three
+  // separate queries rather than nested embeds. Two reasons:
+  // 1. idea_roles has its own RLS policy — if it's stricter than the one
+  //    on ideas, a combined query can come back empty even when the
+  //    parent idea is genuinely visible, incorrectly 404ing the page.
+  // 2. public_profiles is a VIEW with no foreign-key constraint back to
+  //    ideas.user_id. PostgREST's embed syntax (profiles(...)) resolves
+  //    joins via declared FK relationships, not just matching column
+  //    names — embedding a view with no FK makes the whole query fail,
+  //    which also 404s the page. Querying it separately sidesteps both
+  //    failure modes entirely.
   const { data: idea } = await supabase
     .from("ideas")
-    .select(
-      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, public_profiles(full_name, avatar_url)"
-    )
+    .select("id, title, user_id, category, created_at, looking_for_collaborators, visibility")
     .eq("id", id)
     .maybeSingle();
 
@@ -47,13 +49,12 @@ export default async function TeamDetailPage({
   if (!idea) notFound();
   if (!isOwner && (!idea.looking_for_collaborators || idea.visibility !== "public")) notFound();
 
-  const { data: rolesRaw } = await supabase
-    .from("idea_roles")
-    .select("id, role_name, slots_needed, slots_filled")
-    .eq("idea_id", id);
+  const [{ data: rolesRaw }, { data: authorProfile }] = await Promise.all([
+    supabase.from("idea_roles").select("id, role_name, slots_needed, slots_filled").eq("idea_id", id),
+    supabase.from("public_profiles").select("full_name, avatar_url").eq("id", idea.user_id).maybeSingle(),
+  ]);
 
   const roles = (rolesRaw as unknown as IdeaRole[]) ?? [];
-  const authorProfile = idea.public_profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
   const hoursAgo = Math.max(1, Math.round((Date.now() - new Date(idea.created_at).getTime()) / 3600000));
 
   return (

@@ -22,27 +22,41 @@ export default async function IdeasFeedPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // public_profiles is a view with no declared foreign key back to
+  // ideas.user_id, so PostgREST can't resolve it as an embed — embedding
+  // it (public_profiles(...)) fails the whole query. Fetch ideas and
+  // author profiles as separate queries and join them in JS instead.
   const { data: dbIdeas } = await supabase
     .from("ideas")
-    .select("*, public_profiles(full_name, avatar_url)")
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(50);
 
   const ideaIds = (dbIdeas ?? []).map((i) => i.id);
-  let upvotedSet = new Set<string>();
-  let savedSet = new Set<string>();
-  if (user && ideaIds.length > 0) {
-    const [{ data: upvotes }, { data: saves }] = await Promise.all([
-      supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
-      supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
-    ]);
-    upvotedSet = new Set((upvotes ?? []).map((u) => u.idea_id));
-    savedSet = new Set((saves ?? []).map((s) => s.idea_id));
-  }
+  const authorIds = Array.from(new Set((dbIdeas ?? []).map((i) => i.user_id).filter(Boolean)));
+
+  const [profilesResult, upvotesResult, savesResult] = await Promise.all([
+    authorIds.length > 0
+      ? supabase.from("public_profiles").select("id, full_name, avatar_url").in("id", authorIds)
+      : Promise.resolve({ data: null }),
+    user && ideaIds.length > 0
+      ? supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds)
+      : Promise.resolve({ data: null }),
+    user && ideaIds.length > 0
+      ? supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds)
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const profileMap = new Map(
+    (profilesResult.data ?? []).map((p: any) => [p.id as string, { full_name: p.full_name, avatar_url: p.avatar_url }])
+  );
+  const upvotedSet = new Set((upvotesResult.data ?? []).map((u: any) => u.idea_id));
+  const savedSet = new Set((savesResult.data ?? []).map((s: any) => s.idea_id));
 
   const list = (dbIdeas ?? []).map((i) =>
     mapDbIdeaToPrototype({
       ...i,
+      public_profiles: profileMap.get(i.user_id),
       is_upvoted: upvotedSet.has(i.id),
       is_saved: savedSet.has(i.id),
     })

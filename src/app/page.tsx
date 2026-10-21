@@ -58,6 +58,9 @@ export default async function HomePage() {
     showAppGuide = profile?.has_seen_app_guide === false;
   }
 
+  // public_profiles is a view with no declared foreign key back to
+  // ideas.user_id, so PostgREST can't resolve it as an embed — embedding
+  // it (public_profiles(...)) fails the whole query. Fetch separately.
   const [{ data: dbOpps }, { data: dbIdeas }] = await Promise.all([
     supabase
       .from("opportunities")
@@ -66,10 +69,20 @@ export default async function HomePage() {
       .limit(20),
     supabase
       .from("ideas")
-      .select("*, public_profiles(full_name, avatar_url)")
+      .select("*")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);
+
+  const ideaAuthorIds = Array.from(new Set((dbIdeas ?? []).map((i) => i.user_id).filter(Boolean)));
+  let ideaProfileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  if (ideaAuthorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", ideaAuthorIds);
+    ideaProfileMap = new Map((profiles ?? []).map((p) => [p.id as string, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+  }
 
   // No mock fallback: an empty real result is a genuine "nothing here
   // yet" state, not a reason to show unrelated demo content as if it
@@ -78,7 +91,9 @@ export default async function HomePage() {
   const closing = oppList.filter((o) => o.daysLeft !== null && o.daysLeft <= 10);
   const displayClosing = closing.length > 0 ? closing : oppList.slice(0, 6);
 
-  const ideaList = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
+  const ideaList = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({ ...i, public_profiles: ideaProfileMap.get(i.user_id) })
+  );
 
   // Server-rendered, so this reflects the server's clock rather than the
   // visitor's — fine for a greeting, not used anywhere that needs to be exact.

@@ -20,13 +20,28 @@ export default async function GrowthHubPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // public_profiles is a view with no declared foreign key back to
+  // ideas.user_id, so PostgREST can't resolve it as an embed — embedding
+  // it (public_profiles(...)) fails the whole query. Fetch separately.
   const { data: dbIdeas } = await supabase
     .from("ideas")
-    .select("*, public_profiles(full_name, avatar_url)")
+    .select("*")
     .order("upvotes_count", { ascending: false })
     .limit(4);
 
-  const displayedIdeas = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
+  const authorIds = Array.from(new Set((dbIdeas ?? []).map((i) => i.user_id).filter(Boolean)));
+  let profileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
+  if (authorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, full_name, avatar_url")
+      .in("id", authorIds);
+    profileMap = new Map((profiles ?? []).map((p) => [p.id as string, { full_name: p.full_name, avatar_url: p.avatar_url }]));
+  }
+
+  const displayedIdeas = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({ ...i, public_profiles: profileMap.get(i.user_id) })
+  );
 
   let userSkills: { name: string; progress_percent: number }[] = [];
   if (user) {
