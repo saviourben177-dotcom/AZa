@@ -42,7 +42,7 @@ export function mapDbIdeaToPrototype(i: any): PrototypeIdea {
   // manually, e.g. on the public profile page where we already know
   // the author), pass that through so AuthorLine can show/link the
   // real person instead of falling back to the mock `people` dict.
-  const joinedProfile = i.profiles ?? i.author;
+  const joinedProfile = i.public_profiles ?? i.profiles ?? i.author;
   const authorName: string | undefined =
     i.author_name ?? (typeof joinedProfile === "object" ? joinedProfile?.full_name : undefined) ?? undefined;
   const authorAvatarUrl: string | null | undefined =

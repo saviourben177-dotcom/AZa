@@ -22,7 +22,7 @@ export default async function GrowthHubPage() {
 
   const { data: dbIdeas } = await supabase
     .from("ideas")
-    .select("*, profiles(full_name, avatar_url)")
+    .select("*, public_profiles(full_name, avatar_url)")
     .order("upvotes_count", { ascending: false })
     .limit(4);
 

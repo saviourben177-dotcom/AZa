@@ -53,9 +53,14 @@ export default async function TeamFinderPage({
         title="Team Finder"
         sub="Teams looking for people like you"
         action={
-          <Link href="/businesses/team-finder/my-requests" className={btn.secondary}>
-            My requests
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/growth/ideas/new?team=1" className={btn.primary}>
+              Post project
+            </Link>
+            <Link href="/businesses/team-finder/my-requests" className={btn.secondary}>
+              My requests
+            </Link>
+          </div>
         }
       />
 

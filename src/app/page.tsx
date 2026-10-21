@@ -66,7 +66,7 @@ export default async function HomePage() {
       .limit(20),
     supabase
       .from("ideas")
-      .select("*, profiles(full_name, avatar_url)")
+      .select("*, public_profiles(full_name, avatar_url)")
       .order("created_at", { ascending: false })
       .limit(6),
   ]);

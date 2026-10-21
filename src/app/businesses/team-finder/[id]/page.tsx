@@ -37,7 +37,7 @@ export default async function TeamDetailPage({
   const { data: idea } = await supabase
     .from("ideas")
     .select(
-      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, profiles(full_name, avatar_url)"
+      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, public_profiles(full_name, avatar_url)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -53,7 +53,7 @@ export default async function TeamDetailPage({
     .eq("idea_id", id);
 
   const roles = (rolesRaw as unknown as IdeaRole[]) ?? [];
-  const authorProfile = idea.profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
+  const authorProfile = idea.public_profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
   const hoursAgo = Math.max(1, Math.round((Date.now() - new Date(idea.created_at).getTime()) / 3600000));
 
   return (

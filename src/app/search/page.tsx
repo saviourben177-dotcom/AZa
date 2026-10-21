@@ -78,7 +78,7 @@ export default function SearchPage() {
               .limit(10),
             supabase
               .from("ideas")
-              .select("*, profiles(full_name, avatar_url)")
+              .select("*, public_profiles(full_name, avatar_url)")
               .or(`title.ilike.%${clean}%,description.ilike.%${clean}%`)
               .limit(10),
             // public_profiles is the privacy-filtered view (excludes accounts set
