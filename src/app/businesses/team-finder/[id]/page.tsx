@@ -27,13 +27,17 @@ export default async function TeamDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch by id alone first — an owner viewing their own listing should never
-  // 404 just because they've since turned recruiting off. Visibility for
-  // non-owners (and for recruiting status) is enforced just below instead.
+  // Fetch the idea and its roles as two separate queries rather than one
+  // nested join. A nested idea_roles(...) join is subject to idea_roles'
+  // own RLS policy — if that policy is stricter than the one on ideas
+  // itself (e.g. no owner exception), the whole combined query can come
+  // back empty even when the parent idea row is genuinely visible, which
+  // would incorrectly 404 the owner's own listing. Querying separately
+  // means a roles-table permission quirk can't take down the whole page.
   const { data: idea } = await supabase
     .from("ideas")
     .select(
-      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, idea_roles(id, role_name, slots_needed, slots_filled), profiles(full_name, avatar_url)"
+      "id, title, user_id, category, created_at, looking_for_collaborators, visibility, profiles(full_name, avatar_url)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -43,7 +47,12 @@ export default async function TeamDetailPage({
   if (!idea) notFound();
   if (!isOwner && (!idea.looking_for_collaborators || idea.visibility !== "public")) notFound();
 
-  const roles = (idea.idea_roles as unknown as IdeaRole[]) ?? [];
+  const { data: rolesRaw } = await supabase
+    .from("idea_roles")
+    .select("id, role_name, slots_needed, slots_filled")
+    .eq("idea_id", id);
+
+  const roles = (rolesRaw as unknown as IdeaRole[]) ?? [];
   const authorProfile = idea.profiles as unknown as { full_name: string | null; avatar_url: string | null } | null;
   const hoursAgo = Math.max(1, Math.round((Date.now() - new Date(idea.created_at).getTime()) / 3600000));
 
