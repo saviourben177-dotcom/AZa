@@ -175,7 +175,7 @@ export default async function HomePage() {
         </div>
       ) : (
         <div className="mb-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {oppList.slice(0, 6).map((o) => (
+          {oppList.slice(0, 3).map((o) => (
             <OpportunityCard key={o.id} o={o} />
           ))}
         </div>
@@ -186,7 +186,7 @@ export default async function HomePage() {
         <Empty title="No ideas posted yet" />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
-          {ideaList.slice(0, 2).map((i) => (
+          {ideaList.slice(0, 3).map((i) => (
             <IdeaCard key={i.id} idea={i} currentUserId={user?.id} />
           ))}
         </div>

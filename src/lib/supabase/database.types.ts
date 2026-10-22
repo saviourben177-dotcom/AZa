@@ -488,6 +488,84 @@ export type Database = {
           },
         ]
       }
+      featured_opportunity_clicks: {
+        Row: {
+          created_at: string
+          featured_id: string
+          id: string
+          source: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          featured_id: string
+          id?: string
+          source?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          featured_id?: string
+          id?: string
+          source?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_opportunity_clicks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_opportunity_clicks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      featured_opportunity_status: {
+        Row: {
+          created_at: string
+          featured_id: string
+          status: Database["public"]["Enums"]["application_status"]
+          status_updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          featured_id: string
+          status?: Database["public"]["Enums"]["application_status"]
+          status_updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          featured_id?: string
+          status?: Database["public"]["Enums"]["application_status"]
+          status_updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_opportunity_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_opportunity_status_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       follows: {
         Row: {
           created_at: string

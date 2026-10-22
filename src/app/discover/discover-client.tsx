@@ -1,24 +1,33 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Search, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { AppShell } from "@/components/aza/app-shell";
 import { OpportunityCard, PageHeader } from "@/components/aza/ui";
+import FeaturedOpportunityCard from "@/components/aza/featured-opportunity-card";
 import type { Opportunity } from "@/lib/aza-data";
+import type { FeaturedOpportunity } from "@/lib/aza/featured-opportunities";
+import type { ApplicationStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const cats = ["All", "Grant", "Scholarship", "Fellowship", "Hackathon", "Internship", "Competition"];
+const cats = ["All", "Featured", "Grant", "Scholarship", "Fellowship", "Hackathon", "Internship", "Competition"];
 
 export default function DiscoverClient({
   initialOpportunities,
+  featured,
+  featuredStatusMap,
+  signedIn,
 }: {
   initialOpportunities: Opportunity[];
+  featured: FeaturedOpportunity[];
+  featuredStatusMap: Record<string, ApplicationStatus>;
+  signedIn: boolean;
 }) {
   const [cat, setCat] = useState("All");
   const [q, setQ] = useState("");
 
   const list = initialOpportunities
-    .filter((o) => cat === "All" || o.category.toLowerCase() === cat.toLowerCase())
+    .filter((o) => cat === "All" || (cat !== "Featured" && o.category.toLowerCase() === cat.toLowerCase()))
     .filter((o) => (o.title + o.org).toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => {
       // Rolling-basis (null deadline) opportunities sort after everything
@@ -28,6 +37,11 @@ export default function DiscoverClient({
       if (b.daysLeft === null) return -1;
       return a.daysLeft - b.daysLeft;
     });
+
+  const featuredList = featured.filter((f) => (f.title + f.description).toLowerCase().includes(q.toLowerCase()));
+
+  const showFeatured = cat === "All" || cat === "Featured";
+  const showMain = cat !== "Featured";
 
   return (
     <AppShell>
@@ -60,15 +74,53 @@ export default function DiscoverClient({
           </button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((o) => (
-          <OpportunityCard key={o.id} o={o} />
-        ))}
-      </div>
-      {list.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">
-          Nothing matches yet. Try another category.
-        </p>
+
+      {showFeatured && cat === "Featured" && (
+        <div className="mb-5 flex items-start gap-2 rounded-lg border border-primary/20 bg-primary-soft p-3 text-xs text-primary-strong">
+          <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+          <p>
+            These are vetted external platforms — some links support Aza at no extra cost to you. Status here is
+            self-reported; Aza has no API access to these platforms, so nothing syncs automatically.
+          </p>
+        </div>
+      )}
+
+      {showFeatured && featuredList.length > 0 && (
+        <div className={cat === "Featured" ? "mb-10" : "mb-10"}>
+          {cat === "All" && <h2 className="mb-3 text-lg font-display font-bold text-foreground">Featured</h2>}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {featuredList.map((f) => (
+              <FeaturedOpportunityCard
+                key={f.id}
+                featured={f}
+                status={featuredStatusMap[f.id] ?? "saved"}
+                signedIn={signedIn}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {showMain && (
+        <>
+          {cat === "All" && list.length > 0 && (
+            <h2 className="mb-3 text-lg font-display font-bold text-foreground">All opportunities</h2>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {list.map((o) => (
+              <OpportunityCard key={o.id} o={o} />
+            ))}
+          </div>
+          {list.length === 0 && cat !== "Featured" && (
+            <p className="py-12 text-center text-sm text-muted-foreground">
+              Nothing matches yet. Try another category.
+            </p>
+          )}
+        </>
+      )}
+
+      {cat === "Featured" && featuredList.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">No featured platforms match your search.</p>
       )}
     </AppShell>
   );
