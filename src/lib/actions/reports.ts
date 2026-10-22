@@ -3,16 +3,27 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+import type { Database } from "@/lib/supabase/database.types";
+
 export type ReportContentType = "message" | "idea" | "idea_comment";
 
-const VALID_REASONS = new Set([
-  "Spam or scam",
-  "Harassment or bullying",
-  "Hate speech or discrimination",
-  "Inappropriate content",
-  "Misinformation",
-  "Other",
-]);
+type ReportReason = Database["public"]["Enums"]["report_reason"];
+
+// Maps the human-readable labels shown in report-sheet.tsx to the DB's
+// report_reason enum. The labels were previously sent as-is to the
+// `reason` column, which only accepts the enum values below — every
+// report submitted through this path was failing silently (the UI caught
+// the resulting error and showed "Couldn't send report", but nothing was
+// ever actually saved). This map is the fix; the UI's displayed labels
+// are unchanged.
+const REASON_LABEL_TO_ENUM: Record<string, ReportReason> = {
+  "Spam or scam": "spam",
+  "Harassment or bullying": "harassment_or_bullying",
+  "Hate speech or discrimination": "hate_speech",
+  "Inappropriate content": "inappropriate_content",
+  "Misinformation": "misinformation",
+  "Other": "other",
+};
 
 export async function createReport(input: {
   contentType: ReportContentType;
@@ -20,7 +31,8 @@ export async function createReport(input: {
   reason: string;
   details?: string;
 }) {
-  if (!VALID_REASONS.has(input.reason)) throw new Error("Choose a valid reason");
+  const reasonEnum = REASON_LABEL_TO_ENUM[input.reason];
+  if (!reasonEnum) throw new Error("Choose a valid reason");
   if (!input.contentId) throw new Error("This content is unavailable");
   if (input.details && input.details.length > 1000) throw new Error("Details are too long");
 
@@ -69,7 +81,7 @@ export async function createReport(input: {
       content_preview: contentPreview.slice(0, 2000),
       reporter_id: user.id,
       reported_user_id: reportedUserId,
-      reason: input.reason,
+      reason: reasonEnum,
       details: input.details?.trim() || null,
     });
   if (error) throw new Error(error.message);

@@ -55,14 +55,45 @@ git matches what's actually in the DB — you do not need to re-run them.
 - `src/app/growth/courses/page.tsx` — wired in `MarkCompleteButton` on
   each course card, fetches the user's completed-resource IDs
 
+## v2 — fixes a real build-breaking bug the first version missed
+The first version of this zip (v1) shipped with two pre-existing type
+errors left in on the theory they were unrelated/out of scope. That was
+wrong — `tsc --noEmit` passed, but a full `next build` does a stricter
+pass and **did fail on them**, which is exactly what happened on your
+Vercel deploy. v2 fixes both. Also includes two changed files not in v1:
+
+- `src/lib/actions/reports.ts` — `createReport`'s reason validation was
+  checking against a `Set` of human-readable labels ("Spam or scam",
+  etc.) but then sending that same label straight to the DB's `reason`
+  column, which only accepts the enum (`spam`, `harassment_or_bullying`,
+  etc.). Every report submitted through `report-sheet.tsx` was silently
+  failing (caught by the UI's error handler, but nothing was ever saved).
+  Fixed with a label→enum map; the UI is unchanged.
+- `src/lib/aza/api.ts` — same category of bug in the other report path
+  (`report.tsx` → `api.createReport`). Two of its six reason values
+  ("harassment", "hate") didn't match the enum
+  ("harassment_or_bullying", "hate_speech"). Fixed with a small map; the
+  other four values already matched and are untouched.
+
+Neither bug was introduced by the courses/skill-tracking work — both
+predate it. They only became visible once `database.types.ts` was
+regenerated to reflect the live schema accurately (the old, stale types
+file in the repo had looser/incorrect typing here that was masking a
+real runtime bug in report submission).
+
 ## What was verified before this was packaged
-- `tsc --noEmit`: clean across the whole project (two pre-existing,
-  unrelated errors in `reports.ts`/`api.ts` were exposed by the type
-  regeneration — not caused by these changes, left alone)
-- `next lint`: clean on every touched file
-- `next build`: compiled successfully (only failure was a sandboxed
-  environment's lack of internet access to Google Fonts — not a code
-  issue)
+- `tsc --noEmit`: clean across the whole project, zero errors
+- `next lint`: clean on every touched file (two pre-existing warnings
+  remain, in files never touched by this work)
+- **A full production `next build` was run against this exact code,
+  merged onto a fresh clone of the real, current `main` branch** (not
+  just the feature branch) — confirmed all 67 routes compile, including
+  both new ones. The only failure encountered in that process was the
+  sandbox's lack of internet access to Google Fonts (a `next/font/google`
+  build-time fetch) — this was isolated by temporarily stubbing the font
+  import, confirming the rest of the build succeeds, then the stub was
+  reverted before packaging. Your Vercel deploy has normal internet
+  access and will fetch those fonts fine; this was never a code issue.
 - The ingest parsing logic was tested against real RSS/Atom samples
 - The full upsert + skill-resolution flow was run directly against the
   live database, then cleaned up
@@ -71,3 +102,7 @@ git matches what's actually in the DB — you do not need to re-run them.
   using the one existing real user account, confirmed correct in both
   directions (0% → 100% → 0%), then fully reverted — no trace left on
   that account
+- This zip's contents were diffed line-by-line against the actual current
+  `main` branch (fetched fresh, not assumed) before packaging, to confirm
+  every file applies cleanly with no silent overwrites of unrelated work
+  (e.g. the Featured Opportunities commit already on `main`)

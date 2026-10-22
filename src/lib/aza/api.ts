@@ -1,5 +1,6 @@
 import { askGrowthAssistant, generateBusinessPlan } from "./ai.functions";
 import { createClient } from "@/lib/supabase/client";
+import type { Database } from "@/lib/supabase/database.types";
 
 type Payload = Record<string, FormDataEntryValue>;
 export type ReportType = "post" | "comment" | "message" | "opportunity" | "business" | "idea" | "idea_comment";
@@ -385,6 +386,15 @@ export const api = {
       data: { user },
     } = await supabase.auth.getUser();
     if (user) {
+      // src/components/aza/report.tsx's reportReasons values ("harassment",
+      // "hate") don't match the DB's report_reason enum
+      // ("harassment_or_bullying", "hate_speech") — this was being sent
+      // as-is and would fail the insert for those two reasons. The rest
+      // already match the enum, so this map only needs those two entries.
+      const reasonMap: Record<string, string> = {
+        harassment: "harassment_or_bullying",
+        hate: "hate_speech",
+      };
       await supabase.from("reports").insert({
         reporter_id: user.id,
         content_type:
@@ -394,7 +404,7 @@ export const api = {
               ? "idea_comment"
               : "message",
         content_id: r.target_id,
-        reason: r.reason,
+        reason: (reasonMap[r.reason] ?? r.reason) as Database["public"]["Enums"]["report_reason"],
         details: r.notes ?? r.content,
         reported_user_id: r.reported_user_id || user.id,
         content_preview: r.content,
