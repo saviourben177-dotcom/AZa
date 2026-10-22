@@ -24,11 +24,15 @@ export default async function MyIdeasPage() {
 
   if (!user) redirect("/login?next=/growth/my-ideas");
 
-  const { data: dbIdeas } = await supabase
+  // Do not embed profiles here: this is an ownership query and it must still
+  // work when a profile is private or its public-profile policy changes.
+  const { data: dbIdeas, error } = await supabase
     .from("ideas")
-    .select("*, profiles(full_name, avatar_url)")
+    .select("*")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Could not load your ideas: ${error.message}`);
 
   const list = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
 

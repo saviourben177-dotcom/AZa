@@ -41,18 +41,23 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login?next=/profile");
 
-  const [{ data: p }, { data: dbIdeas }, { data: dbSaved }, { data: dbApps }, { data: cv }] =
+  const [{ data: p }, { data: dbIdeas, error: ideasError }, { data: dbSaved }, { data: dbApps }, { data: cv }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase
         .from("ideas")
-        .select("*, profiles(full_name, avatar_url)")
+        // A user's own ideas do not need a profile embed. Keeping this as a
+        // direct ownership query means a restrictive/public-profile policy
+        // cannot make the whole list look empty.
+        .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
       supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id),
       supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id).eq("status", "applied"),
       supabase.from("cv_profiles").select("summary, skills, education, experience").eq("user_id", user.id).maybeSingle(),
     ]);
+
+  if (ideasError) throw new Error(`Could not load your ideas: ${ideasError.message}`);
 
   const profileData = {
     id: user.id,
@@ -62,7 +67,13 @@ export default async function ProfilePage() {
     avatarUrl: p?.avatar_url ?? null,
   };
 
-  const myIdeas = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
+  const myIdeas = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({
+      ...i,
+      author_name: profileData.name,
+      author_avatar_url: profileData.avatarUrl,
+    })
+  );
   const ideasCount = myIdeas.length;
   const savedCount = dbSaved?.length ?? 0;
   const appliedCount = dbApps?.length ?? 0;

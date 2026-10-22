@@ -76,6 +76,8 @@ export async function createIdea(formData: FormData) {
   }
 
   revalidatePath("/growth/ideas");
+  revalidatePath("/growth/my-ideas");
+  revalidatePath("/profile");
   revalidatePath("/businesses/team-finder");
   redirect(lookingForCollaborators ? `/growth/ideas/posted?id=${data.id}` : `/growth/ideas/${data.id}`);
 }
@@ -116,6 +118,8 @@ export async function deleteIdea(ideaId: string, redirectTo: string = "/growth/i
   // does nothing) for anyone else, rather than deleting someone else's post.
   await supabase.from("ideas").delete().eq("id", ideaId).eq("user_id", user.id);
   revalidatePath("/growth/ideas");
+  revalidatePath("/growth/my-ideas");
+  revalidatePath("/profile");
   revalidatePath("/businesses/team-finder");
   redirect(redirectTo);
 }
