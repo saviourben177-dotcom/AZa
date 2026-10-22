@@ -4,6 +4,7 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink } from "@/components/aza/kit";
 import { PageHeader, Tag } from "@/components/aza/ui";
 import SaveResourceButton from "@/components/save-resource-button";
+import MarkCompleteButton from "@/components/mark-complete-button";
 import CategoryPills from "./category-pills";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export default async function CoursesPage({
 
   const { data: resources } = await supabase
     .from("skill_resources")
-    .select("*, skills(name, category)")
+    .select("*, skills(id, name, category)")
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -38,12 +39,14 @@ export default async function CoursesPage({
   const categories = Array.from(new Set((skillRows ?? []).map((s) => s.category))).sort();
 
   let savedIds = new Set<string>();
+  let completedIds = new Set<string>();
   if (user) {
-    const { data: savedResources } = await supabase
-      .from("saved_resources")
-      .select("resource_id")
-      .eq("user_id", user.id);
+    const [{ data: savedResources }, { data: completedResources }] = await Promise.all([
+      supabase.from("saved_resources").select("resource_id").eq("user_id", user.id),
+      supabase.from("user_skill_resources").select("resource_id").eq("user_id", user.id),
+    ]);
     savedIds = new Set((savedResources ?? []).map((s) => s.resource_id));
+    completedIds = new Set((completedResources ?? []).map((s) => s.resource_id));
   }
 
   return (
@@ -74,11 +77,19 @@ export default async function CoursesPage({
               </div>
               <h3 className="text-base font-display font-bold leading-snug text-foreground">{r.title}</h3>
               <p className="text-sm text-muted-foreground">{r.provider ?? "Unknown provider"}</p>
-              <div className="mt-auto flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {r.is_free ? <Tag tone="primary">Free</Tag> : <Tag>Paid</Tag>}
                 <Tag>{r.level}</Tag>
                 {r.duration_hours ? <Tag icon={<Clock className="size-3.5" />}>{r.duration_hours}h</Tag> : null}
                 {r.rating ? <Tag>★{r.rating}</Tag> : null}
+              </div>
+              <div className="mt-auto">
+                <MarkCompleteButton
+                  skillId={(r.skills as unknown as { id: string })?.id}
+                  resourceId={r.id}
+                  initialCompleted={completedIds.has(r.id)}
+                  isAuthed={!!user}
+                />
               </div>
             </a>
           ))}

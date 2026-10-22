@@ -1684,38 +1684,44 @@ export type Database = {
         Row: {
           content_id: string
           content_preview: string
-          content_type: string
+          content_type: Database["public"]["Enums"]["report_content_type"]
           created_at: string
           details: string | null
           id: string
-          reason: string
+          reason: Database["public"]["Enums"]["report_reason"]
           reported_user_id: string
           reporter_id: string
-          status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
         }
         Insert: {
           content_id: string
           content_preview: string
-          content_type: string
+          content_type: Database["public"]["Enums"]["report_content_type"]
           created_at?: string
           details?: string | null
           id?: string
-          reason: string
+          reason: Database["public"]["Enums"]["report_reason"]
           reported_user_id: string
           reporter_id: string
-          status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
         }
         Update: {
           content_id?: string
           content_preview?: string
-          content_type?: string
+          content_type?: Database["public"]["Enums"]["report_content_type"]
           created_at?: string
           details?: string | null
           id?: string
-          reason?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
           reported_user_id?: string
           reporter_id?: string
-          status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
         }
         Relationships: [
           {
@@ -1742,6 +1748,20 @@ export type Database = {
           {
             foreignKeyName: "reports_reporter_id_fkey"
             columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_reviewed_by_fkey"
+            columns: ["reviewed_by"]
             isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
@@ -1930,6 +1950,7 @@ export type Database = {
           rating: number | null
           resource_type: string
           skill_id: string
+          source_ref: string | null
           title: string
           url: string
         }
@@ -1945,6 +1966,7 @@ export type Database = {
           rating?: number | null
           resource_type?: string
           skill_id: string
+          source_ref?: string | null
           title: string
           url: string
         }
@@ -1960,6 +1982,7 @@ export type Database = {
           rating?: number | null
           resource_type?: string
           skill_id?: string
+          source_ref?: string | null
           title?: string
           url?: string
         }
@@ -2007,6 +2030,46 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      user_skill_resources: {
+        Row: {
+          completed_at: string
+          resource_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          resource_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          resource_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_skill_resources_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "skill_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_skill_resources_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_skill_resources_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_skills: {
         Row: {
@@ -2126,6 +2189,7 @@ export type Database = {
         | "opportunity_match"
         | "idea_upvote"
         | "system"
+        | "idea_comment"
       opportunity_category:
         | "scholarship"
         | "grant"
@@ -2135,6 +2199,16 @@ export type Database = {
         | "competition"
         | "job_gig"
       product_category: "food" | "fuel_energy" | "building_materials"
+      report_content_type: "message" | "idea" | "idea_comment"
+      report_reason:
+        | "spam"
+        | "harassment_or_bullying"
+        | "hate_speech"
+        | "inappropriate_content"
+        | "scam_or_fraud"
+        | "misinformation"
+        | "other"
+      report_status: "open" | "reviewed" | "dismissed"
       skill_level: "beginner" | "intermediate" | "advanced"
       user_role: "user" | "curator" | "admin" | "editorial"
     }
@@ -2299,6 +2373,7 @@ export const Constants = {
         "opportunity_match",
         "idea_upvote",
         "system",
+        "idea_comment",
       ],
       opportunity_category: [
         "scholarship",
@@ -2310,6 +2385,17 @@ export const Constants = {
         "job_gig",
       ],
       product_category: ["food", "fuel_energy", "building_materials"],
+      report_content_type: ["message", "idea", "idea_comment"],
+      report_reason: [
+        "spam",
+        "harassment_or_bullying",
+        "hate_speech",
+        "inappropriate_content",
+        "scam_or_fraud",
+        "misinformation",
+        "other",
+      ],
+      report_status: ["open", "reviewed", "dismissed"],
       skill_level: ["beginner", "intermediate", "advanced"],
       user_role: ["user", "curator", "admin", "editorial"],
     },

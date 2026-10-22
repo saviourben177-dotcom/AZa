@@ -64,6 +64,7 @@ export default async function MySkillsPage() {
               skillId={s.skill_id}
               name={(s.skills as unknown as Skill).name}
               category={getSkillCategoryLabel((s.skills as unknown as Skill).category)}
+              categorySlug={(s.skills as unknown as Skill).category}
               level={s.level}
               progress={s.progress_percent}
             />

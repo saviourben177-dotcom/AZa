@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/ingest-opportunities",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/ingest-courses",
+      "schedule": "15 5 * * *"
     }
   ]
 }
