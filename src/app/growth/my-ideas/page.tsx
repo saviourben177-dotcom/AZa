@@ -26,15 +26,27 @@ export default async function MyIdeasPage() {
 
   // Do not embed profiles here: this is an ownership query and it must still
   // work when a profile is private or its public-profile policy changes.
-  const { data: dbIdeas, error } = await supabase
-    .from("ideas")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data: dbIdeas, error }, { data: profile }] = await Promise.all([
+    supabase
+      .from("ideas")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    // This is the signed-in user's own profile, so it remains available even
+    // when their public profile is hidden.
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", user.id).maybeSingle(),
+  ]);
 
   if (error) throw new Error(`Could not load your ideas: ${error.message}`);
 
-  const list = (dbIdeas ?? []).map((i) => mapDbIdeaToPrototype(i));
+  const authorName = profile?.full_name || user.email?.split("@")[0] || "Member";
+  const list = (dbIdeas ?? []).map((i) =>
+    mapDbIdeaToPrototype({
+      ...i,
+      author_name: authorName,
+      author_avatar_url: profile?.avatar_url ?? null,
+    })
+  );
 
   return (
     <AppShell>
