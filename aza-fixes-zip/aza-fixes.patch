@@ -1,0 +1,210 @@
+diff --git a/src/components/team-finder/message-thread.tsx b/src/components/team-finder/message-thread.tsx
+index 6464de7..d327199 100644
+--- a/src/components/team-finder/message-thread.tsx
++++ b/src/components/team-finder/message-thread.tsx
+@@ -1,10 +1,17 @@
+ "use client";
+ 
+ import { useRef, useTransition } from "react";
++import type { ChangeEvent } from "react";
+ import { Send } from "lucide-react";
+ import { sendMessage } from "@/lib/actions/team-finder";
+ import { relativeTime } from "@/lib/types";
+ 
++// Cap the composer's auto-grow height so a long message scrolls inside the
++// textarea instead of pushing the send button / rest of the page around.
++// Kept as a plain px number (not a Tailwind class) since it has to match
++// the value used in the inline style driving the auto-resize.
++const MAX_COMPOSER_HEIGHT_PX = 160;
++
+ interface MessageItem {
+   id: string;
+   sender_id: string;
+@@ -26,15 +33,30 @@ export default function MessageThread({
+ }) {
+   const [isPending, startTransition] = useTransition();
+   const formRef = useRef<HTMLFormElement>(null);
++  const textareaRef = useRef<HTMLTextAreaElement>(null);
+ 
+   function handleSubmit(formData: FormData) {
+     startTransition(async () => {
+       if (onSend) await onSend(formData);
+       else if (joinRequestId) await sendMessage(joinRequestId, formData);
+       formRef.current?.reset();
++      // form.reset() clears the textarea's value but not its height, since
++      // the height was set imperatively (not via React state) as the user
++      // typed — collapse it back to one row for the next message.
++      if (textareaRef.current) textareaRef.current.style.height = "auto";
+     });
+   }
+ 
++  // Auto-grow the textarea as the user types, up to MAX_COMPOSER_HEIGHT_PX,
++  // beyond which it scrolls internally instead of growing further. Resetting
++  // height to "auto" first lets scrollHeight shrink back down too (e.g.
++  // after deleting lines), not just grow.
++  function handleInput(e: ChangeEvent<HTMLTextAreaElement>) {
++    const el = e.currentTarget;
++    el.style.height = "auto";
++    el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT_PX)}px`;
++  }
++
+   return (
+     <div className="flex flex-1 flex-col">
+       <div className="flex-1 space-y-3 px-4 py-5 md:px-5">
+@@ -65,14 +87,26 @@ export default function MessageThread({
+       <form
+         ref={formRef}
+         action={handleSubmit}
+-        className="sticky bottom-0 flex items-center gap-2 border-t bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur-xl"
++        className="sticky bottom-0 flex items-end gap-2 border-t bg-background/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 backdrop-blur-xl"
+       >
+-        <input
++        <textarea
++          ref={textareaRef}
+           name="body"
+           required
+           placeholder="Type a message..."
+           autoComplete="off"
+-          className="h-11 min-w-0 flex-1 rounded-full border border-input bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
++          rows={1}
++          onInput={handleInput}
++          // Deliberately no onKeyDown handler here: a <textarea> never
++          // submits its form on Enter on its own (unlike <input>), so Enter
++          // already inserts a newline for free, with no risk of
++          // double-handling composed/IME input — important on Android,
++          // where keydown for Enter can report a synthetic keyCode (229)
++          // during IME composition (observed back to Android 8) rather than
++          // the real key, which would make a keydown-based "submit on
++          // Enter unless Shift" check unreliable. Sending is the Send
++          // button's job, full stop.
++          className="max-h-40 min-h-11 min-w-0 flex-1 resize-none overflow-y-auto rounded-2xl border border-input bg-background px-4 py-2.5 text-sm leading-relaxed text-foreground placeholder:text-muted-foreground shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+         />
+         <button
+           type="submit"
+diff --git a/src/lib/ingest/sources.ts b/src/lib/ingest/sources.ts
+index 047803b..e9aacf9 100644
+--- a/src/lib/ingest/sources.ts
++++ b/src/lib/ingest/sources.ts
+@@ -61,7 +61,6 @@ export interface IngestRow {
+ }
+ 
+ const toISO = (d: Date) => d.toISOString().slice(0, 10);
+-const in92Days = () => new Date(Date.now() + 92 * 86_400_000);
+ 
+ function stripHtml(s: string): string {
+   return s
+@@ -118,18 +117,34 @@ interface HimalayasJob {
+   maxSalary?: number;
+   currency?: string;
+   salaryPeriod?: string;
++  // Comma-separated seniority levels Himalayas itself assigns to the
++  // listing, e.g. "Mid-level, Senior". Used to keep Director/Executive
++  // roles — a mismatch for AZA's youth/early-career audience — out of
++  // the feed, using the source's own classification rather than a guess.
++  seniority?: string;
+ }
+ 
++// Seniority bands (as Himalayas/Jobicy label them) that don't fit a
++// youth/early-career opportunities feed. Applied from the source's own
++// field, not inferred from the job title.
++const SENIOR_LEVELS = /director|executive|vp|vice president|c-level|chief/i;
++
+ async function fetchHimalayas(): Promise<IngestRow[]> {
+   const res = await safeFetch("https://himalayas.app/jobs/api?limit=20");
+   if (!res) return [];
+   const data = (await res.json()) as { jobs?: HimalayasJob[] };
+-  const jobs = data?.jobs ?? [];
++  const jobs = (data?.jobs ?? []).filter((j) => !SENIOR_LEVELS.test(j.seniority ?? ""));
+   return jobs.map((j) => {
+     const tags: string[] = (j.categories ?? []).slice(0, 5);
+     const funding = j.minSalary
+       ? `${j.currency ?? "USD"} ${j.minSalary}-${j.maxSalary ?? j.minSalary} (${j.salaryPeriod ?? "annual"})`
+       : null;
++    // Only Himalayas' own expiryDate counts as a real deadline. When it's
++    // absent, leave deadline null (rolling/ongoing) rather than inventing
++    // a 92-day countdown — the UI already renders null deadlines honestly
++    // (DeadlinePill shows "No deadline"), so there's no need to fake one.
++    const parsedExpiry = j.expiryDate ? new Date(j.expiryDate) : null;
++    const deadline = parsedExpiry && !isNaN(parsedExpiry.getTime()) ? toISO(parsedExpiry) : null;
+     return {
+       source_ref: `himalayas-${j.guid}`,
+       title: String(j.title ?? "Remote role").slice(0, 200),
+@@ -140,7 +155,7 @@ async function fetchHimalayas(): Promise<IngestRow[]> {
+         5000
+       ),
+       eligibility: null,
+-      deadline: toISO(j.expiryDate ? new Date(j.expiryDate) : in92Days()),
++      deadline,
+       apply_url: j.applicationLink || "https://himalayas.app",
+       location: null,
+       remote: true,
+@@ -164,13 +179,16 @@ interface JobicyJob {
+   annualSalaryMin?: number;
+   annualSalaryMax?: number;
+   salaryCurrency?: string;
++  // Jobicy's own seniority label, e.g. "Senior", "Midweight", "Entry Level",
++  // "Director". See SENIOR_LEVELS above.
++  jobLevel?: string;
+ }
+ 
+ async function fetchJobicy(): Promise<IngestRow[]> {
+   const res = await safeFetch("https://jobicy.com/api/v2/remote-jobs?count=20");
+   if (!res) return [];
+   const data = (await res.json()) as { jobs?: JobicyJob[] };
+-  const jobs = data?.jobs ?? [];
++  const jobs = (data?.jobs ?? []).filter((j) => !SENIOR_LEVELS.test(j.jobLevel ?? ""));
+   return jobs.map((j) => {
+     // jobIndustry has been observed as both a string and an array from this
+     // API — always normalize to an array before use (this exact shape bug
+@@ -191,7 +209,10 @@ async function fetchJobicy(): Promise<IngestRow[]> {
+         5000
+       ),
+       eligibility: null,
+-      deadline: toISO(in92Days()),
++      // Jobicy's API carries no application-deadline field at all — these
++      // are rolling postings. Leave deadline null rather than fabricating
++      // a 92-day countdown; the UI already renders "No deadline" honestly.
++      deadline: null,
+       apply_url: j.url || "https://jobicy.com",
+       location: j.jobGeo && j.jobGeo !== "Worldwide" ? String(j.jobGeo) : null,
+       remote: true,
+@@ -236,7 +257,12 @@ async function fetchDevpost(): Promise<IngestRow[]> {
+           5000
+         ),
+         eligibility: null,
+-        deadline: toISO(in92Days()),
++        // submission_period_dates is free text ("Nov 09 - 20, 2025") with no
++        // reliable, unambiguous way to parse an end date out of it — rather
++        // than risk silently extracting the wrong date (or inventing one
++        // outright via a 92-day placeholder), leave deadline null and keep
++        // the real text in the description above for the user to read.
++        deadline: null,
+         apply_url: h.url || "https://devpost.com/hackathons",
+         location: h.displayed_location === "Online" ? null : String(h.displayed_location ?? "") || null,
+         remote: h.displayed_location === "Online",
+@@ -265,7 +291,11 @@ async function fetchScholars4Dev(): Promise<IngestRow[]> {
+       description:
+         "Scholarship listing curated by Scholars4Dev. See the original listing for full eligibility and deadline details.",
+       eligibility: "See original listing for eligibility details.",
+-      deadline: toISO(in92Days()),
++      // This feed exposes no structured deadline (only title/link are read
++      // above) and the title text isn't reliably parseable, so leave this
++      // null rather than fabricate a 92-day countdown. The real deadline
++      // lives on the linked listing, which apply_url points to.
++      deadline: null,
+       apply_url: link,
+       location: null,
+       remote: true,
+@@ -288,7 +318,11 @@ async function fetchGrantDesk(): Promise<IngestRow[]> {
+     const link = rssField(block, "link").trim() || "https://www.artificialnouveau.com/smalltools/grants/";
+     const desc = stripHtml(rssField(block, "description"));
+     const deadlineMatch = desc.match(/Deadline:\s*(\d{1,2}\s\w{3}\s\d{4})/);
+-    let deadline = toISO(in92Days());
++    // Only trust a deadline we actually parsed from this feed's own
++    // "Deadline: DD Mon YYYY" format. When the description doesn't contain
++    // one (rolling/undated grant, or a format this regex doesn't match),
++    // leave it null rather than fabricate a 92-day countdown.
++    let deadline: string | null = null;
+     if (deadlineMatch) {
+       const parsed = new Date(deadlineMatch[1]);
+       if (!isNaN(parsed.getTime())) deadline = toISO(parsed);
