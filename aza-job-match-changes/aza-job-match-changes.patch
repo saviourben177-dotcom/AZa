@@ -1,0 +1,663 @@
+diff --git a/src/app/opportunities/[id]/opportunity-detail-client.tsx b/src/app/opportunities/[id]/opportunity-detail-client.tsx
+index 12d68d8..82ee939 100644
+--- a/src/app/opportunities/[id]/opportunity-detail-client.tsx
++++ b/src/app/opportunities/[id]/opportunity-detail-client.tsx
+@@ -7,6 +7,7 @@ import { AppShell } from "@/components/aza/app-shell";
+ import { BackLink, btn } from "@/components/aza/kit";
+ import { Deadline, Tag } from "@/components/aza/ui";
+ import { ReportButton } from "@/components/aza/report";
++import OpportunityMatchAnalysisCard from "@/components/cv/opportunity-match-analysis";
+ import type { Opportunity } from "@/lib/aza-data";
+ import { api } from "@/lib/aza/api";
+ import { cn } from "@/lib/utils";
+@@ -106,51 +107,55 @@ export default function OpportunityDetailClient({
+           </p>
+         </article>
+ 
+-        <aside className="h-fit space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)] lg:sticky lg:top-24">
+-          {d.applyUrl ? (
+-            <a
+-              href={d.applyUrl}
+-              target="_blank"
+-              rel="noreferrer"
+-              className={cn(btn.primary, "w-full justify-center")}
++        <aside className="h-fit space-y-3 lg:sticky lg:top-24">
++          <OpportunityMatchAnalysisCard opportunityId={o.id} />
++
++          <div className="space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)]">
++            {d.applyUrl ? (
++              <a
++                href={d.applyUrl}
++                target="_blank"
++                rel="noreferrer"
++                className={cn(btn.primary, "w-full justify-center")}
++              >
++                Apply now <ExternalLink className="size-4" />
++              </a>
++            ) : (
++              <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
++                No application link provided yet.
++              </p>
++            )}
++
++            <button
++              className={cn(btn.secondary, "w-full justify-center")}
++              aria-pressed={saved}
++              disabled={isPending}
++              onClick={handleToggleSave}
+             >
+-              Apply now <ExternalLink className="size-4" />
+-            </a>
+-          ) : (
+-            <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+-              No application link provided yet.
+-            </p>
+-          )}
+-
+-          <button
+-            className={cn(btn.secondary, "w-full justify-center")}
+-            aria-pressed={saved}
+-            disabled={isPending}
+-            onClick={handleToggleSave}
+-          >
+-            <Bookmark className="size-4" fill={saved ? "currentColor" : "none"} />
+-            {saved ? "Saved" : "Save"}
+-          </button>
+-
+-          <button
+-            className={cn(btn.secondary, "w-full justify-center")}
+-            onClick={handleTailorCv}
+-          >
+-            <Sparkles className="size-4 text-primary" /> Tailor my CV
+-          </button>
+-
+-          <label className="block pt-2 text-sm">
+-            <span className="font-semibold text-foreground">Application status</span>
+-            <select
+-              value={status}
+-              onChange={(e) => handleStatusChange(e.target.value)}
+-              className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring"
++              <Bookmark className="size-4" fill={saved ? "currentColor" : "none"} />
++              {saved ? "Saved" : "Save"}
++            </button>
++
++            <button
++              className={cn(btn.secondary, "w-full justify-center")}
++              onClick={handleTailorCv}
+             >
+-              {statuses.map((s) => (
+-                <option key={s}>{s}</option>
+-              ))}
+-            </select>
+-          </label>
++              <Sparkles className="size-4 text-primary" /> Tailor my CV
++            </button>
++
++            <label className="block pt-2 text-sm">
++              <span className="font-semibold text-foreground">Application status</span>
++              <select
++                value={status}
++                onChange={(e) => handleStatusChange(e.target.value)}
++                className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring"
++              >
++                {statuses.map((s) => (
++                  <option key={s}>{s}</option>
++                ))}
++              </select>
++            </label>
++          </div>
+         </aside>
+       </div>
+     </AppShell>
+diff --git a/src/components/cv/opportunity-match-analysis.tsx b/src/components/cv/opportunity-match-analysis.tsx
+new file mode 100644
+index 0000000..386e5f7
+--- /dev/null
++++ b/src/components/cv/opportunity-match-analysis.tsx
+@@ -0,0 +1,134 @@
++"use client";
++
++import { useEffect, useState, useTransition } from "react";
++import { CheckCircle2, CircleAlert, Sparkles } from "lucide-react";
++import { toast } from "sonner";
++import { btn } from "@/components/aza/kit";
++import { cn } from "@/lib/utils";
++import {
++  analyzeOpportunityMatchForId,
++  getOpportunityMatchAnalysis,
++  type OpportunityMatchAnalysis,
++} from "@/lib/actions/job-match";
++
++/**
++ * Standalone "Job Match Analysis" — the fast, free "am I wasting my time
++ * applying" check. Separate from OpportunityCvTailor (tailoring a full CV):
++ * this only scores fit and lists specific gaps, so a user can decide
++ * whether tailoring/applying is worth their time before committing to it.
++ *
++ * Access gating: there is currently no access-tier/unlock column in the
++ * live schema (confirmed via Supabase MCP before building this), so this
++ * component has no locked state yet. If/when an unlock column is added,
++ * gate the "Check my match" button here — e.g. pass a `locked` prop down
++ * from the server component (opportunity-detail-client's parent) and
++ * render an upgrade-prompt state instead of the button below. Do not wire
++ * an actual payment flow here — just the UI gate.
++ */
++export default function OpportunityMatchAnalysisCard({ opportunityId }: { opportunityId: string }) {
++  const [analysis, setAnalysis] = useState<OpportunityMatchAnalysis | null>(null);
++  const [loaded, setLoaded] = useState(false);
++  const [isPending, startTransition] = useTransition();
++  const [error, setError] = useState<string | null>(null);
++
++  useEffect(() => {
++    getOpportunityMatchAnalysis(opportunityId)
++      .then(setAnalysis)
++      .finally(() => setLoaded(true));
++  }, [opportunityId]);
++
++  function handleAnalyze() {
++    setError(null);
++    startTransition(async () => {
++      try {
++        const result = await analyzeOpportunityMatchForId(opportunityId);
++        if (!result.ok) {
++          setError("Add your details in the CV builder first so we can check your fit.");
++          return;
++        }
++        setAnalysis(result.analysis);
++      } catch (err) {
++        toast.error("Could not analyze match");
++        setError(err instanceof Error ? err.message : "Could not analyze match");
++      }
++    });
++  }
++
++  if (!loaded) return null;
++
++  const scoreTone =
++    analysis && analysis.match_score >= 70
++      ? "text-primary-strong"
++      : analysis && analysis.match_score >= 40
++        ? "text-foreground"
++        : "text-urgent";
++
++  return (
++    <div className="rounded-lg border bg-card p-4">
++      <div className="flex items-center justify-between gap-2">
++        <p className="flex items-center gap-1.5 text-sm font-bold">
++          <Sparkles className="size-4 text-primary" /> Job Match Analysis
++        </p>
++        {analysis && (
++          <span className={cn("text-base font-display font-extrabold", scoreTone)}>
++            {analysis.match_score}%
++          </span>
++        )}
++      </div>
++
++      {!analysis && (
++        <p className="mt-1.5 text-sm text-muted-foreground">
++          See your fit score and exactly what's missing before you tailor a CV or apply.
++        </p>
++      )}
++
++      {analysis && (
++        <div className="mt-3 space-y-3">
++          {analysis.summary && <p className="text-sm text-foreground/85">{analysis.summary}</p>}
++
++          {analysis.matched_requirements.length > 0 && (
++            <div>
++              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
++                You match
++              </p>
++              <ul className="mt-1.5 space-y-1">
++                {analysis.matched_requirements.map((req, i) => (
++                  <li key={i} className="flex items-start gap-1.5 text-sm text-foreground/85">
++                    <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-primary" />
++                    {req}
++                  </li>
++                ))}
++              </ul>
++            </div>
++          )}
++
++          {analysis.missing_requirements.length > 0 && (
++            <div>
++              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
++                Gaps to address
++              </p>
++              <ul className="mt-1.5 space-y-1">
++                {analysis.missing_requirements.map((req, i) => (
++                  <li key={i} className="flex items-start gap-1.5 text-sm text-foreground/85">
++                    <CircleAlert className="mt-0.5 size-3.5 shrink-0 text-urgent" />
++                    {req}
++                  </li>
++                ))}
++              </ul>
++            </div>
++          )}
++        </div>
++      )}
++
++      <button
++        className={cn(btn.secondary, "mt-3 w-full justify-center")}
++        disabled={isPending}
++        onClick={handleAnalyze}
++      >
++        {isPending ? "Analyzing..." : analysis ? "Re-check my match" : "Check my match"}
++      </button>
++
++      {error && <p className="mt-2 text-sm font-medium text-destructive">{error}</p>}
++    </div>
++  );
++}
+diff --git a/src/lib/actions/job-match.ts b/src/lib/actions/job-match.ts
+new file mode 100644
+index 0000000..2de52fe
+--- /dev/null
++++ b/src/lib/actions/job-match.ts
+@@ -0,0 +1,110 @@
++"use server";
++
++import { createClient } from "@/lib/supabase/server";
++import { revalidatePath } from "next/cache";
++import { analyzeOpportunityMatch } from "@/lib/groq";
++import type { Opportunity } from "@/lib/types";
++
++async function requireUser() {
++  const supabase = await createClient();
++  const {
++    data: { user },
++  } = await supabase.auth.getUser();
++  if (!user) throw new Error("Not authenticated");
++  return { supabase, user };
++}
++
++export type OpportunityMatchAnalysis = {
++  id: string;
++  user_id: string;
++  opportunity_id: string;
++  match_score: number;
++  matched_requirements: string[];
++  missing_requirements: string[];
++  summary: string | null;
++  created_at: string;
++  updated_at: string;
++};
++
++/**
++ * Runs (or re-runs) the standalone job-fit gap analysis for an opportunity,
++ * using the user's base CV (cv_profiles.generated_content). Requires a base
++ * CV to already exist — mirrors the same "no-base-cv" typed-result pattern
++ * used by tailorCvForOpportunityId in cv-generate.ts, for the same reason:
++ * Next.js strips thrown Server Action error messages in production, so a
++ * plain throw here would only show the user a useless generic error for
++ * this specific, expected, recoverable case.
++ *
++ * NOTE ON ACCESS GATING (deliberately not implemented here):
++ * Pricing and payment gateway (Paystack vs Korapay, exact amount) are not
++ * yet decided. The live schema (checked via Supabase MCP list_tables on
++ * project "AZA", 2026-10-25) has no access-tier/unlock column on profiles,
++ * cv_tailorings, or anywhere else — so there is nothing to gate against
++ * yet. This feature is fully open for now. Once an unlock/tier column
++ * exists, add a check here (and mirror it in the UI component) before
++ * calling analyzeOpportunityMatch — e.g.:
++ *   if (!profile.has_job_match_access) return { ok: false, reason: "locked" };
++ * TODO(payment): wire this once pricing/gateway is decided. Do not build
++ * the actual Paystack/Korapay flow here — just the gate check.
++ */
++export async function analyzeOpportunityMatchForId(
++  opportunityId: string
++): Promise<
++  | { ok: true; analysis: OpportunityMatchAnalysis }
++  | { ok: false; reason: "no-base-cv" }
++> {
++  const { supabase, user } = await requireUser();
++
++  const [{ data: cv }, { data: opportunity }] = await Promise.all([
++    supabase.from("cv_profiles").select("generated_content").eq("user_id", user.id).single(),
++    supabase.from("opportunities").select("*").eq("id", opportunityId).single(),
++  ]);
++
++  if (!cv?.generated_content) {
++    return { ok: false, reason: "no-base-cv" };
++  }
++  if (!opportunity) throw new Error("Opportunity not found");
++
++  const opp = opportunity as Opportunity;
++  const result = await analyzeOpportunityMatch(cv.generated_content, {
++    title: opp.title,
++    org: opp.org,
++    description: opp.description,
++    eligibility: opp.eligibility,
++  });
++
++  const { data: saved, error } = await supabase
++    .from("opportunity_match_analyses")
++    .upsert(
++      {
++        user_id: user.id,
++        opportunity_id: opportunityId,
++        match_score: result.matchScore,
++        matched_requirements: result.matchedRequirements,
++        missing_requirements: result.missingRequirements,
++        summary: result.summary || null,
++      },
++      { onConflict: "user_id,opportunity_id" }
++    )
++    .select("*")
++    .single();
++
++  if (error) throw new Error(error.message);
++
++  revalidatePath(`/opportunities/${opportunityId}`);
++  return { ok: true, analysis: saved as OpportunityMatchAnalysis };
++}
++
++/** Fetches a previously persisted analysis, if one exists, so a user can revisit it. */
++export async function getOpportunityMatchAnalysis(
++  opportunityId: string
++): Promise<OpportunityMatchAnalysis | null> {
++  const { supabase, user } = await requireUser();
++  const { data } = await supabase
++    .from("opportunity_match_analyses")
++    .select("*")
++    .eq("user_id", user.id)
++    .eq("opportunity_id", opportunityId)
++    .maybeSingle();
++  return (data as OpportunityMatchAnalysis | null) ?? null;
++}
+diff --git a/src/lib/groq.ts b/src/lib/groq.ts
+index f8acafa..fca4eb0 100644
+--- a/src/lib/groq.ts
++++ b/src/lib/groq.ts
+@@ -202,6 +202,80 @@ ${contextBlock}`;
+   return { answer, hasResults: true };
+ }
+ 
++/**
++ * Standalone job-fit gap analysis: scores how well a base CV matches an
++ * opportunity and lists specific matched/missing requirements — WITHOUT
++ * rewriting the CV. This is the fast, cheap "should I bother applying"
++ * check (see tailorCvForOpportunity above for the heavier CV-rewrite +
++ * bundled-score call, which this intentionally does not duplicate or call
++ * into — a standalone analysis should not pay the cost of a full CV
++ * rewrite just to get a score and gap list).
++ *
++ * Same honesty standard as tailorCvForOpportunity: the score must reflect
++ * genuine overlap between what's actually in the CV and what the
++ * opportunity asks for. Never inflate it, and never invent a requirement
++ * that isn't actually implied by the opportunity's description/eligibility.
++ */
++export async function analyzeOpportunityMatch(
++  baseCvMarkdown: string,
++  opportunity: { title: string; org: string; description: string; eligibility: string | null }
++): Promise<{
++  matchScore: number;
++  matchedRequirements: string[];
++  missingRequirements: string[];
++  summary: string;
++}> {
++  const prompt = `You are assessing how well a candidate's CV matches a specific opportunity's requirements. You are NOT rewriting the CV — only analyzing fit.
++
++Read the opportunity's description and eligibility criteria and identify its concrete requirements (skills, experience level, qualifications, age/status restrictions, specific tools or domains mentioned, etc.). Then compare each requirement against what is actually present in the CV.
++
++Score strictly on genuine overlap — do not round up, do not give credit for "could probably learn it," and do not penalize for things the opportunity doesn't actually ask for. If eligibility is not specified, judge based on the description alone. If the opportunity's requirements are too vague to assess specific items, keep matched/missing lists short and general rather than inventing specifics.
++
++Opportunity:
++Title: ${opportunity.title}
++Organization: ${opportunity.org}
++Description: ${opportunity.description}
++Eligibility: ${opportunity.eligibility ?? "Not specified"}
++
++Candidate's CV (Markdown):
++${baseCvMarkdown}
++
++Respond with JSON only, in this exact shape:
++{"match_score": <integer 0-100>, "matched_requirements": ["<short phrase per requirement the CV does satisfy>"], "missing_requirements": ["<short phrase per requirement the CV does NOT currently satisfy>"], "summary": "<one short sentence, plain and honest, on overall fit>"}
++
++Keep each requirement phrase under 12 words. Omit the "could not assess" caveat from the lists themselves — put any such caveat in summary instead if needed. Use at most 6 items per list, the most decision-relevant ones first.`;
++
++  const raw = await groqChat({
++    model: TEXT_MODEL,
++    temperature: 0.3,
++    max_completion_tokens: 700,
++    response_format: { type: "json_object" },
++    messages: [{ role: "user", content: prompt }],
++  });
++
++  try {
++    const parsed = JSON.parse(raw);
++    const scoreRaw = parsed.match_score;
++    const matchScore =
++      typeof scoreRaw === "number" && Number.isFinite(scoreRaw)
++        ? Math.max(0, Math.min(100, Math.round(scoreRaw)))
++        : 0;
++    const matchedRequirements = Array.isArray(parsed.matched_requirements)
++      ? parsed.matched_requirements.filter((x: unknown): x is string => typeof x === "string").slice(0, 6)
++      : [];
++    const missingRequirements = Array.isArray(parsed.missing_requirements)
++      ? parsed.missing_requirements.filter((x: unknown): x is string => typeof x === "string").slice(0, 6)
++      : [];
++    const summary = typeof parsed.summary === "string" ? parsed.summary : "";
++    return { matchScore, matchedRequirements, missingRequirements, summary };
++  } catch {
++    // Model didn't return valid JSON. Don't fabricate a score — surface this
++    // as a genuine failure to the caller rather than silently showing 0%,
++    // which would look like a real (and alarming) assessment.
++    throw new Error("Could not parse match analysis response");
++  }
++}
++
+ /**
+  * Tailors an existing base CV toward a specific opportunity's eligibility/description,
+  * re-ordering and re-emphasizing content. Does not fabricate new facts.
+diff --git a/src/lib/supabase/database.types.ts b/src/lib/supabase/database.types.ts
+index 9dbe573..bcf59eb 100644
+--- a/src/lib/supabase/database.types.ts
++++ b/src/lib/supabase/database.types.ts
+@@ -1485,6 +1485,113 @@ export type Database = {
+           },
+         ]
+       }
++      opportunity_match_analyses: {
++        Row: {
++          created_at: string
++          id: string
++          match_score: number
++          matched_requirements: string[]
++          missing_requirements: string[]
++          opportunity_id: string
++          summary: string | null
++          updated_at: string
++          user_id: string
++        }
++        Insert: {
++          created_at?: string
++          id?: string
++          match_score: number
++          matched_requirements?: string[]
++          missing_requirements?: string[]
++          opportunity_id: string
++          summary?: string | null
++          updated_at?: string
++          user_id: string
++        }
++        Update: {
++          created_at?: string
++          id?: string
++          match_score?: number
++          matched_requirements?: string[]
++          missing_requirements?: string[]
++          opportunity_id?: string
++          summary?: string | null
++          updated_at?: string
++          user_id?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "opportunity_match_analyses_opportunity_id_fkey"
++            columns: ["opportunity_id"]
++            isOneToOne: false
++            referencedRelation: "opportunities"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "opportunity_match_analyses_user_id_fkey"
++            columns: ["user_id"]
++            isOneToOne: false
++            referencedRelation: "profiles"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "opportunity_match_analyses_user_id_fkey"
++            columns: ["user_id"]
++            isOneToOne: false
++            referencedRelation: "public_profiles"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
++      opportunity_match_digests: {
++        Row: {
++          created_at: string
++          digest_date: string
++          match_count: number
++          notification_id: string | null
++          opportunity_ids: string[]
++          user_id: string
++        }
++        Insert: {
++          created_at?: string
++          digest_date: string
++          match_count: number
++          notification_id?: string | null
++          opportunity_ids: string[]
++          user_id: string
++        }
++        Update: {
++          created_at?: string
++          digest_date?: string
++          match_count?: number
++          notification_id?: string | null
++          opportunity_ids?: string[]
++          user_id?: string
++        }
++        Relationships: [
++          {
++            foreignKeyName: "opportunity_match_digests_notification_id_fkey"
++            columns: ["notification_id"]
++            isOneToOne: false
++            referencedRelation: "notifications"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "opportunity_match_digests_user_id_fkey"
++            columns: ["user_id"]
++            isOneToOne: false
++            referencedRelation: "profiles"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "opportunity_match_digests_user_id_fkey"
++            columns: ["user_id"]
++            isOneToOne: false
++            referencedRelation: "public_profiles"
++            referencedColumns: ["id"]
++          },
++        ]
++      }
+       prices: {
+         Row: {
+           category: Database["public"]["Enums"]["product_category"]
+diff --git a/supabase/migrations/20261025000000_add_opportunity_match_analyses.sql b/supabase/migrations/20261025000000_add_opportunity_match_analyses.sql
+new file mode 100644
+index 0000000..6285c86
+--- /dev/null
++++ b/supabase/migrations/20261025000000_add_opportunity_match_analyses.sql
+@@ -0,0 +1,87 @@
++-- Standalone Job Match Analysis: lets a user see their fit score AND a
++-- specific list of missing/unmet requirements for an opportunity WITHOUT
++-- generating a full tailored CV first. Persisted (not ephemeral) so a user
++-- can revisit it, the same way cv_tailorings persists tailored CV content.
++--
++-- Distinct from cv_tailorings: that table stores a *tailored CV body* plus
++-- a bundled match_score, produced by tailorCvForOpportunity() (the heavier,
++-- CV-rewriting call). This table stores *only* the gap analysis (score +
++-- matched/missing requirement lists), produced by the new, lighter
++-- analyzeOpportunityMatch() call, so a user can get the fast "am I wasting
++-- my time applying" read before committing to a full CV tailoring pass.
++--
++-- Confirmed via live schema inspection (list_tables, 2026-10-25) before
++-- writing this: no existing table covers standalone gap-analysis
++-- persistence. opportunity_match_digests is unrelated (daily notification
++-- bookkeeping, not per-opportunity analysis content).
++--
++-- No access-tier / unlock column exists anywhere in the live schema as of
++-- this migration (checked profiles, cv_tailorings, and all other tables).
++-- This feature is therefore built fully open for now. See the TODO in
++-- src/lib/actions/job-match.ts for where tier-gating would hook in once
++-- pricing/payment (Paystack vs Korapay) is decided — out of scope here.
++
++create table if not exists public.opportunity_match_analyses (
++  id uuid primary key default gen_random_uuid(),
++  user_id uuid not null references public.profiles(id) on delete cascade,
++  opportunity_id uuid not null references public.opportunities(id) on delete cascade,
++  match_score smallint not null check (match_score >= 0 and match_score <= 100),
++  matched_requirements text[] not null default '{}',
++  missing_requirements text[] not null default '{}',
++  summary text,
++  created_at timestamptz not null default now(),
++  updated_at timestamptz not null default now(),
++  unique (user_id, opportunity_id)
++);
++
++comment on table public.opportunity_match_analyses is
++  'Standalone job-fit gap analysis per user per opportunity: persisted match_score plus matched/missing requirement lists, produced by analyzeOpportunityMatch() in src/lib/groq.ts. Independent of cv_tailorings (which bundles a score with a full tailored CV rewrite) — this is the lighter, faster "should I bother applying" check.';
++
++comment on column public.opportunity_match_analyses.match_score is
++  'Persisted 0-100 match percentage. Must reflect genuine overlap between the user''s CV content and the opportunity''s stated requirements — never fabricated or inflated, same honesty standard enforced in tailorCvForOpportunity''s prompt.';
++
++comment on column public.opportunity_match_analyses.matched_requirements is
++  'Short list of specific requirements/criteria from the opportunity that the user''s CV does satisfy, as plain strings.';
++
++comment on column public.opportunity_match_analyses.missing_requirements is
++  'Short list of specific requirements/criteria from the opportunity that the user''s CV does NOT currently satisfy — the "gap list" that is the core value of this feature.';
++
++create index if not exists opportunity_match_analyses_user_id_idx
++  on public.opportunity_match_analyses (user_id);
++
++create index if not exists opportunity_match_analyses_opportunity_id_idx
++  on public.opportunity_match_analyses (opportunity_id);
++
++alter table public.opportunity_match_analyses enable row level security;
++revoke all on public.opportunity_match_analyses from anon, authenticated;
++
++-- Owner-only, using (select auth.uid()) per the per-row-re-evaluation fix
++-- applied to profiles/ideas in 20261022010000_fix_rls_auth_reevaluation.sql
++-- (Postgres caches a `(select ...)` sub-select for the statement instead of
++-- re-running it per row).
++create policy opportunity_match_analyses_owner_all
++  on public.opportunity_match_analyses for all
++  to authenticated
++  using (user_id = (select auth.uid()))
++  with check (user_id = (select auth.uid()));
++
++grant select, insert, update, delete on public.opportunity_match_analyses to authenticated;
++
++-- Keep updated_at current on re-analysis (upsert from the app does a plain
++-- upsert, not an UPDATE statement necessarily, but this covers direct
++-- UPDATE paths and is cheap insurance).
++create or replace function public.set_opportunity_match_analyses_updated_at()
++returns trigger
++language plpgsql
++as $$
++begin
++  new.updated_at = now();
++  return new;
++end;
++$$;
++
++drop trigger if exists opportunity_match_analyses_set_updated_at on public.opportunity_match_analyses;
++create trigger opportunity_match_analyses_set_updated_at
++  before update on public.opportunity_match_analyses
++  for each row
++  execute function public.set_opportunity_match_analyses_updated_at();
