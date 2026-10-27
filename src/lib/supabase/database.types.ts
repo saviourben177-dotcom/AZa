@@ -214,6 +214,80 @@ export type Database = {
           },
         ]
       }
+      checkpoint_submissions: {
+        Row: {
+          ai_feedback: string | null
+          ai_gaps: string[]
+          ai_strengths: string[]
+          checkpoint_id: string
+          created_at: string
+          evaluated_at: string | null
+          id: string
+          path_id: string
+          status: string
+          submission_text: string | null
+          submission_url: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          ai_gaps?: string[]
+          ai_strengths?: string[]
+          checkpoint_id: string
+          created_at?: string
+          evaluated_at?: string | null
+          id?: string
+          path_id: string
+          status?: string
+          submission_text?: string | null
+          submission_url?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          ai_gaps?: string[]
+          ai_strengths?: string[]
+          checkpoint_id?: string
+          created_at?: string
+          evaluated_at?: string | null
+          id?: string
+          path_id?: string
+          status?: string
+          submission_text?: string | null
+          submission_url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkpoint_submissions_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "skill_checkpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkpoint_submissions_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "skill_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkpoint_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkpoint_submissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -1485,6 +1559,181 @@ export type Database = {
           },
         ]
       }
+      opportunity_match_analyses: {
+        Row: {
+          created_at: string
+          id: string
+          match_score: number
+          matched_requirements: string[]
+          missing_requirements: string[]
+          opportunity_id: string
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_score: number
+          matched_requirements?: string[]
+          missing_requirements?: string[]
+          opportunity_id: string
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_score?: number
+          matched_requirements?: string[]
+          missing_requirements?: string[]
+          opportunity_id?: string
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_match_analyses_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_match_analyses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_match_analyses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_match_digests: {
+        Row: {
+          created_at: string
+          digest_date: string
+          match_count: number
+          notification_id: string | null
+          opportunity_ids: string[]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          digest_date: string
+          match_count: number
+          notification_id?: string | null
+          opportunity_ids: string[]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          digest_date?: string
+          match_count?: number
+          notification_id?: string | null
+          opportunity_ids?: string[]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_match_digests_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_match_digests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_match_digests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_entries: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          path_id: string
+          project_url: string | null
+          submission_id: string | null
+          tags: string[]
+          title: string
+          user_id: string
+          verified: boolean
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          path_id: string
+          project_url?: string | null
+          submission_id?: string | null
+          tags?: string[]
+          title: string
+          user_id: string
+          verified?: boolean
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          path_id?: string
+          project_url?: string | null
+          submission_id?: string | null
+          tags?: string[]
+          title?: string
+          user_id?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_entries_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "skill_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_entries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "checkpoint_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prices: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
@@ -1937,6 +2186,125 @@ export type Database = {
           },
         ]
       }
+      skill_checkpoints: {
+        Row: {
+          content_by_style: Json
+          created_at: string
+          description: string | null
+          evaluation_criteria: string | null
+          id: string
+          is_final: boolean
+          learning_points: string[]
+          order: number
+          path_id: string
+          requires_submission: boolean
+          title: string
+        }
+        Insert: {
+          content_by_style?: Json
+          created_at?: string
+          description?: string | null
+          evaluation_criteria?: string | null
+          id?: string
+          is_final?: boolean
+          learning_points?: string[]
+          order: number
+          path_id: string
+          requires_submission?: boolean
+          title: string
+        }
+        Update: {
+          content_by_style?: Json
+          created_at?: string
+          description?: string | null
+          evaluation_criteria?: string | null
+          id?: string
+          is_final?: boolean
+          learning_points?: string[]
+          order?: number
+          path_id?: string
+          requires_submission?: boolean
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_checkpoints_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "skill_paths"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skill_paths: {
+        Row: {
+          category: string
+          cover_icon: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          estimated_weeks: number | null
+          id: string
+          is_published: boolean
+          output_kind: string
+          slug: string
+          sort_order: number
+          summary: string | null
+          tier: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          cover_icon?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_weeks?: number | null
+          id?: string
+          is_published?: boolean
+          output_kind?: string
+          slug: string
+          sort_order?: number
+          summary?: string | null
+          tier?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          cover_icon?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          estimated_weeks?: number | null
+          id?: string
+          is_published?: boolean
+          output_kind?: string
+          slug?: string
+          sort_order?: number
+          summary?: string | null
+          tier?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "skill_paths_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "skill_paths_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       skill_resources: {
         Row: {
           created_at: string
@@ -2030,6 +2398,135 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      user_checkpoint_progress: {
+        Row: {
+          checkpoint_id: string
+          completed_at: string | null
+          path_id: string
+          started_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          checkpoint_id: string
+          completed_at?: string | null
+          path_id: string
+          started_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          checkpoint_id?: string
+          completed_at?: string | null
+          path_id?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_checkpoint_progress_checkpoint_id_fkey"
+            columns: ["checkpoint_id"]
+            isOneToOne: false
+            referencedRelation: "skill_checkpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_checkpoint_progress_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "skill_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_checkpoint_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_checkpoint_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_skill_paths: {
+        Row: {
+          active_days_count: number
+          completed_at: string | null
+          current_streak_days: number
+          last_activity_at: string
+          learning_style: string | null
+          longest_streak_days: number
+          path_id: string
+          rating_consistency: number | null
+          rating_overall: number | null
+          rating_speed: number | null
+          started_at: string
+          status: string
+          streak_last_counted_date: string | null
+          user_id: string
+        }
+        Insert: {
+          active_days_count?: number
+          completed_at?: string | null
+          current_streak_days?: number
+          last_activity_at?: string
+          learning_style?: string | null
+          longest_streak_days?: number
+          path_id: string
+          rating_consistency?: number | null
+          rating_overall?: number | null
+          rating_speed?: number | null
+          started_at?: string
+          status?: string
+          streak_last_counted_date?: string | null
+          user_id: string
+        }
+        Update: {
+          active_days_count?: number
+          completed_at?: string | null
+          current_streak_days?: number
+          last_activity_at?: string
+          learning_style?: string | null
+          longest_streak_days?: number
+          path_id?: string
+          rating_consistency?: number | null
+          rating_overall?: number | null
+          rating_speed?: number | null
+          started_at?: string
+          status?: string
+          streak_last_counted_date?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_skill_paths_path_id_fkey"
+            columns: ["path_id"]
+            isOneToOne: false
+            referencedRelation: "skill_paths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_skill_paths_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_skill_paths_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_skill_resources: {
         Row: {
@@ -2139,7 +2636,26 @@ export type Database = {
       }
     }
     Functions: {
+      bump_skill_path_streak: {
+        Args: { p_path_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      complete_skill_checkpoint: {
+        Args: {
+          p_portfolio_description?: string
+          p_portfolio_project_url?: string
+          p_portfolio_tags?: string[]
+          p_portfolio_title?: string
+          p_status: string
+          p_submission_id: string
+        }
+        Returns: undefined
+      }
       delete_own_account: { Args: never; Returns: undefined }
+      enroll_in_skill_path: {
+        Args: { p_learning_style?: string; p_path_id: string }
+        Returns: undefined
+      }
       get_push_secret: { Args: { secret_name: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_curator_or_admin: { Args: never; Returns: boolean }
@@ -2155,6 +2671,7 @@ export type Database = {
       }
       send_deadline_reminders: { Args: never; Returns: undefined }
       send_opportunity_match_notifications: { Args: never; Returns: undefined }
+      send_skill_streak_risk_notifications: { Args: never; Returns: undefined }
     }
     Enums: {
       application_status:

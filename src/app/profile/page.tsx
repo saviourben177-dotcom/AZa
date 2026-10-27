@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bookmark, FileText, Lightbulb, PenLine, Settings, Users } from "lucide-react";
+import { Bookmark, FileText, Lightbulb, PenLine, Settings, Trophy, Users } from "lucide-react";
 import { Tile, Empty } from "@/components/aza/kit";
 import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
@@ -140,6 +140,7 @@ export default async function ProfilePage() {
         <Tile to="/profile/cv" icon={FileText} title="CV" sub="View and tailor" />
         <Tile to="/profile/saved" icon={Bookmark} title="Saved" sub="Opportunities, ideas" />
         <Tile to="/growth/my-ideas" icon={Lightbulb} title="My ideas" sub="Manage posts" />
+        <Tile to="/profile/portfolio" icon={Trophy} title="Portfolio" sub="Verified skill projects" />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">

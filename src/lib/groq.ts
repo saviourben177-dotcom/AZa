@@ -250,3 +250,66 @@ Respond with JSON only, in this exact shape:
     return { content: raw, matchScore: null };
   }
 }
+
+/**
+ * Evaluates a user's checkpoint submission against the checkpoint's stated
+ * criteria. This is the core honesty-critical AI call for the Skills feature:
+ * it must never report "passed" unless the submission genuinely meets the
+ * criteria, and feedback on a fail must give specific, actionable reasons —
+ * never a vague "good effort" that hides whether the user actually passed.
+ */
+export async function evaluateCheckpointSubmission(input: {
+  checkpointTitle: string;
+  checkpointDescription: string | null;
+  learningPoints: string[];
+  evaluationCriteria: string | null;
+  submissionText: string | null;
+  submissionUrl: string | null;
+}): Promise<{
+  passed: boolean;
+  feedback: string;
+  strengths: string[];
+  gaps: string[];
+}> {
+  const prompt = `You are grading a learner's submission for a skill-building checkpoint. Be honest and specific — never say a submission passed unless it genuinely meets the criteria below, and never give generic praise. If it fails, explain exactly what's missing or wrong so the learner can fix it and resubmit.
+
+Checkpoint: "${input.checkpointTitle}"
+${input.checkpointDescription ? `Description: ${input.checkpointDescription}\n` : ""}What this checkpoint teaches: ${input.learningPoints.join("; ") || "not specified"}
+
+Evaluation criteria: ${input.evaluationCriteria || "Use your judgment based on the checkpoint description and learning points above."}
+
+Learner's submission:
+${input.submissionText ? `Text: ${input.submissionText}\n` : ""}${input.submissionUrl ? `Link: ${input.submissionUrl}\n` : ""}
+${!input.submissionText && !input.submissionUrl ? "(No content was submitted.)" : ""}
+
+Respond with JSON only, in this exact shape:
+{"passed": boolean, "feedback": "2-4 sentences of direct, honest feedback explaining the decision", "strengths": ["short phrase", ...up to 3], "gaps": ["short phrase", ...up to 3, empty array if passed with nothing to flag"]}
+
+If no real content was submitted (empty, a placeholder, or clearly not an attempt at this checkpoint), passed must be false and feedback should say so plainly.`;
+
+  const content = await groqChat({
+    model: TEXT_MODEL,
+    temperature: 0.2,
+    response_format: { type: "json_object" },
+    max_completion_tokens: 600,
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  try {
+    const parsed = JSON.parse(content);
+    return {
+      passed: Boolean(parsed.passed),
+      feedback: typeof parsed.feedback === "string" ? parsed.feedback : "Unable to generate feedback — please try resubmitting.",
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths.filter((s: unknown) => typeof s === "string").slice(0, 3) : [],
+      gaps: Array.isArray(parsed.gaps) ? parsed.gaps.filter((s: unknown) => typeof s === "string").slice(0, 3) : [],
+    };
+  } catch {
+    // Parsing failed — fail safe rather than silently marking a pass we can't verify.
+    return {
+      passed: false,
+      feedback: "We couldn't evaluate this submission automatically. Please try resubmitting, or try again shortly.",
+      strengths: [],
+      gaps: [],
+    };
+  }
+}

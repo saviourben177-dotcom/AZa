@@ -379,3 +379,101 @@ export interface MarketplaceListing {
   created_at: string;
   updated_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Skill Paths (Skills feature v2: guided learning paths, checkpoints,
+// submission evaluation, portfolio). Independent of Skill/SkillResource
+// above, which remain the flat skill-tag + external-resource catalog.
+// ---------------------------------------------------------------------------
+
+export type LearningStyle = "entertaining" | "focused" | "practical";
+export type SkillPathOutputKind = "artifact" | "capability";
+export type SkillPathTier = "free" | "premium";
+export type CheckpointProgressStatus = "locked" | "in_progress" | "completed";
+export type SubmissionStatus = "pending" | "passed" | "failed";
+
+export interface SkillPath {
+  id: string;
+  slug: string;
+  title: string;
+  category: string;
+  summary: string | null;
+  description: string | null;
+  cover_icon: string | null;
+  output_kind: SkillPathOutputKind;
+  tier: SkillPathTier;
+  estimated_weeks: number | null;
+  sort_order: number;
+  is_published: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SkillCheckpoint {
+  id: string;
+  path_id: string;
+  order: number;
+  title: string;
+  description: string | null;
+  learning_points: string[];
+  content_by_style: Partial<Record<LearningStyle, string>>;
+  is_final: boolean;
+  requires_submission: boolean;
+  evaluation_criteria: string | null;
+  created_at: string;
+}
+
+export interface UserSkillPath {
+  user_id: string;
+  path_id: string;
+  learning_style: LearningStyle | null;
+  status: "in_progress" | "completed";
+  started_at: string;
+  completed_at: string | null;
+  last_activity_at: string;
+  current_streak_days: number;
+  longest_streak_days: number;
+  streak_last_counted_date: string | null;
+  active_days_count: number;
+  rating_overall: number | null;
+  rating_speed: number | null;
+  rating_consistency: number | null;
+}
+
+export interface UserCheckpointProgress {
+  user_id: string;
+  checkpoint_id: string;
+  path_id: string;
+  status: CheckpointProgressStatus;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
+export interface CheckpointSubmission {
+  id: string;
+  user_id: string;
+  checkpoint_id: string;
+  path_id: string;
+  submission_text: string | null;
+  submission_url: string | null;
+  status: SubmissionStatus;
+  ai_feedback: string | null;
+  ai_strengths: string[];
+  ai_gaps: string[];
+  evaluated_at: string | null;
+  created_at: string;
+}
+
+export interface PortfolioEntry {
+  id: string;
+  user_id: string;
+  path_id: string;
+  submission_id: string | null;
+  title: string;
+  description: string | null;
+  project_url: string | null;
+  tags: string[];
+  verified: boolean;
+  created_at: string;
+}

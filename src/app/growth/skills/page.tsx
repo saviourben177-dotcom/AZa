@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SKILL_CATEGORY_ORDER, getSkillCategoryLabel } from "@/lib/skill-visuals";
 import type { Skill } from "@/lib/types";
@@ -53,6 +54,19 @@ export default async function MySkillsPage() {
     <AppShell>
       <BackLink to="/growth" label="Growth" />
       <PageHeader title="Skills" sub="Log progress after each lesson" />
+
+      <Link
+        href="/growth/skills/paths"
+        className="card-lift mb-8 flex items-center justify-between gap-3 rounded-lg border bg-card p-4 shadow-[var(--shadow-card)]"
+      >
+        <div>
+          <p className="font-display font-bold text-foreground">Try guided Skill Paths</p>
+          <p className="text-sm text-muted-foreground">
+            Checkpoints, real feedback, and a portfolio piece at the end.
+          </p>
+        </div>
+        <ArrowRight className="size-5 shrink-0 text-muted-foreground" />
+      </Link>
 
       {(userSkills ?? []).length === 0 ? (
         <Empty title="No skills tracked yet" sub="Add a skill from the list below to start tracking your progress." />
