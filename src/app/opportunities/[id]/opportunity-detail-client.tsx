@@ -7,6 +7,7 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink, btn } from "@/components/aza/kit";
 import { Deadline, Tag } from "@/components/aza/ui";
 import { ReportButton } from "@/components/aza/report";
+import OpportunityMatchAnalysisCard from "@/components/cv/opportunity-match-analysis";
 import type { Opportunity } from "@/lib/aza-data";
 import { api } from "@/lib/aza/api";
 import { cn } from "@/lib/utils";
@@ -106,51 +107,55 @@ export default function OpportunityDetailClient({
           </p>
         </article>
 
-        <aside className="h-fit space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)] lg:sticky lg:top-24">
-          {d.applyUrl ? (
-            <a
-              href={d.applyUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(btn.primary, "w-full justify-center")}
+        <aside className="h-fit space-y-3 lg:sticky lg:top-24">
+          <OpportunityMatchAnalysisCard opportunityId={o.id} />
+
+          <div className="space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)]">
+            {d.applyUrl ? (
+              <a
+                href={d.applyUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(btn.primary, "w-full justify-center")}
+              >
+                Apply now <ExternalLink className="size-4" />
+              </a>
+            ) : (
+              <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
+                No application link provided yet.
+              </p>
+            )}
+
+            <button
+              className={cn(btn.secondary, "w-full justify-center")}
+              aria-pressed={saved}
+              disabled={isPending}
+              onClick={handleToggleSave}
             >
-              Apply now <ExternalLink className="size-4" />
-            </a>
-          ) : (
-            <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
-              No application link provided yet.
-            </p>
-          )}
+              <Bookmark className="size-4" fill={saved ? "currentColor" : "none"} />
+              {saved ? "Saved" : "Save"}
+            </button>
 
-          <button
-            className={cn(btn.secondary, "w-full justify-center")}
-            aria-pressed={saved}
-            disabled={isPending}
-            onClick={handleToggleSave}
-          >
-            <Bookmark className="size-4" fill={saved ? "currentColor" : "none"} />
-            {saved ? "Saved" : "Save"}
-          </button>
-
-          <button
-            className={cn(btn.secondary, "w-full justify-center")}
-            onClick={handleTailorCv}
-          >
-            <Sparkles className="size-4 text-primary" /> Tailor my CV
-          </button>
-
-          <label className="block pt-2 text-sm">
-            <span className="font-semibold text-foreground">Application status</span>
-            <select
-              value={status}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            <button
+              className={cn(btn.secondary, "w-full justify-center")}
+              onClick={handleTailorCv}
             >
-              {statuses.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
+              <Sparkles className="size-4 text-primary" /> Tailor my CV
+            </button>
+
+            <label className="block pt-2 text-sm">
+              <span className="font-semibold text-foreground">Application status</span>
+              <select
+                value={status}
+                onChange={(e) => handleStatusChange(e.target.value)}
+                className="mt-1.5 h-11 w-full rounded-md border border-input bg-background px-3 font-sans text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                {statuses.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
+          </div>
         </aside>
       </div>
     </AppShell>

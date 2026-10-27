@@ -203,6 +203,80 @@ ${contextBlock}`;
 }
 
 /**
+ * Standalone job-fit gap analysis: scores how well a base CV matches an
+ * opportunity and lists specific matched/missing requirements — WITHOUT
+ * rewriting the CV. This is the fast, cheap "should I bother applying"
+ * check (see tailorCvForOpportunity above for the heavier CV-rewrite +
+ * bundled-score call, which this intentionally does not duplicate or call
+ * into — a standalone analysis should not pay the cost of a full CV
+ * rewrite just to get a score and gap list).
+ *
+ * Same honesty standard as tailorCvForOpportunity: the score must reflect
+ * genuine overlap between what's actually in the CV and what the
+ * opportunity asks for. Never inflate it, and never invent a requirement
+ * that isn't actually implied by the opportunity's description/eligibility.
+ */
+export async function analyzeOpportunityMatch(
+  baseCvMarkdown: string,
+  opportunity: { title: string; org: string; description: string; eligibility: string | null }
+): Promise<{
+  matchScore: number;
+  matchedRequirements: string[];
+  missingRequirements: string[];
+  summary: string;
+}> {
+  const prompt = `You are assessing how well a candidate's CV matches a specific opportunity's requirements. You are NOT rewriting the CV — only analyzing fit.
+
+Read the opportunity's description and eligibility criteria and identify its concrete requirements (skills, experience level, qualifications, age/status restrictions, specific tools or domains mentioned, etc.). Then compare each requirement against what is actually present in the CV.
+
+Score strictly on genuine overlap — do not round up, do not give credit for "could probably learn it," and do not penalize for things the opportunity doesn't actually ask for. If eligibility is not specified, judge based on the description alone. If the opportunity's requirements are too vague to assess specific items, keep matched/missing lists short and general rather than inventing specifics.
+
+Opportunity:
+Title: ${opportunity.title}
+Organization: ${opportunity.org}
+Description: ${opportunity.description}
+Eligibility: ${opportunity.eligibility ?? "Not specified"}
+
+Candidate's CV (Markdown):
+${baseCvMarkdown}
+
+Respond with JSON only, in this exact shape:
+{"match_score": <integer 0-100>, "matched_requirements": ["<short phrase per requirement the CV does satisfy>"], "missing_requirements": ["<short phrase per requirement the CV does NOT currently satisfy>"], "summary": "<one short sentence, plain and honest, on overall fit>"}
+
+Keep each requirement phrase under 12 words. Omit the "could not assess" caveat from the lists themselves — put any such caveat in summary instead if needed. Use at most 6 items per list, the most decision-relevant ones first.`;
+
+  const raw = await groqChat({
+    model: TEXT_MODEL,
+    temperature: 0.3,
+    max_completion_tokens: 700,
+    response_format: { type: "json_object" },
+    messages: [{ role: "user", content: prompt }],
+  });
+
+  try {
+    const parsed = JSON.parse(raw);
+    const scoreRaw = parsed.match_score;
+    const matchScore =
+      typeof scoreRaw === "number" && Number.isFinite(scoreRaw)
+        ? Math.max(0, Math.min(100, Math.round(scoreRaw)))
+        : 0;
+    const matchedRequirements = Array.isArray(parsed.matched_requirements)
+      ? parsed.matched_requirements.filter((x: unknown): x is string => typeof x === "string").slice(0, 6)
+      : [];
+    const missingRequirements = Array.isArray(parsed.missing_requirements)
+      ? parsed.missing_requirements.filter((x: unknown): x is string => typeof x === "string").slice(0, 6)
+      : [];
+    const summary = typeof parsed.summary === "string" ? parsed.summary : "";
+    return { matchScore, matchedRequirements, missingRequirements, summary };
+  } catch {
+    // Model didn't return valid JSON. Don't fabricate a score — surface this
+    // as a genuine failure to the caller rather than silently showing 0%,
+    // which would look like a real (and alarming) assessment.
+    throw new Error("Could not parse match analysis response");
+  }
+}
+
+/**
  * Tailors an existing base CV toward a specific opportunity's eligibility/description,
  * re-ordering and re-emphasizing content. Does not fabricate new facts.
  * Also produces a 0-100 match score in the same call (single API cost, single round trip).
