@@ -4,9 +4,15 @@
 // source_ref dedup-key pattern, same shape of a per-source fetcher plus a
 // fetchAll aggregator.
 //
-// Two real, free, no-auth sources, both verified live before writing this:
+// Five real, free, no-auth sources, all verified live before writing this:
 //   - freeCodeCamp "course" tag RSS (freecodecamp.org/news/tag/course/rss/)
 //     — written course articles/tutorials, all free, all coding.
+//   - freeCodeCamp "cs50" tag RSS (freecodecamp.org/news/tag/cs50/rss/) —
+//     written guides/reviews for Harvard's free CS50 course. Coding.
+//   - freeCodeCamp "ui-ux" tag RSS (freecodecamp.org/news/tag/ui-ux/rss/)
+//     — verified on-topic (UI/UX fundamentals, Figma tutorials), not
+//     software-architecture content that a generically-named "design" tag
+//     on the same site turned out to carry. Design.
 //   - YouTube channel RSS (youtube.com/feeds/videos.xml?channel_id=...) for
 //     freeCodeCamp.org (UC8butISFwT-Wl7EV0hUK0BQ) and Khan Academy
 //     (UC4a-Gbdw7vOaccHmFo40b9g) — full free video courses, no API key
@@ -19,13 +25,17 @@
 // 20261021190936_course_ingest_and_skills_seed.sql migration), rather than
 // trying to infer a specific skill from free-text titles.
 //
-// Coverage note: this ingest currently reaches "coding" (both sources) and
+// Coverage note (updated Oct 2026): this ingest now reaches "coding"
+// (freeCodeCamp course + cs50 + YouTube), "design" (ui-ux tag), and
 // partially "ai"/"business" (Khan Academy touches finance/business, not
-// true AI). "design", "trading", and "trades_diy" have no verified no-auth
-// live source yet and are covered only by the hand-curated seed rows in
-// the migration (source_ref IS NULL) — add a fetcher here once a real
-// free/no-auth source for those categories is confirmed, rather than
-// guessing a channel ID that may not exist or may not be free.
+// true AI). "trading" and "trades_diy" still have no verified no-auth live
+// source — freeCodeCamp's "investing"/"cryptocurrency" tags were checked
+// directly (Oct 2026) and are low-volume (3 items) and developer-angled
+// ("build your own cryptocurrency with Python"), not trading/market
+// education, so not a good match for the trading skill category. Both
+// remain covered only by hand-curated seed rows (source_ref IS NULL) —
+// add a fetcher here once a real free/no-auth trading- or trades-education
+// source is confirmed, rather than forcing a weak one in to look complete.
 
 export type IngestResourceType = "course" | "article" | "video" | "tool";
 export type IngestLevel = "beginner" | "intermediate" | "advanced";
@@ -169,10 +179,58 @@ async function fetchKhanAcademyVideos(): Promise<CourseIngestRow[]> {
   });
 }
 
+// ---- 4. freeCodeCamp — "cs50" tag RSS (Harvard CS50 guides/reviews) ----
+async function fetchCS50Articles(): Promise<CourseIngestRow[]> {
+  const res = await safeFetch("https://www.freecodecamp.org/news/tag/cs50/rss/");
+  if (!res) return [];
+  const xml = await res.text();
+  const items = parseRssItems(xml, 15);
+  return items.map((block) => {
+    const title = stripHtml(rssField(block, "title")) || "Free CS50 guide";
+    const link = rssField(block, "link").trim() || "https://www.freecodecamp.org/news/";
+    return {
+      source_ref: `fcc-cs50-${Buffer.from(link).toString("base64url").slice(0, 32)}`,
+      skill_name: "Web Development",
+      title: title.slice(0, 200),
+      provider: "freeCodeCamp (CS50 guides)",
+      url: link,
+      resource_type: "article" as const,
+      level: "beginner" as const,
+      duration_hours: null,
+      is_free: true,
+    };
+  });
+}
+
+// ---- 5. freeCodeCamp — "ui-ux" tag RSS (verified on-topic design content) ----
+async function fetchUiUxArticles(): Promise<CourseIngestRow[]> {
+  const res = await safeFetch("https://www.freecodecamp.org/news/tag/ui-ux/rss/");
+  if (!res) return [];
+  const xml = await res.text();
+  const items = parseRssItems(xml, 15);
+  return items.map((block) => {
+    const title = stripHtml(rssField(block, "title")) || "Free UI/UX article";
+    const link = rssField(block, "link").trim() || "https://www.freecodecamp.org/news/";
+    return {
+      source_ref: `fcc-uiux-${Buffer.from(link).toString("base64url").slice(0, 32)}`,
+      skill_name: "UI/UX Design",
+      title: title.slice(0, 200),
+      provider: "freeCodeCamp",
+      url: link,
+      resource_type: "article" as const,
+      level: "beginner" as const,
+      duration_hours: null,
+      is_free: true,
+    };
+  });
+}
+
 export interface CourseIngestSummary {
   freecodecamp_articles: number;
   freecodecamp_videos: number;
   khanacademy_videos: number;
+  cs50_articles: number;
+  uiux_articles: number;
   total: number;
 }
 
@@ -180,19 +238,23 @@ export async function fetchAllLiveCourses(): Promise<{
   rows: CourseIngestRow[];
   summary: CourseIngestSummary;
 }> {
-  const [fccArticles, fccVideos, khanVideos] = await Promise.all([
+  const [fccArticles, fccVideos, khanVideos, cs50Articles, uiuxArticles] = await Promise.all([
     fetchFreeCodeCamp(),
     fetchFreeCodeCampVideos(),
     fetchKhanAcademyVideos(),
+    fetchCS50Articles(),
+    fetchUiUxArticles(),
   ]);
 
-  const rows = [...fccArticles, ...fccVideos, ...khanVideos];
+  const rows = [...fccArticles, ...fccVideos, ...khanVideos, ...cs50Articles, ...uiuxArticles];
   return {
     rows,
     summary: {
       freecodecamp_articles: fccArticles.length,
       freecodecamp_videos: fccVideos.length,
       khanacademy_videos: khanVideos.length,
+      cs50_articles: cs50Articles.length,
+      uiux_articles: uiuxArticles.length,
       total: rows.length,
     },
   };

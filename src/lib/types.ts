@@ -85,6 +85,8 @@ export interface Opportunity {
   level: string | null;
   applicants_count: number | null;
   paid: boolean | null;
+  /** Best-effort hint only — see opportunities.eligibility_flag column comment. Never used to hide a row, only to show a "check eligibility" note. */
+  eligibility_flag: boolean;
 }
 
 export interface Price {

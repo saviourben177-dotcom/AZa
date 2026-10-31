@@ -55,6 +55,12 @@ export default function OpportunityCard({
             {opportunity.description}
           </p>
 
+          {opportunity.eligibility_flag && (
+            <p className="mt-2.5 rounded-card bg-amber-50 px-2.5 py-1.5 text-[11px] font-medium text-amber-700">
+              ⚠️ May have location/work-authorization requirements — check the listing before applying.
+            </p>
+          )}
+
           <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
             <span className="text-[11.5px] font-medium text-ink/50">
               {opportunity.remote ? "🌍 Remote" : opportunity.location ?? "Location not specified"}

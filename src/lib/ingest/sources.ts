@@ -1,15 +1,29 @@
 // Live external-source ingestion for Aza's `opportunities` table.
 //
-// Five real, free, no-auth sources — two for jobs, one each for hackathons,
-// scholarships, and grants/fellowships. Ported from the equivalent module in
-// the aza-opportunity-finder (HackSocial) codebase and re-mapped onto THIS
-// app's actual `opportunities` row shape (see src/lib/types.ts Opportunity
-// and src/lib/actions/opportunities.ts createOpportunity) — the two repos
-// have different schemas (this one uses `org`/`apply_url`/a narrower
-// category enum, no `eligibleCountries`/`skills`/etc columns), so the row
-// builders below are new, not copy-pasted.
+// Seven real, free, no-auth sources — four for jobs, one each for
+// hackathons, scholarships, and grants/fellowships. Ported from the
+// equivalent module in the aza-opportunity-finder (HackSocial) codebase and
+// re-mapped onto THIS app's actual `opportunities` row shape (see
+// src/lib/types.ts Opportunity and src/lib/actions/opportunities.ts
+// createOpportunity) — the two repos have different schemas (this one uses
+// `org`/`apply_url`/a narrower category enum, no `eligibleCountries`/
+// `skills`/etc columns), so the row builders below are new, not
+// copy-pasted.
 //
-// Attribution / usage requirements (checked at integration time, Aug 2026):
+// Deliberately NOT Nigeria/Africa-only: every job source here is a global
+// remote-jobs feed, same as the two already live. There is no free, no-auth
+// API with real-time Nigerian or African-specific listings (Jobberman and
+// BrighterMonday have no public API; Adzuna's documented country coverage
+// doesn't include Nigeria) — see flagsRestrictiveEligibility() below for
+// how the resulting eligibility uncertainty is surfaced honestly instead
+// of pretending to filter by country. Genuine Nigeria/Africa-specific
+// volume is a curator-added (hand-curated, source_ref IS NULL) job, same
+// pattern as the existing 57 hand-curated rows — not a separate ingest
+// pipeline, so the feed reads as one global opportunity list, not a
+// one-country app bolted onto a global one.
+//
+// Attribution / usage requirements (checked at integration time, Aug 2026,
+// updated Oct 2026):
 //   - Himalayas: requires a visible link back + "via Himalayas" mention.
 //     Do not push their listings into other third-party job aggregators.
 //   - Jobicy: requires attribution; poll at most hourly; do not
@@ -22,6 +36,13 @@
 //     restrictions found, but only title/link/short description are
 //     reliably structured — full eligibility/deadline detail lives on
 //     the source site, which is why apply_url always points back there.
+//   - Remotive: official API (github.com/remotive-com/remote-jobs-api).
+//     Docs ask for at most ~4 requests/day — fine for this app's
+//     once-daily cron; do not add a second, more frequent trigger that
+//     also calls this source without revisiting that limit.
+//   - Arbeitnow: public job-board API, no documented redistribution
+//     restriction found. Skews EU/Germany-heavy — filtered to remote=true
+//     rows only, to keep what's ingested relevant to a remote-first app.
 //
 // Hero images: this app already renders a category-keyed stock image for
 // every opportunity card (src/lib/category-visuals.ts CATEGORY_IMAGE) —
@@ -313,12 +334,115 @@ async function fetchGrantDesk(): Promise<IngestRow[]> {
   });
 }
 
+// ---- 6. Remotive — remote jobs (worldwide, not region-specific) ----
+// Official API (github.com/remotive-com/remote-jobs-api): docs ask for at
+// most ~4 requests/day — fine for this app's once-daily cron, would NOT be
+// fine for a more frequent poll. candidate_required_location is the most
+// reliable free-text eligibility signal of any source wired up so far
+// (often an explicit "Worldwide", "USA Only", "Europe", etc.) — surfaced
+// via flagsRestrictiveEligibility() below rather than used to filter rows
+// outright, since it's inconsistent across listings.
+interface RemotiveJob {
+  id: number;
+  title?: string;
+  company_name?: string;
+  category?: string;
+  job_type?: string;
+  candidate_required_location?: string;
+  salary?: string;
+  url?: string;
+  description?: string;
+}
+
+async function fetchRemotive(): Promise<IngestRow[]> {
+  const res = await safeFetch("https://remotive.com/api/remote-jobs?limit=25");
+  if (!res) return [];
+  const data = (await res.json()) as { jobs?: RemotiveJob[] };
+  const jobs = data?.jobs ?? [];
+  return jobs.map((j) => {
+    const loc = j.candidate_required_location?.trim() || null;
+    return {
+      source_ref: `remotive-${j.id}`,
+      title: String(j.title ?? "Remote role").slice(0, 200),
+      org: String(j.company_name ?? "Unknown company").slice(0, 200),
+      category: "job_gig" as const,
+      description: `${stripHtml(j.description ?? "").slice(0, 450)} (Sourced via Remotive — remotive.com)`.slice(
+        0,
+        5000
+      ),
+      eligibility: loc && loc.toLowerCase() !== "worldwide" ? `Candidate location: ${loc}` : null,
+      deadline: toISO(in92Days()),
+      apply_url: j.url || "https://remotive.com",
+      location: loc && loc.toLowerCase() !== "worldwide" ? loc : null,
+      remote: true,
+      tags: j.category ? [j.category] : [],
+      job_type: j.job_type || "full_time",
+      paid: j.salary ? true : null,
+      salary_range: j.salary || null,
+    };
+  });
+}
+
+// ---- 7. Arbeitnow — jobs (mostly Europe-based, but a real free no-auth
+// source with no account/key required; many postings are explicitly remote) ----
+interface ArbeitnowJob {
+  slug: string;
+  title?: string;
+  company_name?: string;
+  description?: string;
+  remote?: boolean;
+  url?: string;
+  tags?: string[];
+  job_types?: string[];
+  location?: string;
+}
+
+async function fetchArbeitnow(): Promise<IngestRow[]> {
+  const res = await safeFetch("https://www.arbeitnow.com/api/job-board-api");
+  if (!res) return [];
+  const data = (await res.json()) as { data?: ArbeitnowJob[] };
+  const jobs = (data?.data ?? []).filter((j) => j.remote).slice(0, 25);
+  return jobs.map((j) => ({
+    source_ref: `arbeitnow-${j.slug}`,
+    title: String(j.title ?? "Remote role").slice(0, 200),
+    org: String(j.company_name ?? "Unknown company").slice(0, 200),
+    category: "job_gig" as const,
+    description: `${stripHtml(j.description ?? "").slice(0, 450)} (Sourced via Arbeitnow — arbeitnow.com)`.slice(
+      0,
+      5000
+    ),
+    eligibility: null,
+    deadline: toISO(in92Days()),
+    apply_url: j.url || "https://www.arbeitnow.com",
+    location: j.location || null,
+    remote: true,
+    tags: (j.tags ?? []).slice(0, 5),
+    job_type: (j.job_types ?? [])[0] ?? "full_time",
+    paid: null,
+    salary_range: null,
+  }));
+}
+
+// Loose signal only — a hint for the UI, never a filter. None of the wired
+// sources reliably state country eligibility, so this flags common
+// exclusionary phrasing found in free-text descriptions/locations rather
+// than claiming to verify anything. False positives/negatives are expected.
+const RESTRICTIVE_PATTERNS =
+  /\b(us\s*only|usa\s*only|u\.s\.\s*only|united states only|must be (?:based|located) in the (?:us|u\.s\.|united states)|eu\s*only|europe\s*only|european union only|must be (?:eu|europe)[- ]based|uk\s*only|united kingdom only|work authorization required|must be authorized to work in)\b/i;
+
+export function flagsRestrictiveEligibility(text: string | null): boolean {
+  if (!text) return false;
+  return RESTRICTIVE_PATTERNS.test(text);
+}
+
 export interface IngestSummary {
   himalayas: number;
   jobicy: number;
   devpost: number;
   scholars4dev: number;
   grantdesk: number;
+  remotive: number;
+  arbeitnow: number;
   total: number;
 }
 
@@ -326,15 +450,17 @@ export async function fetchAllLiveOpportunities(): Promise<{
   rows: IngestRow[];
   summary: IngestSummary;
 }> {
-  const [himalayas, jobicy, devpost, scholars4dev, grantdesk] = await Promise.all([
+  const [himalayas, jobicy, devpost, scholars4dev, grantdesk, remotive, arbeitnow] = await Promise.all([
     fetchHimalayas(),
     fetchJobicy(),
     fetchDevpost(),
     fetchScholars4Dev(),
     fetchGrantDesk(),
+    fetchRemotive(),
+    fetchArbeitnow(),
   ]);
 
-  const rows = [...himalayas, ...jobicy, ...devpost, ...scholars4dev, ...grantdesk];
+  const rows = [...himalayas, ...jobicy, ...devpost, ...scholars4dev, ...grantdesk, ...remotive, ...arbeitnow];
   return {
     rows,
     summary: {
@@ -343,6 +469,8 @@ export async function fetchAllLiveOpportunities(): Promise<{
       devpost: devpost.length,
       scholars4dev: scholars4dev.length,
       grantdesk: grantdesk.length,
+      remotive: remotive.length,
+      arbeitnow: arbeitnow.length,
       total: rows.length,
     },
   };

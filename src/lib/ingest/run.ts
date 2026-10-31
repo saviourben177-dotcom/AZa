@@ -1,5 +1,5 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { fetchAllLiveOpportunities } from "@/lib/ingest/sources";
+import { fetchAllLiveOpportunities, flagsRestrictiveEligibility } from "@/lib/ingest/sources";
 
 // The editorial identity (@Aza) that owns all curated/ingested content —
 // same profile used for manually-added opportunities. See profiles table,
@@ -60,6 +60,14 @@ export async function runOpportunityIngest(): Promise<IngestRunResult> {
       job_type: r.job_type,
       paid: r.paid,
       salary_range: r.salary_range,
+      // Best-effort hint only (see flagsRestrictiveEligibility in
+      // sources.ts) — checked against the row's own description/location/
+      // eligibility text, never used to drop the row. Surfaced in the UI
+      // as a "check eligibility" note, not a per-country filter, since no
+      // source here reliably states which countries are excluded.
+      eligibility_flag: flagsRestrictiveEligibility(
+        [r.description, r.location, r.eligibility].filter(Boolean).join(" ")
+      ),
       updated_at: new Date().toISOString(),
     }));
 
