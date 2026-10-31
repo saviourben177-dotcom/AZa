@@ -1,13 +1,16 @@
 "use client";
 
-import { BadgeCheck, Bookmark, ExternalLink, Sparkles } from "lucide-react";
-import { useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, BadgeCheck, Bookmark, ExternalLink, Sparkles } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/aza/app-shell";
-import { BackLink, btn } from "@/components/aza/kit";
+import { btn } from "@/components/aza/kit";
 import { Deadline, Tag } from "@/components/aza/ui";
 import { ReportButton } from "@/components/aza/report";
 import OpportunityMatchAnalysisCard from "@/components/cv/opportunity-match-analysis";
+import OpportunityExitIntent from "./opportunity-exit-intent";
 import type { Opportunity } from "@/lib/aza-data";
 import { api } from "@/lib/aza/api";
 import { cn } from "@/lib/utils";
@@ -18,6 +21,7 @@ export default function OpportunityDetailClient({
   o,
   d,
   initialSaved = false,
+  similar = [],
 }: {
   o: Opportunity;
   d: {
@@ -26,10 +30,57 @@ export default function OpportunityDetailClient({
     applyUrl: string | null;
   };
   initialSaved?: boolean;
+  similar?: Opportunity[];
 }) {
+  const router = useRouter();
   const [saved, setSaved] = useState(initialSaved);
   const [status, setStatus] = useState(statuses[0]);
   const [isPending, startTransition] = useTransition();
+
+  // Exit-intent: shown once, only if the user tries to leave without
+  // having saved the opportunity, and only when there's something to show
+  // them instead. savedRef mirrors `saved` for the popstate handler below,
+  // which is registered once and would otherwise close over a stale value.
+  const [showExitIntent, setShowExitIntent] = useState(false);
+  const exitIntentShownRef = useRef(false);
+  const savedRef = useRef(saved);
+  useEffect(() => {
+    savedRef.current = saved;
+  }, [saved]);
+
+  const shouldInterceptExit = useCallback(() => {
+    return !savedRef.current && similar.length > 0 && !exitIntentShownRef.current;
+  }, [similar.length]);
+
+  const BACK_HREF = "/discover";
+
+  const handleBackClick = (e: React.MouseEvent) => {
+    if (shouldInterceptExit()) {
+      e.preventDefault();
+      exitIntentShownRef.current = true;
+      setShowExitIntent(true);
+    }
+  };
+
+  // Browser/gesture back button: push one history entry on mount so the
+  // first back press can be caught and swapped for the in-app prompt
+  // instead of silently navigating away.
+  useEffect(() => {
+    if (!shouldInterceptExit()) return;
+    window.history.pushState({ azaExitGuard: true }, "", window.location.href);
+    const onPopState = () => {
+      if (shouldInterceptExit()) {
+        exitIntentShownRef.current = true;
+        setShowExitIntent(true);
+        window.history.pushState({ azaExitGuard: true }, "", window.location.href);
+      }
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+    // Intentionally only re-arms when similar/saved state settles, not on
+    // every render — re-running this would push extra history entries.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [similar.length, saved]);
 
   const handleToggleSave = () => {
     startTransition(async () => {
@@ -65,7 +116,13 @@ export default function OpportunityDetailClient({
   return (
     <AppShell>
       <div className="mb-4 flex items-center justify-between">
-        <BackLink to="/discover" label="Discover" />
+        <Link
+          href={BACK_HREF}
+          onClick={handleBackClick}
+          className="-ml-2 mb-0 inline-flex h-11 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" /> Discover
+        </Link>
         <ReportButton target={{ type: "idea", id: o.id, userId: o.id, content: o.title }} />
       </div>
 
@@ -158,6 +215,17 @@ export default function OpportunityDetailClient({
           </div>
         </aside>
       </div>
+
+      {showExitIntent && (
+        <OpportunityExitIntent
+          similar={similar}
+          onStay={() => setShowExitIntent(false)}
+          onLeave={() => {
+            setShowExitIntent(false);
+            router.push(BACK_HREF);
+          }}
+        />
+      )}
     </AppShell>
   );
 }

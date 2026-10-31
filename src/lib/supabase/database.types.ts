@@ -687,6 +687,29 @@ export type Database = {
           },
         ]
       }
+      growth_hub_visits: {
+        Row: {
+          first_visited_at: string
+          user_id: string
+        }
+        Insert: {
+          first_visited_at?: string
+          user_id: string
+        }
+        Update: {
+          first_visited_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_hub_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       idea_comment_reactions: {
         Row: {
           comment_id: string
@@ -2461,6 +2484,44 @@ export type Database = {
           },
         ]
       }
+      user_core_streaks: {
+        Row: {
+          current_streak_days: number
+          last_activity_at: string | null
+          last_activity_kind: string | null
+          longest_streak_days: number
+          streak_last_counted_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_streak_days?: number
+          last_activity_at?: string | null
+          last_activity_kind?: string | null
+          longest_streak_days?: number
+          streak_last_counted_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_streak_days?: number
+          last_activity_at?: string | null
+          last_activity_kind?: string | null
+          longest_streak_days?: number
+          streak_last_counted_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_core_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_skill_paths: {
         Row: {
           active_days_count: number
@@ -2622,6 +2683,14 @@ export type Database = {
       }
     }
     Views: {
+      public_core_streaks: {
+        Row: {
+          current_streak_days: number | null
+          longest_streak_days: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
@@ -2642,8 +2711,20 @@ export type Database = {
       }
     }
     Functions: {
+      bump_core_streak: {
+        Args: { p_kind: string; p_user_id: string }
+        Returns: undefined
+      }
       bump_skill_path_streak: {
         Args: { p_path_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      record_growth_hub_visit: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      send_getting_started_reminders: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
       complete_skill_checkpoint: {
@@ -2713,6 +2794,7 @@ export type Database = {
         | "idea_upvote"
         | "system"
         | "idea_comment"
+        | "getting_started_reminder"
       opportunity_category:
         | "scholarship"
         | "grant"
@@ -2897,6 +2979,7 @@ export const Constants = {
         "idea_upvote",
         "system",
         "idea_comment",
+        "getting_started_reminder",
       ],
       opportunity_category: [
         "scholarship",

@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { Check, ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import type { GettingStartedState } from "@/lib/aza/getting-started";
 
-type Step = { id: string; title: string; hint: string; href: string };
+type Step = { id: keyof GettingStartedState; title: string; hint: string; href: string };
 
 const STEPS: Step[] = [
   { id: "profile", title: "Create your profile", hint: "Done during sign up", href: "/profile" },
@@ -13,19 +14,22 @@ const STEPS: Step[] = [
   { id: "growth", title: "Explore the Growth Hub", hint: "Courses, skills and ideas", href: "/growth" },
 ];
 
-const KEY = "aza:getting-started";
+const DISMISS_KEY = "aza:getting-started-dismissed";
 
-/** Checklist shown under the home search bar. Progress is kept on this device. */
-export default function GettingStartedCard() {
-  const [done, setDone] = useState<string[]>(["profile"]);
+/**
+ * Checklist shown under the home search bar. Progress comes from real
+ * server-checked facts (passed in as `state`, computed by
+ * getGettingStartedState) — not click-to-complete, not localStorage.
+ * Only the "hide this card" preference stays local, since that's a genuine
+ * per-device UI preference with nothing to verify server-side.
+ */
+export default function GettingStartedCard({ state }: { state: GettingStartedState }) {
   const [hidden, setHidden] = useState(true);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const s = JSON.parse(localStorage.getItem(KEY) || "{}");
-      setDone(Array.from(new Set(["profile", ...(s.done || [])])));
-      setHidden(!!s.dismissed);
+      setHidden(localStorage.getItem(DISMISS_KEY) === "1");
     } catch {
       setHidden(false);
     } finally {
@@ -33,26 +37,20 @@ export default function GettingStartedCard() {
     }
   }, []);
 
-  const persist = (next: { done?: string[]; dismissed?: boolean }) => {
-    const payload = { done, dismissed: hidden, ...next };
-    localStorage.setItem(KEY, JSON.stringify(payload));
-  };
-
-  const mark = (id: string) => {
-    if (done.includes(id)) return;
-    const next = [...done, id];
-    setDone(next);
-    persist({ done: next });
-  };
-
   const dismiss = () => {
     setHidden(true);
-    persist({ dismissed: true });
+    try {
+      localStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      // ignore — dismiss still works for this render, just won't persist
+    }
   };
 
+  const doneCount = STEPS.filter((s) => state[s.id]).length;
+
   // Avoid a flash of the card before localStorage has been read.
-  if (!hydrated || hidden || done.length === STEPS.length) return null;
-  const pct = Math.round((done.length / STEPS.length) * 100);
+  if (!hydrated || hidden || doneCount === STEPS.length) return null;
+  const pct = Math.round((doneCount / STEPS.length) * 100);
 
   return (
     <section className="mb-8">
@@ -61,7 +59,7 @@ export default function GettingStartedCard() {
           <div>
             <h2 className="text-base font-bold tracking-tight text-foreground">Get started</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {done.length} of {STEPS.length} done
+              {doneCount} of {STEPS.length} done
             </p>
           </div>
           <button
@@ -78,12 +76,11 @@ export default function GettingStartedCard() {
         </div>
         <ul className="mt-3 divide-y divide-border">
           {STEPS.map((s) => {
-            const ok = done.includes(s.id);
+            const ok = state[s.id];
             return (
               <li key={s.id}>
                 <Link
                   href={s.href}
-                  onClick={() => mark(s.id)}
                   className="flex items-center gap-3 py-3 transition hover:opacity-80"
                 >
                   <span

@@ -69,7 +69,24 @@ export default async function OpportunityDetailPage({
       eligibility: dbOpp.eligibility || null,
       applyUrl: dbOpp.apply_url || null,
     };
-    return <OpportunityDetailClient o={o} d={d} initialSaved={isSaved} />;
+
+    // Exit-intent candidates: same category, not this opportunity. Only
+    // needed when not yet saved — fetched regardless of isSaved since it's
+    // cheap and keeps the client component's prop shape simple; the client
+    // only shows the exit-intent prompt when !saved.
+    let similar: ReturnType<typeof mapDbOpportunityToPrototype>[] = [];
+    if (dbOpp.category) {
+      const { data: similarRows } = await supabase
+        .from("opportunities")
+        .select("*")
+        .eq("category", dbOpp.category)
+        .neq("id", id)
+        .order("deadline", { ascending: true, nullsFirst: false })
+        .limit(3);
+      similar = (similarRows ?? []).map((row) => mapDbOpportunityToPrototype(row));
+    }
+
+    return <OpportunityDetailClient o={o} d={d} initialSaved={isSaved} similar={similar} />;
   }
 
   // Try mock data fallback — only reached when the id was never a real
@@ -86,6 +103,7 @@ export default async function OpportunityDetailPage({
       o={mock}
       d={{ description: mockD.description, eligibility: mockD.eligibility, applyUrl: mockD.applyUrl }}
       initialSaved={false}
+      similar={[]}
     />
   );
 }

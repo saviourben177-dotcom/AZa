@@ -7,10 +7,12 @@ import { IdeaCard } from "@/components/aza/idea-card";
 import { Empty } from "@/components/aza/kit";
 import { OpportunityCard, Deadline, Tag } from "@/components/aza/ui";
 import GettingStartedCard from "@/components/aza/getting-started-card";
+import CoreStreakBadge from "@/components/aza/core-streak-badge";
 import AppGuideGate from "@/components/app-guide/app-guide-gate";
 import { createClient } from "@/lib/supabase/server";
 import { INTRO_COOKIE } from "@/lib/intro/cookie";
 import { mapDbOpportunityToPrototype, mapDbIdeaToPrototype } from "@/lib/aza/mappers";
+import { getGettingStartedState } from "@/lib/aza/getting-started";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +101,33 @@ export default async function HomePage() {
   // visitor's — fine for a greeting, not used anywhere that needs to be exact.
   const hello = greeting(new Date().getHours());
 
+  const gettingStarted = user ? await getGettingStartedState(supabase, user.id) : null;
+
+  let streak: { currentStreakDays: number; lastActivityKind: string | null; atRisk: boolean } | null = null;
+  if (user) {
+    const { data: streakRow } = await supabase
+      .from("user_core_streaks")
+      .select("current_streak_days, streak_last_counted_date, last_activity_kind")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (streakRow) {
+      // UTC "today" vs the row's last counted day — mirrors the at-risk
+      // window send_skill_streak_risk_notifications checks server-side:
+      // last counted yesterday, nothing yet today, so it lapses at UTC
+      // midnight unless a qualifying action happens today.
+      const todayUtc = new Date().toISOString().slice(0, 10);
+      const yesterdayUtc = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const atRisk =
+        streakRow.streak_last_counted_date === yesterdayUtc &&
+        streakRow.streak_last_counted_date !== todayUtc;
+      streak = {
+        currentStreakDays: streakRow.current_streak_days,
+        lastActivityKind: streakRow.last_activity_kind,
+        atRisk,
+      };
+    }
+  }
+
   return (
     <AppShell>
       {showAppGuide && <AppGuideGate shouldShow />}
@@ -115,7 +144,15 @@ export default async function HomePage() {
         Search scholarships, grants, fellowships...
       </Link>
 
-      <GettingStartedCard />
+      {streak && (
+        <CoreStreakBadge
+          currentStreakDays={streak.currentStreakDays}
+          lastActivityKind={streak.lastActivityKind}
+          streakAtRiskToday={streak.atRisk}
+        />
+      )}
+
+      {gettingStarted && <GettingStartedCard state={gettingStarted} />}
 
       <div className="mt-7">
         <SectionHead title="Closing soon" to="/discover" />

@@ -20,6 +20,13 @@ export default async function GrowthHubPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Fire-and-forget: powers the "Explore the Growth Hub" step of the real
+  // getting-started checklist. Idempotent server-side (on conflict do
+  // nothing), so no need to await/guard against repeat visits here.
+  if (user) {
+    void supabase.rpc("record_growth_hub_visit");
+  }
+
   // public_profiles is a view with no declared foreign key back to
   // ideas.user_id, so PostgREST can't resolve it as an embed — embedding
   // it (public_profiles(...)) fails the whole query. Fetch separately.
