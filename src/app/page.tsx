@@ -130,7 +130,7 @@ export default async function HomePage() {
                 key={o.id}
                 href={`/opportunities/${o.id}`}
                 className={`card-lift relative flex w-[72%] shrink-0 snap-start flex-col gap-3 overflow-hidden rounded-lg border-t-4 bg-card p-4 pt-5 md:w-auto ${
-                  o.daysLeft <= 7 ? "border-urgent" : "border-primary"
+                  o.daysLeft !== null && o.daysLeft <= 7 ? "border-urgent" : "border-primary"
                 }`}
               >
                 <span className="emboss grid size-10 shrink-0 place-items-center rounded-md border font-display text-sm font-bold">

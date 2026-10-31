@@ -4,9 +4,14 @@ export function mapDbOpportunityToPrototype(
   o: any,
   isSaved = false,
 ): PrototypeOpportunity {
+  // null = no known deadline (ongoing/rolling) — never fabricate a number
+  // here. This used to fall back to a hardcoded `30`, which displayed as a
+  // fake "30 days left" on the real opportunity detail page for every
+  // opportunity with no actual deadline. See Deadline() in
+  // src/components/aza/ui.tsx, which renders "Ongoing" for null.
   const daysLeft = o.deadline
     ? Math.max(0, Math.ceil((new Date(o.deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 30;
+    : null;
 
   const orgMark = (o.org || "AZ")
     .split(/\s+/)

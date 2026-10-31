@@ -4,7 +4,7 @@ export default function DeadlinePill({ deadline }: { deadline: string | null }) 
   if (!deadline) {
     return (
       <span className="rounded-pill bg-paper-dim px-3 py-1.5 text-[11px] font-semibold text-ink/50">
-        No deadline
+        Ongoing
       </span>
     );
   }

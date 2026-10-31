@@ -107,7 +107,11 @@ export type Opportunity = {
   verified: boolean;
   category: string;
   location: string;
-  daysLeft: number;
+  // null = no real deadline (ongoing/rolling opportunity). Must never be
+  // filled with a guessed/fabricated number — see mapDbOpportunityToPrototype
+  // in src/lib/aza/mappers.ts, which is the only place real DB rows flow
+  // through this type.
+  daysLeft: number | null;
   amount?: string;
   summary?: string;
   description?: string;

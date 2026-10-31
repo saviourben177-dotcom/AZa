@@ -1467,6 +1467,7 @@ export type Database = {
           eligibility: string | null
           eligibility_flag: boolean
           experience_required: string | null
+          expires_at: string | null
           id: string
           job_type: string | null
           level: string | null
@@ -1497,6 +1498,7 @@ export type Database = {
           eligibility?: string | null
           eligibility_flag?: boolean
           experience_required?: string | null
+          expires_at?: string | null
           id?: string
           job_type?: string | null
           level?: string | null
@@ -1527,6 +1529,7 @@ export type Database = {
           eligibility?: string | null
           eligibility_flag?: boolean
           experience_required?: string | null
+          expires_at?: string | null
           id?: string
           job_type?: string | null
           level?: string | null

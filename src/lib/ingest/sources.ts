@@ -71,7 +71,16 @@ export interface IngestRow {
   category: IngestCategory;
   description: string;
   eligibility: string | null;
+  // The REAL, user-facing application deadline — null means no known
+  // deadline (ongoing/rolling), never a fabricated placeholder. Sources
+  // below only set this when they have an actual deadline from the API/
+  // feed; when they don't, this stays null and expires_at (below) carries
+  // the internal housekeeping date instead.
   deadline: string | null; // ISO date
+  // Internal housekeeping only: when a row with no real deadline should be
+  // swept as stale by the ingest sweep in run.ts. NEVER rendered to users
+  // and never substituted for `deadline`.
+  expires_at: string | null; // ISO date
   apply_url: string;
   location: string | null;
   remote: boolean;
@@ -82,6 +91,8 @@ export interface IngestRow {
 }
 
 const toISO = (d: Date) => d.toISOString().slice(0, 10);
+// Housekeeping-only TTL for rows with no real deadline — see expires_at
+// above. Must never be written to `deadline`.
 const in92Days = () => new Date(Date.now() + 92 * 86_400_000);
 
 function stripHtml(s: string): string {
@@ -161,7 +172,8 @@ async function fetchHimalayas(): Promise<IngestRow[]> {
         5000
       ),
       eligibility: null,
-      deadline: toISO(j.expiryDate ? new Date(j.expiryDate) : in92Days()),
+      deadline: j.expiryDate ? toISO(new Date(j.expiryDate)) : null,
+      expires_at: j.expiryDate ? null : toISO(in92Days()),
       apply_url: j.applicationLink || "https://himalayas.app",
       location: null,
       remote: true,
@@ -212,7 +224,8 @@ async function fetchJobicy(): Promise<IngestRow[]> {
         5000
       ),
       eligibility: null,
-      deadline: toISO(in92Days()),
+      deadline: null, // Jobicy's API doesn't return a per-listing deadline.
+      expires_at: toISO(in92Days()),
       apply_url: j.url || "https://jobicy.com",
       location: j.jobGeo && j.jobGeo !== "Worldwide" ? String(j.jobGeo) : null,
       remote: true,
@@ -257,7 +270,11 @@ async function fetchDevpost(): Promise<IngestRow[]> {
           5000
         ),
         eligibility: null,
-        deadline: toISO(in92Days()),
+        // The mirror's submission_period_dates is a free-text display
+        // string (e.g. "Oct 01, 2026 - Nov 15, 2026"), not a parseable
+        // field, so there's no real structured deadline to use here.
+        deadline: null,
+        expires_at: toISO(in92Days()),
         apply_url: h.url || "https://devpost.com/hackathons",
         location: h.displayed_location === "Online" ? null : String(h.displayed_location ?? "") || null,
         remote: h.displayed_location === "Online",
@@ -286,7 +303,10 @@ async function fetchScholars4Dev(): Promise<IngestRow[]> {
       description:
         "Scholarship listing curated by Scholars4Dev. See the original listing for full eligibility and deadline details.",
       eligibility: "See original listing for eligibility details.",
-      deadline: toISO(in92Days()),
+      // Scholars4Dev's RSS only reliably structures title/link/description
+      // — the real deadline lives on the source page, not in the feed.
+      deadline: null,
+      expires_at: toISO(in92Days()),
       apply_url: link,
       location: null,
       remote: true,
@@ -309,11 +329,15 @@ async function fetchGrantDesk(): Promise<IngestRow[]> {
     const link = rssField(block, "link").trim() || "https://www.artificialnouveau.com/smalltools/grants/";
     const desc = stripHtml(rssField(block, "description"));
     const deadlineMatch = desc.match(/Deadline:\s*(\d{1,2}\s\w{3}\s\d{4})/);
-    let deadline = toISO(in92Days());
+    let deadline: string | null = null;
     if (deadlineMatch) {
       const parsed = new Date(deadlineMatch[1]);
       if (!isNaN(parsed.getTime())) deadline = toISO(parsed);
     }
+    // Only fall back to the housekeeping TTL when no real deadline could be
+    // parsed out of the RSS description — a row with a real deadline is
+    // never also given a fabricated expires_at.
+    const expiresAt = deadline ? null : toISO(in92Days());
     const isFellowship = /fellowship|residenc/i.test(title);
     return {
       source_ref: `grantdesk-${Buffer.from(link).toString("base64url").slice(0, 24)}-${i}`,
@@ -323,6 +347,7 @@ async function fetchGrantDesk(): Promise<IngestRow[]> {
       description: (desc || "See original listing for full details.").slice(0, 5000),
       eligibility: "See original listing for eligibility details.",
       deadline,
+      expires_at: expiresAt,
       apply_url: link,
       location: null,
       remote: true,
@@ -371,7 +396,8 @@ async function fetchRemotive(): Promise<IngestRow[]> {
         5000
       ),
       eligibility: loc && loc.toLowerCase() !== "worldwide" ? `Candidate location: ${loc}` : null,
-      deadline: toISO(in92Days()),
+      deadline: null, // Remotive's API doesn't return a per-listing deadline.
+      expires_at: toISO(in92Days()),
       apply_url: j.url || "https://remotive.com",
       location: loc && loc.toLowerCase() !== "worldwide" ? loc : null,
       remote: true,
@@ -412,7 +438,8 @@ async function fetchArbeitnow(): Promise<IngestRow[]> {
       5000
     ),
     eligibility: null,
-    deadline: toISO(in92Days()),
+    deadline: null, // Arbeitnow's API doesn't return a per-listing deadline.
+    expires_at: toISO(in92Days()),
     apply_url: j.url || "https://www.arbeitnow.com",
     location: j.location || null,
     remote: true,
@@ -476,9 +503,11 @@ export async function fetchAllLiveOpportunities(): Promise<{
   };
 }
 
-// The 92-day expiry rule (ingested rows whose deadline has passed get
+// The 92-day expiry rule (ingested rows whose expires_at has passed get
 // swept; hand-curated rows with source_ref IS NULL are never touched) is
-// implemented directly against the Supabase client in the ingest route
-// (src/app/api/ingest/opportunities/route.ts), not here — kept as one
-// source of truth instead of a parallel raw-SQL statement that could drift
-// out of sync with it.
+// implemented directly against the Supabase client in src/lib/ingest/run.ts,
+// not here — kept as one source of truth instead of a parallel raw-SQL
+// statement that could drift out of sync with it. `expires_at` is set only
+// on rows with no real `deadline` (see IngestRow above) — it is internal
+// housekeeping and must never be read as, or substituted for, the
+// user-facing deadline.

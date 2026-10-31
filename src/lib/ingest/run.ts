@@ -16,9 +16,11 @@ export interface IngestRunResult {
 
 /**
  * Runs one full ingest pass: fetch all live external sources, upsert into
- * `opportunities` keyed on `source_ref`, then sweep expired ingested rows
- * (deadline passed). Shared by both trigger paths (manual/curator POST and
- * Vercel Cron GET) so the actual ingest logic exists exactly once.
+ * `opportunities` keyed on `source_ref`, then sweep stale ingested rows
+ * (real deadline passed, or — for rows with no real deadline — the internal
+ * expires_at housekeeping date passed). Shared by both trigger paths
+ * (manual/curator POST and Vercel Cron GET) so the actual ingest logic
+ * exists exactly once.
  *
  * Requires SUPABASE_SERVICE_ROLE_KEY (bypasses RLS — there's no logged-in
  * user in a cron context).
@@ -47,6 +49,7 @@ export async function runOpportunityIngest(): Promise<IngestRunResult> {
       description: r.description,
       eligibility: r.eligibility,
       deadline: r.deadline,
+      expires_at: r.expires_at,
       apply_url: r.apply_url,
       location: r.location,
       remote: r.remote,
@@ -83,15 +86,27 @@ export async function runOpportunityIngest(): Promise<IngestRunResult> {
     }
   }
 
-  // The 92-day rule: any ingested row (source_ref not null) whose deadline
-  // has already passed gets swept. Hand-curated rows (source_ref IS NULL)
-  // are never touched.
+  // Sweep stale ingested rows (source_ref not null). Hand-curated rows
+  // (source_ref IS NULL) are never touched by this, regardless of their
+  // deadline — a curator-entered past deadline is real data, not staleness,
+  // and deleting it isn't this sweep's job.
+  //
+  // Two independent reasons an ingested row counts as stale:
+  //   - its real `deadline` has passed (rows that DID get a real deadline
+  //     from their source, e.g. Himalayas with expiryDate, or Grant Desk's
+  //     parsed RSS deadline), or
+  //   - its internal `expires_at` housekeeping date has passed (rows with
+  //     no real deadline at all — see sources.ts — which would otherwise
+  //     sit in the table forever since they have no deadline to go by).
+  // Never the fabricated-deadline shortcut the old code used, which
+  // conflated the two and surfaced the housekeeping date to users.
+  const todayStr = new Date().toISOString().slice(0, 10);
   let expiredRemoved = 0;
   const { error: sweepErr, count: sweepCount } = await supabase
     .from("opportunities")
     .delete({ count: "exact" })
     .not("source_ref", "is", null)
-    .lt("deadline", new Date().toISOString().slice(0, 10));
+    .or(`deadline.lt.${todayStr},expires_at.lt.${todayStr}`);
   if (sweepErr) {
     console.error("[ingest] expiry sweep failed:", sweepErr.message);
   } else {
