@@ -141,7 +141,7 @@ export const opportunityDetails: Record<string, { description: string; eligibili
     description: `${o.title} supports young Africans with funding, mentorship and a peer network. Selected applicants join a cohort and receive structured support over the programme.`,
     eligibility: "Ages 18–35 · Resident in an eligible country · Early-stage idea or business",
     applyUrl: "https://example.com/apply",
-    applicants: 120 + o.daysLeft * 7,
+    applicants: 120 + (o.daysLeft ?? 0) * 7,
   }]),
 );
 
