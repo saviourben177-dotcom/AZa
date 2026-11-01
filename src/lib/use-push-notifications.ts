@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
+import { App as CapacitorApp } from "@capacitor/app";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { createClient } from "@/lib/supabase/client";
 
@@ -18,6 +19,7 @@ export function usePushNotifications() {
 
     let cancelled = false;
     let latestToken: string | null = null;
+    let registering = false;
     const supabase = createClient();
 
     async function saveToken() {
@@ -45,6 +47,14 @@ export function usePushNotifications() {
     }
 
     async function register() {
+      // A fresh install's first launch can lose this race (cold start,
+      // network not ready yet, Play Services still warming up) with no
+      // error the app can see. Without a retry, that single miss means
+      // the device never gets a token until the user happens to clear
+      // app data. Guard against overlapping attempts; real failures are
+      // still retried on next resume since `latestToken` stays null.
+      if (registering || latestToken || cancelled) return;
+      registering = true;
       try {
         const permStatus = await PushNotifications.checkPermissions();
 
@@ -73,6 +83,8 @@ export function usePushNotifications() {
         await PushNotifications.register();
       } catch (err) {
         console.error("Push setup error:", err);
+      } finally {
+        registering = false;
       }
     }
 
@@ -103,10 +115,23 @@ export function usePushNotifications() {
 
     void register();
 
+    // Retry on every foreground resume until a token is actually obtained.
+    // This is what covers the fresh-install case: if the very first launch
+    // lost the race, the user reopening (or just backgrounding/foregrounding)
+    // the app gives registration another shot instead of it being stuck
+    // until a reinstall or manual app-data clear.
+    const resumeListenerPromise = CapacitorApp.addListener(
+      "appStateChange",
+      ({ isActive }) => {
+        if (isActive) void register();
+      }
+    );
+
     return () => {
       cancelled = true;
       void registrationListenerPromise.then((handle) => handle.remove());
       void errorListenerPromise.then((handle) => handle.remove());
+      void resumeListenerPromise.then((handle) => handle.remove());
       authListener.data.subscription.unsubscribe();
     };
   }, []);
