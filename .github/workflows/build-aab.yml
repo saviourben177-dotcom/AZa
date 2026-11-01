@@ -27,7 +27,17 @@ jobs:
         run: npm ci
 
       - name: Build Next.js app
-        run: npm run build
+        # next/font/google downloads font files at build time. A transient
+        # network blip to Google's font CDN from the runner throws a null-deref
+        # inside Next's font loader and fails the whole build, even though
+        # nothing is wrong with the code. Retry a couple of times before
+        # giving up, since a second attempt almost always succeeds.
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: npm run build
 
       - name: Sync Capacitor Android project
         run: |
