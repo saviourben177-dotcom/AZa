@@ -46,13 +46,30 @@ export function usePushNotifications() {
       }
     }
 
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryAttempt = 0;
+    const MAX_RETRY_DELAY_MS = 60_000;
+
+    function scheduleRetry() {
+      if (cancelled || latestToken) return;
+      // Exponential backoff (2s, 4s, 8s, ... capped at 60s) so a lost
+      // cold-start race is retried automatically within this same
+      // session instead of only on the next app foreground. Fresh
+      // installs that are opened once and never backgrounded were
+      // previously stuck with no token until a manual resume.
+      const delay = Math.min(2_000 * 2 ** retryAttempt, MAX_RETRY_DELAY_MS);
+      retryAttempt += 1;
+      retryTimer = setTimeout(() => {
+        void register();
+      }, delay);
+    }
+
     async function register() {
       // A fresh install's first launch can lose this race (cold start,
       // network not ready yet, Play Services still warming up) with no
-      // error the app can see. Without a retry, that single miss means
-      // the device never gets a token until the user happens to clear
-      // app data. Guard against overlapping attempts; real failures are
-      // still retried on next resume since `latestToken` stays null.
+      // error the app can see. Guard against overlapping attempts; a
+      // miss is retried both on next resume and via scheduleRetry below,
+      // since `latestToken` stays null until a token actually lands.
       if (registering || latestToken || cancelled) return;
       registering = true;
       try {
@@ -67,7 +84,11 @@ export function usePushNotifications() {
           granted = req.receive === "granted";
         }
 
-        if (!granted || cancelled) return;
+        if (!granted || cancelled) {
+          // Permission denial is a real outcome, not a transient race —
+          // don't keep retrying in a loop if the user said no.
+          return;
+        }
 
         // Android 8+ requires a notification channel for visible notifications.
         await PushNotifications.createChannel({
@@ -81,8 +102,17 @@ export function usePushNotifications() {
         });
 
         await PushNotifications.register();
+
+        // `register()` only kicks off the native flow; the "registration"
+        // listener delivers the token asynchronously (or "registrationError"
+        // fires instead). If neither has landed shortly after, the native
+        // call itself was lost — schedule a retry.
+        setTimeout(() => {
+          if (!cancelled && !latestToken) scheduleRetry();
+        }, 5_000);
       } catch (err) {
         console.error("Push setup error:", err);
+        if (!cancelled) scheduleRetry();
       } finally {
         registering = false;
       }
@@ -92,6 +122,11 @@ export function usePushNotifications() {
       "registration",
       async (token) => {
         latestToken = token.value;
+        retryAttempt = 0;
+        if (retryTimer) {
+          clearTimeout(retryTimer);
+          retryTimer = null;
+        }
         await saveToken();
       }
     );
@@ -100,6 +135,10 @@ export function usePushNotifications() {
       "registrationError",
       (err) => {
         console.error("Push registration error:", err);
+        // A native registrationError means the token attempt definitely
+        // failed (not just "still pending") — retry rather than waiting
+        // for the next app resume.
+        if (!cancelled) scheduleRetry();
       }
     );
 
@@ -129,6 +168,7 @@ export function usePushNotifications() {
 
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       void registrationListenerPromise.then((handle) => handle.remove());
       void errorListenerPromise.then((handle) => handle.remove());
       void resumeListenerPromise.then((handle) => handle.remove());

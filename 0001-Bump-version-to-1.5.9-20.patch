@@ -1,0 +1,27 @@
+From 3ef7a60f259aa837ba07c6ba80b90835c34c50ec Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Sun, 1 Nov 2026 09:34:13 +0000
+Subject: [PATCH] Bump version to 1.5.9 (20)
+
+---
+ android/app/build.gradle | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/android/app/build.gradle b/android/app/build.gradle
+index 09c6e66..87a6b5a 100644
+--- a/android/app/build.gradle
++++ b/android/app/build.gradle
+@@ -7,8 +7,8 @@ android {
+         applicationId "com.azatechnologies.aza"
+         minSdkVersion rootProject.ext.minSdkVersion
+         targetSdkVersion rootProject.ext.targetSdkVersion
+-        versionCode 18
+-        versionName "1.5.8"
++        versionCode 19
++        versionName "1.5.9"
+         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+         aaptOptions {
+              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+-- 
+2.43.0
+
