@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { pushDebugState } from "@/lib/use-push-notifications";
+import type { Json } from "@/lib/supabase/database.types";
 
 interface DebugRow {
   id: string;
   event: string;
-  detail: Record<string, unknown> | null;
+  detail: Json | null;
   created_at: string;
 }
 
