@@ -522,6 +522,36 @@ export type Database = {
         }
         Relationships: []
       }
+      push_registration_debug: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          detail: Json | null
+          event: string
+          id: string
+          platform: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          detail?: Json | null
+          event: string
+          id?: string
+          platform?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          detail?: Json | null
+          event?: string
+          id?: string
+          platform?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       dismissed_opportunities: {
         Row: {
           dismissed_at: string
@@ -2717,6 +2747,10 @@ export type Database = {
       }
       bump_skill_path_streak: {
         Args: { p_path_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      claim_push_token: {
+        Args: { p_fcm_token: string; p_platform?: string }
         Returns: undefined
       }
       record_growth_hub_visit: {
