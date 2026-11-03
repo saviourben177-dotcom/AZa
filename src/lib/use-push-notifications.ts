@@ -5,6 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { App as CapacitorApp } from "@capacitor/app";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { createClient } from "@/lib/supabase/client";
+import type { Json } from "@/lib/supabase/database.types";
 
 /**
  * Registers the native Android device for FCM push notifications and keeps
@@ -39,9 +40,20 @@ export function usePushNotifications() {
   useEffect(() => {
     const supabase = createClient();
 
-    async function log(event: string, detail?: Record<string, unknown>) {
+    async function log(event: string, detail?: Json) {
       pushDebugState.lastEvent = event;
-      if (detail?.error) pushDebugState.lastError = String(detail.error);
+      // Json is a union (string | number | boolean | null | Json[] |
+      // {[key:string]: Json}), so a plain `detail?.error` property read
+      // doesn't type-check — narrow to the object case first.
+      if (
+        detail &&
+        typeof detail === "object" &&
+        !Array.isArray(detail) &&
+        "error" in detail &&
+        detail.error
+      ) {
+        pushDebugState.lastError = String(detail.error);
+      }
 
       try {
         const {
