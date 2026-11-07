@@ -17,6 +17,15 @@ interface NotificationPayload {
   link_path?: string | null;
 }
 
+interface FcmErrorResponse {
+  error?: {
+    status?: string;
+    details?: Array<{
+      errorCode?: string;
+    }>;
+  };
+}
+
 // Minimal OAuth2 access token fetch for the FCM v1 API using a service account.
 async function getAccessToken(serviceAccount: {
   client_email: string;
@@ -109,7 +118,7 @@ Deno.serve(async (req: Request) => {
     const accessToken = await getAccessToken(serviceAccount);
 
     const results = await Promise.all(
-      tokens.map(async ({ fcm_token }) => {
+      tokens.map(async ({ fcm_token }, index) => {
         const res = await fetch(
           `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
           {
@@ -126,22 +135,37 @@ Deno.serve(async (req: Request) => {
                   body: payload.body ?? "",
                 },
                 data: payload.link_path ? { link_path: payload.link_path } : {},
-                android: { priority: "high" },
+                android: {
+                  priority: "high",
+                  notification: {
+                    channel_id: "aza_default",
+                    sound: "default",
+                    default_vibrate_timings: true,
+                  },
+                },
               },
             }),
           }
         );
 
-        // Clean up tokens FCM reports as invalid/unregistered
-        if (res.status === 404 || res.status === 400) {
-          const errBody = await res.json().catch(() => ({}));
-          const isInvalid = JSON.stringify(errBody).includes("UNREGISTERED");
-          if (isInvalid) {
-            await supabase.from("device_push_tokens").delete().eq("fcm_token", fcm_token);
-          }
+        const response = res.ok
+          ? null
+          : ((await res.json().catch(() => ({}))) as FcmErrorResponse);
+        const errorStatus =
+          response?.error?.details?.find((detail) => detail.errorCode)?.errorCode ??
+          response?.error?.status;
+
+        // Remove only tokens that FCM has explicitly invalidated. Other
+        // failures must remain visible for retry and diagnostics.
+        if (errorStatus === "UNREGISTERED") {
+          await supabase.from("device_push_tokens").delete().eq("fcm_token", fcm_token);
         }
 
-        return { token: fcm_token, status: res.status };
+        return {
+          device: index + 1,
+          status: res.status,
+          ...(errorStatus ? { error: errorStatus } : {}),
+        };
       })
     );
 
