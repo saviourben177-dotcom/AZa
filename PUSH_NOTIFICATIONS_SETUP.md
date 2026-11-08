@@ -29,9 +29,11 @@ This is NOT the same as google-services.json. In the Firebase Console:
 Project Settings → Service Accounts → "Generate new private key".
 This downloads a second JSON file. Keep it safe, don't commit it.
 
-### 3. Apply the Supabase migration
-Run `supabase/migrations/001_push_notifications.sql` against your AZA
-project (SQL editor, or `supabase db push` if you use the CLI).
+### 3. Apply the Supabase migrations
+Run the committed migrations against your AZA project (SQL editor, or
+`supabase db push` if you use the CLI). In particular, the current migration
+set includes the token-recovery RPC needed when a device is reinstalled or a
+person signs out and signs back in.
 
 Then, in the Supabase SQL editor, run these two lines with your real values
 (these are secrets — deliberately not in the migration file / git):
@@ -71,6 +73,8 @@ npx cap sync android
 3. The function looks up all of that user's device tokens and sends a push
    via FCM to each one.
 4. If FCM reports a token as invalid/uninstalled, it's deleted automatically.
+   The sender targets the `aza_default` Android notification channel explicitly,
+   so notifications stay visible on Android 8 and later.
 
 Nothing needs to change in the app's *feature* code going forward — any
 future feature that writes to `notifications` gets push for free.
