@@ -53,14 +53,34 @@ jobs:
         working-directory: android
         run: chmod +x gradlew
 
+      - name: Cache Gradle wrapper and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/wrapper
+            ~/.gradle/caches
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
       - name: Build signed AAB
-        working-directory: android
         env:
           ANDROID_KEYSTORE_PATH: aza-release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew bundleRelease
+        # The Gradle wrapper's own distribution download (gradle-*-all.zip
+        # from services.gradle.org) has a short, non-configurable socket
+        # timeout and has been timing out intermittently on GitHub's
+        # runners, failing the whole job before any real build work starts.
+        # The cache step above means this only matters on a cold cache; retry
+        # a few times since a second attempt reliably gets through.
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 20
+          command: cd android && ./gradlew bundleRelease
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
