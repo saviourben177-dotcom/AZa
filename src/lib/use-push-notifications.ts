@@ -22,7 +22,7 @@ import type { Json } from "@/lib/supabase/database.types";
  * registration actually gets.
  */
 
-const APP_VERSION = "1.5.9";
+const APP_VERSION = "1.5.10";
 
 // Module-level so a debug UI (see push-token-debug.tsx) can read the
 // current state without plumbing props through the whole app tree.
@@ -134,10 +134,44 @@ export function usePushNotifications() {
 
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let retryAttempt = 0;
+    let retryDisabled = false;
+    const MAX_RETRY_ATTEMPTS = 6;
     const MAX_RETRY_DELAY_MS = 60_000;
 
-    function scheduleRetry() {
-      if (cancelled || latestToken) return;
+    // FCM registration errors that mean "stop hammering, this will not
+    // resolve on its own retry" — most importantly the registration-quota
+    // errors (seen as TOO_MANY_REGISTRATIONS / QUOTA_EXCEEDED in device
+    // logs). Retrying on these just adds to the quota exhaustion instead
+    // of recovering from it.
+    const TERMINAL_ERROR_PATTERNS = [
+      "TOO_MANY_REGISTRATIONS",
+      "QUOTA_EXCEEDED",
+      "INVALID_SENDER",
+      "NOT_REGISTERED",
+    ];
+
+    function isTerminalError(message: string | undefined | null): boolean {
+      if (!message) return false;
+      return TERMINAL_ERROR_PATTERNS.some((pattern) =>
+        message.toUpperCase().includes(pattern)
+      );
+    }
+
+    function scheduleRetry(errorMessage?: string | null) {
+      if (cancelled || latestToken || retryDisabled) return;
+
+      if (isTerminalError(errorMessage)) {
+        retryDisabled = true;
+        void log("retry_disabled_terminal_error", { error: errorMessage });
+        return;
+      }
+
+      if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+        retryDisabled = true;
+        void log("retry_disabled_max_attempts", { attempts: retryAttempt });
+        return;
+      }
+
       const delay = Math.min(2_000 * 2 ** retryAttempt, MAX_RETRY_DELAY_MS);
       retryAttempt += 1;
       void log("retry_scheduled", { attempt: retryAttempt, delay_ms: delay });
@@ -147,11 +181,12 @@ export function usePushNotifications() {
     }
 
     async function register() {
-      if (registering || latestToken || cancelled) {
+      if (registering || latestToken || cancelled || retryDisabled) {
         void log("register_skipped", {
           registering,
           has_token: !!latestToken,
           cancelled,
+          retryDisabled,
         });
         return;
       }
@@ -207,11 +242,10 @@ export function usePushNotifications() {
           }
         }, 5_000);
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
         console.error("Push setup error:", err);
-        void log("register_threw", {
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (!cancelled) scheduleRetry();
+        void log("register_threw", { error: message });
+        if (!cancelled) scheduleRetry(message);
       } finally {
         registering = false;
       }
@@ -235,9 +269,10 @@ export function usePushNotifications() {
     const errorListenerPromise = PushNotifications.addListener(
       "registrationError",
       (err) => {
+        const serialized = JSON.stringify(err);
         console.error("Push registration error:", err);
-        void log("registration_error_event", { error: JSON.stringify(err) });
-        if (!cancelled) scheduleRetry();
+        void log("registration_error_event", { error: serialized });
+        if (!cancelled) scheduleRetry(err?.error ?? serialized);
       }
     );
 
