@@ -11,10 +11,34 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 interface NotificationPayload {
+  notification_id?: string;
   user_id: string;
   title: string;
   body?: string | null;
   link_path?: string | null;
+}
+
+type DeliveryOutcome = "accepted" | "invalid_token" | "failed" | "no_token";
+
+async function recordDelivery(
+  supabase: ReturnType<typeof createClient>,
+  input: {
+    notificationId?: string;
+    userId: string;
+    deviceTokenId?: string;
+    outcome: DeliveryOutcome;
+    fcmStatus?: string;
+  }
+) {
+  if (!input.notificationId) return;
+  const { error } = await supabase.from("push_delivery_attempts").insert({
+    notification_id: input.notificationId,
+    user_id: input.userId,
+    device_token_id: input.deviceTokenId ?? null,
+    outcome: input.outcome,
+    fcm_status: input.fcmStatus ?? null,
+  });
+  if (error) console.error("Failed to record push delivery outcome", error.message);
 }
 
 interface FcmErrorResponse {
@@ -89,6 +113,20 @@ async function getAccessToken(serviceAccount: {
 
 Deno.serve(async (req: Request) => {
   try {
+    const triggerToken = Deno.env.get("PUSH_TRIGGER_TOKEN");
+    // The database trigger always sends x-aza-push-token. Enforce it as soon
+    // as the matching Edge Function secret is configured; retain the
+    // established delivery path for the current deployment while reporting
+    // the missing configuration in logs rather than dropping every push.
+    if (triggerToken && req.headers.get("x-aza-push-token") !== triggerToken) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    if (!triggerToken) console.error("PUSH_TRIGGER_TOKEN is not configured");
+
     const payload = (await req.json()) as NotificationPayload;
     if (!payload.user_id || !payload.title) {
       return new Response(JSON.stringify({ error: "user_id and title required" }), {
@@ -103,11 +141,16 @@ Deno.serve(async (req: Request) => {
 
     const { data: tokens, error: tokenErr } = await supabase
       .from("device_push_tokens")
-      .select("fcm_token")
+      .select("id, fcm_token")
       .eq("user_id", payload.user_id);
 
     if (tokenErr) throw tokenErr;
     if (!tokens || tokens.length === 0) {
+      await recordDelivery(supabase, {
+        notificationId: payload.notification_id,
+        userId: payload.user_id,
+        outcome: "no_token",
+      });
       return new Response(JSON.stringify({ skipped: "no device tokens for user" }), {
         headers: { "Content-Type": "application/json" },
       });
@@ -118,7 +161,7 @@ Deno.serve(async (req: Request) => {
     const accessToken = await getAccessToken(serviceAccount);
 
     const results = await Promise.all(
-      tokens.map(async ({ fcm_token }, index) => {
+      tokens.map(async ({ id, fcm_token }, index) => {
         const res = await fetch(
           `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
           {
@@ -157,7 +200,16 @@ Deno.serve(async (req: Request) => {
 
         // Remove only tokens that FCM has explicitly invalidated. Other
         // failures must remain visible for retry and diagnostics.
-        if (errorStatus === "UNREGISTERED") {
+        const invalidToken = errorStatus === "UNREGISTERED" || errorStatus === "NOT_FOUND";
+        await recordDelivery(supabase, {
+          notificationId: payload.notification_id,
+          userId: payload.user_id,
+          deviceTokenId: id,
+          outcome: res.ok ? "accepted" : invalidToken ? "invalid_token" : "failed",
+          fcmStatus: errorStatus ?? String(res.status),
+        });
+
+        if (invalidToken) {
           await supabase.from("device_push_tokens").delete().eq("fcm_token", fcm_token);
         }
 

@@ -1,5 +1,6 @@
 import { askGrowthAssistant, generateBusinessPlan } from "./ai.functions";
 import { createClient } from "@/lib/supabase/client";
+import { releaseCurrentPushToken } from "@/lib/use-push-notifications";
 import type { Database } from "@/lib/supabase/database.types";
 
 type Payload = Record<string, FormDataEntryValue>;
@@ -47,6 +48,7 @@ export const api = {
 
   signOut: async () => {
     const supabase = createClient();
+    await releaseCurrentPushToken();
     await supabase.auth.signOut();
     return true;
   },
@@ -77,6 +79,7 @@ export const api = {
       // ignore
     }
     const supabase = createClient();
+    await releaseCurrentPushToken();
     await supabase.auth.signOut();
     return true;
   },

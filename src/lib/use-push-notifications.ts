@@ -36,6 +36,31 @@ export const pushDebugState: {
   lastError: null,
 };
 
+/**
+ * Detach this device from the account that is about to sign out. The RPC
+ * deletes only a row owned by the current authenticated user, so a delayed
+ * sign-out can never detach a token another account has already claimed.
+ */
+export async function releaseCurrentPushToken(): Promise<void> {
+  const token = pushDebugState.latestToken;
+  if (!token) return;
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("release_push_token", {
+    p_fcm_token: token,
+  });
+
+  if (error) {
+    // Signing out must still be possible offline. A later sign-in will claim
+    // the token for the new account atomically, so this does not create a
+    // cross-account delivery path.
+    console.warn("Failed to release push token before sign-out:", error.message);
+    return;
+  }
+
+  pushDebugState.latestToken = null;
+}
+
 export function usePushNotifications() {
   useEffect(() => {
     const supabase = createClient();
