@@ -79,7 +79,9 @@ export default function SettingsForm({ initialIsPublic }: { initialIsPublic: boo
             className={btn.secondary}
             onClick={async () => {
               await api.signOut();
-              router.push("/login");
+              // Replace, not push — a signed-out session shouldn't be
+              // reachable by pressing back from the login page.
+              router.replace("/login");
             }}
           >
             Sign out
@@ -91,7 +93,9 @@ export default function SettingsForm({ initialIsPublic }: { initialIsPublic: boo
               if (confirm("Delete your account? This can't be undone.")) {
                 await api.deleteAccount();
                 toast.success("Account deleted");
-                router.push("/");
+                // Replace, not push — a deleted account's pages shouldn't
+                // be reachable by pressing back.
+                router.replace("/");
               }
             }}
           >

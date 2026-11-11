@@ -107,6 +107,25 @@ export default function SearchPage() {
             );
           }
 
+          // Without this, every idea card in search results rendered as
+          // "not saved / not upvoted" even when the current user already
+          // had, because mapDbIdeaToPrototype defaults both to false when
+          // is_upvoted/is_saved aren't present on the row.
+          const ideaIds = (ids ?? []).map((i) => i.id);
+          let upvotedIdeaIds = new Set<string>();
+          let savedIdeaIds = new Set<string>();
+          const {
+            data: { user: currentUser },
+          } = await supabase.auth.getUser();
+          if (currentUser && ideaIds.length > 0) {
+            const [{ data: upvotes }, { data: savedRows }] = await Promise.all([
+              supabase.from("idea_upvotes").select("idea_id").eq("user_id", currentUser.id).in("idea_id", ideaIds),
+              supabase.from("saved_ideas").select("idea_id").eq("user_id", currentUser.id).in("idea_id", ideaIds),
+            ]);
+            upvotedIdeaIds = new Set((upvotes ?? []).map((row) => row.idea_id));
+            savedIdeaIds = new Set((savedRows ?? []).map((row) => row.idea_id));
+          }
+
           let oppRows = opps ?? [];
           if (category) {
             const { data: categoryOpps } = await supabase
@@ -128,7 +147,12 @@ export default function SearchPage() {
           setDbOpportunities(oppRows.map((o) => mapDbOpportunityToPrototype(o)));
           setDbIdeas(
             (ids ?? []).map((item) =>
-              mapDbIdeaToPrototype({ ...item, public_profiles: ideaAuthorMap.get(item.user_id) })
+              mapDbIdeaToPrototype({
+                ...item,
+                public_profiles: ideaAuthorMap.get(item.user_id),
+                is_upvoted: upvotedIdeaIds.has(item.id),
+                is_saved: savedIdeaIds.has(item.id),
+              })
             )
           );
           setDbProfiles((profileRows ?? []).filter((p): p is ProfileMatch => p.id !== null));

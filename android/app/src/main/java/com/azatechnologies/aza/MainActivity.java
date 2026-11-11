@@ -69,13 +69,30 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
+                // Skip the hide when this is the about:blank we load
+                // ourselves inside showError() — that finishing "successfully"
+                // must not fade out and hide the error screen underneath it.
+                if ("about:blank".equals(url)) {
+                    return;
+                }
                 hideLoadingOverlay();
             }
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-                super.onReceivedError(view, request, error);
-                showError("Connection failed. Tap Retry.");
+                // Only react to the main document failing to load. Subresource
+                // errors (a missing icon, a blocked analytics script, etc.)
+                // would otherwise also trigger our full-screen error state,
+                // hiding a page that actually loaded fine.
+                if (!request.isForMainFrame()) {
+                    return;
+                }
+                // Don't call super.onReceivedError here — that lets Chromium
+                // paint its own "can't open a-za.vercel.app" page underneath
+                // our overlay. We want only our own error screen visible.
+                showError(isNetworkAvailable()
+                        ? "Connection failed. Tap Retry."
+                        : "No internet connection. Tap Retry.");
             }
 
             @Override
@@ -189,8 +206,13 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void showError(String msg) {
+        loadingOverlay.setVisibility(View.VISIBLE);
+        loadingOverlay.setAlpha(1f);
         loadingBar.setVisibility(View.GONE);
         errorState.setVisibility(View.VISIBLE);
         errorMessage.setText(msg);
+        // Blank out whatever Chromium tried to render (including its own
+        // default offline/error page) so only our error screen is visible.
+        bridge.getWebView().loadUrl("about:blank");
     }
 }

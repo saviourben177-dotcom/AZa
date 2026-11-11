@@ -72,8 +72,26 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
     isFollowing = !!existingFollow;
   }
 
+  const ideaIds = (dbIdeas ?? []).map((i) => i.id);
+  let upvotedIdeaIds = new Set<string>();
+  let savedIdeaIds = new Set<string>();
+  if (user && ideaIds.length > 0) {
+    const [{ data: upvotes }, { data: savedRows }] = await Promise.all([
+      supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
+      supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds),
+    ]);
+    upvotedIdeaIds = new Set((upvotes ?? []).map((row) => row.idea_id));
+    savedIdeaIds = new Set((savedRows ?? []).map((row) => row.idea_id));
+  }
+
   const ideas = (dbIdeas ?? []).map((i) =>
-    mapDbIdeaToPrototype({ ...i, author_name: profile.full_name, author_avatar_url: profile.avatar_url })
+    mapDbIdeaToPrototype({
+      ...i,
+      author_name: profile.full_name,
+      author_avatar_url: profile.avatar_url,
+      is_upvoted: upvotedIdeaIds.has(i.id),
+      is_saved: savedIdeaIds.has(i.id),
+    })
   );
 
   return (

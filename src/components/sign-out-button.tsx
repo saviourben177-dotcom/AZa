@@ -11,7 +11,9 @@ export default function SignOutButton() {
     const supabase = createClient();
     await releaseCurrentPushToken();
     await supabase.auth.signOut();
-    router.push("/");
+    // Replace (not push) history so the back button can't return to the
+    // authenticated page's stale state after signing out.
+    router.replace("/");
     router.refresh();
   }
 

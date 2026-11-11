@@ -4,6 +4,7 @@ import { Sora, Manrope, Inter } from "next/font/google";
 import "./globals.css";
 import PushNotificationsMount from "@/components/push-notifications-mount";
 import PushPermissionBanner from "@/components/push-permission-banner";
+import ServiceWorkerRegister from "@/components/sw-register";
 import { THEME_COOKIE, isValidTheme } from "@/lib/theme/cookie";
 import { Toaster } from "sonner";
 
@@ -55,6 +56,7 @@ export default async function RootLayout({
   return (
     <html lang="en" data-theme={theme} className={`${sora.variable} ${manrope.variable} ${inter.variable}`}>
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
+        <ServiceWorkerRegister />
         <PushNotificationsMount />
         <PushPermissionBanner />
         {children}
