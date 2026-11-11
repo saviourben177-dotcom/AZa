@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
 
 export default function SaveButton({
   opportunityId,
@@ -37,16 +38,24 @@ export default function SaveButton({
       }
 
       if (saved) {
-        await supabase
+        const { error } = await supabase
           .from("saved_opportunities")
           .delete()
           .eq("user_id", user.id)
           .eq("opportunity_id", opportunityId);
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
         setSaved(false);
       } else {
-        await supabase
+        const { error } = await supabase
           .from("saved_opportunities")
           .insert({ user_id: user.id, opportunity_id: opportunityId });
+        if (error) {
+          toast.error(error.message);
+          return;
+        }
         setSaved(true);
       }
     });

@@ -22,7 +22,7 @@ import type { Json } from "@/lib/supabase/database.types";
  * registration actually gets.
  */
 
-const APP_VERSION = "1.5.10";
+const APP_VERSION = "1.5.12";
 
 // Module-level so a debug UI (see push-token-debug.tsx) can read the
 // current state without plumbing props through the whole app tree.

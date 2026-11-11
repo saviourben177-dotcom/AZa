@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleCommentReaction } from "@/lib/actions/idea-comment-reactions";
 import type { CommentReaction } from "@/lib/types";
+import { toast } from "sonner";
 
 export default function CommentReactionButtons({
   ideaId,
@@ -50,7 +51,16 @@ export default function CommentReactionButtons({
       }
     }
 
-    startTransition(() => toggleCommentReaction(ideaId, commentId, reaction, previous));
+    startTransition(async () => {
+      try {
+        await toggleCommentReaction(ideaId, commentId, reaction, previous);
+      } catch (error) {
+        setLocalReaction(previous);
+        setLocalLikes(likesCount);
+        setLocalDislikes(dislikesCount);
+        toast.error(error instanceof Error ? error.message : "Couldn't update your reaction");
+      }
+    });
   }
 
   return (

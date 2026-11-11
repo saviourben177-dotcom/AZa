@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toggleUpvote } from "@/lib/actions/ideas";
+import { toast } from "sonner";
 
 export default function UpvoteButton({
   ideaId, count, upvoted, isAuthed,
@@ -24,7 +25,15 @@ export default function UpvoteButton({
     const next = !localUpvoted;
     setLocalUpvoted(next);
     setLocalCount((c) => c + (next ? 1 : -1));
-    startTransition(() => toggleUpvote(ideaId, localUpvoted));
+    startTransition(async () => {
+      try {
+        await toggleUpvote(ideaId, localUpvoted);
+      } catch (error) {
+        setLocalUpvoted(localUpvoted);
+        setLocalCount(count);
+        toast.error(error instanceof Error ? error.message : "Couldn't update your vote");
+      }
+    });
   }
 
   return (

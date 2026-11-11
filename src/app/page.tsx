@@ -76,6 +76,7 @@ export default async function HomePage() {
       .limit(6),
   ]);
 
+  const ideaIds = (dbIdeas ?? []).map((i) => i.id);
   const ideaAuthorIds = Array.from(new Set((dbIdeas ?? []).map((i) => i.user_id).filter(Boolean)));
   let ideaProfileMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
   if (ideaAuthorIds.length > 0) {
@@ -86,15 +87,35 @@ export default async function HomePage() {
     ideaProfileMap = new Map((profiles ?? []).map((p) => [p.id as string, { full_name: p.full_name, avatar_url: p.avatar_url }]));
   }
 
+  const [upvotesResult, ideaSavesResult, opportunitySavesResult] = await Promise.all([
+    user && ideaIds.length > 0
+      ? supabase.from("idea_upvotes").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds)
+      : Promise.resolve({ data: null }),
+    user && ideaIds.length > 0
+      ? supabase.from("saved_ideas").select("idea_id").eq("user_id", user.id).in("idea_id", ideaIds)
+      : Promise.resolve({ data: null }),
+    user && (dbOpps ?? []).length > 0
+      ? supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id).in("opportunity_id", (dbOpps ?? []).map((o) => o.id))
+      : Promise.resolve({ data: null }),
+  ]);
+  const upvotedIdeaIds = new Set((upvotesResult.data ?? []).map((row) => row.idea_id));
+  const savedIdeaIds = new Set((ideaSavesResult.data ?? []).map((row) => row.idea_id));
+  const savedOpportunityIds = new Set((opportunitySavesResult.data ?? []).map((row) => row.opportunity_id));
+
   // No mock fallback: an empty real result is a genuine "nothing here
   // yet" state, not a reason to show unrelated demo content as if it
   // were real.
-  const oppList = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o));
+  const oppList = (dbOpps ?? []).map((o) => mapDbOpportunityToPrototype(o, savedOpportunityIds.has(o.id)));
   const closing = oppList.filter((o) => o.daysLeft !== null && o.daysLeft <= 10);
   const displayClosing = closing.length > 0 ? closing : oppList.slice(0, 6);
 
   const ideaList = (dbIdeas ?? []).map((i) =>
-    mapDbIdeaToPrototype({ ...i, public_profiles: ideaProfileMap.get(i.user_id) })
+    mapDbIdeaToPrototype({
+      ...i,
+      public_profiles: ideaProfileMap.get(i.user_id),
+      is_upvoted: upvotedIdeaIds.has(i.id),
+      is_saved: savedIdeaIds.has(i.id),
+    })
   );
 
   // Server-rendered, so this reflects the server's clock rather than the

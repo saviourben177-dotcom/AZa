@@ -90,9 +90,11 @@ export async function toggleUpvote(ideaId: string, currentlyUpvoted: boolean) {
   if (!user) throw new Error("Not authenticated");
 
   if (currentlyUpvoted) {
-    await supabase.from("idea_upvotes").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+    const { error } = await supabase.from("idea_upvotes").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+    if (error) throw new Error(error.message);
   } else {
-    await supabase.from("idea_upvotes").upsert({ user_id: user.id, idea_id: ideaId });
+    const { error } = await supabase.from("idea_upvotes").upsert({ user_id: user.id, idea_id: ideaId });
+    if (error) throw new Error(error.message);
   }
 
   revalidatePath("/growth/ideas");
@@ -132,9 +134,11 @@ export async function toggleSaveIdea(ideaId: string, currentlySaved: boolean) {
   if (!user) throw new Error("Not authenticated");
 
   if (currentlySaved) {
-    await supabase.from("saved_ideas").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+    const { error } = await supabase.from("saved_ideas").delete().eq("user_id", user.id).eq("idea_id", ideaId);
+    if (error) throw new Error(error.message);
   } else {
-    await supabase.from("saved_ideas").upsert({ user_id: user.id, idea_id: ideaId });
+    const { error } = await supabase.from("saved_ideas").upsert({ user_id: user.id, idea_id: ideaId });
+    if (error) throw new Error(error.message);
   }
 
   revalidatePath("/growth/ideas");
