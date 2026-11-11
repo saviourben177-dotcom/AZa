@@ -2753,6 +2753,10 @@ export type Database = {
         Args: { p_fcm_token: string; p_platform?: string }
         Returns: undefined
       }
+      release_push_token: {
+        Args: { p_fcm_token: string }
+        Returns: undefined
+      }
       record_growth_hub_visit: {
         Args: Record<PropertyKey, never>
         Returns: undefined
