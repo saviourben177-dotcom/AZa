@@ -14,6 +14,18 @@ create table if not exists public.push_delivery_attempts (
 alter table public.push_delivery_attempts enable row level security;
 revoke all on public.push_delivery_attempts from public;
 
+create table if not exists public.push_function_config (
+  key text primary key,
+  value text not null
+);
+alter table public.push_function_config enable row level security;
+revoke all on public.push_function_config from public;
+
+insert into public.push_function_config(key, value)
+select 'trigger_token_sha256', encode(digest(decrypted_secret, 'sha256'), 'hex')
+from vault.decrypted_secrets where name = 'push_trigger_token'
+on conflict (key) do update set value = excluded.value;
+
 create index if not exists push_delivery_attempts_notification_id_idx
   on public.push_delivery_attempts(notification_id, attempted_at desc);
 create index if not exists push_delivery_attempts_user_id_idx

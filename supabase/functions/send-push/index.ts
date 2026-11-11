@@ -113,19 +113,25 @@ async function getAccessToken(serviceAccount: {
 
 Deno.serve(async (req: Request) => {
   try {
-    const triggerToken = Deno.env.get("PUSH_TRIGGER_TOKEN");
-    // The database trigger always sends x-aza-push-token. Enforce it as soon
-    // as the matching Edge Function secret is configured; retain the
-    // established delivery path for the current deployment while reporting
-    // the missing configuration in logs rather than dropping every push.
-    if (triggerToken && req.headers.get("x-aza-push-token") !== triggerToken) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    const suppliedToken = req.headers.get("x-aza-push-token");
+    const { data: configuredToken } = await supabase
+      .from("push_function_config")
+      .select("value")
+      .eq("key", "trigger_token_sha256")
+      .maybeSingle();
+    const digest = suppliedToken
+      ? Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(suppliedToken))))
+          .map((byte) => byte.toString(16).padStart(2, "0")).join("")
+      : null;
+    if (!configuredToken?.value || !digest || digest !== configuredToken.value) {
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    if (!triggerToken) console.error("PUSH_TRIGGER_TOKEN is not configured");
 
     const payload = (await req.json()) as NotificationPayload;
     if (!payload.user_id || !payload.title) {
@@ -134,10 +140,6 @@ Deno.serve(async (req: Request) => {
         headers: { "Content-Type": "application/json" },
       });
     }
-
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: tokens, error: tokenErr } = await supabase
       .from("device_push_tokens")
