@@ -47,6 +47,69 @@ export async function setLearningStyle(pathId: string, learningStyle: LearningSt
 }
 
 /**
+ * Marks a non-submission checkpoint (a quick read/quiz with no work to
+ * review) as done. Reuses the same completion path as a real submission —
+ * an empty checkpoint_submissions row, auto-passed — so unlocking the next
+ * checkpoint and streak/portfolio bookkeeping stay identical either way.
+ * Only for checkpoints where requires_submission is false; the UI never
+ * offers this button otherwise.
+ */
+export async function markMicroLessonComplete(checkpointId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: checkpoint, error: checkpointError } = await supabase
+    .from("skill_checkpoints")
+    .select("id, path_id, is_final, requires_submission")
+    .eq("id", checkpointId)
+    .single();
+  if (checkpointError || !checkpoint) throw new Error("Checkpoint not found");
+  if (checkpoint.requires_submission) throw new Error("This checkpoint needs a submission.");
+
+  const { data: progress } = await supabase
+    .from("user_checkpoint_progress")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("checkpoint_id", checkpointId)
+    .maybeSingle();
+  if (!progress || progress.status === "locked") {
+    throw new Error("This checkpoint isn't unlocked yet.");
+  }
+  if (progress.status === "completed") return;
+
+  const { data: submission, error: insertError } = await supabase
+    .from("checkpoint_submissions")
+    .insert({
+      user_id: user.id,
+      checkpoint_id: checkpointId,
+      path_id: checkpoint.path_id,
+      submission_text: null,
+      submission_url: null,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+  if (insertError || !submission) throw new Error(insertError?.message ?? "Couldn't mark complete");
+
+  const { error: completeError } = await supabase.rpc("complete_skill_checkpoint", {
+    p_submission_id: submission.id,
+    p_status: "passed",
+    p_portfolio_title: undefined,
+    p_portfolio_description: undefined,
+    p_portfolio_project_url: undefined,
+    p_portfolio_tags: [],
+  });
+  if (completeError) throw new Error(completeError.message);
+
+  revalidatePath(`/growth/skills/paths/${checkpoint.path_id}`);
+  revalidatePath("/growth/skills");
+  revalidatePath("/profile");
+}
+
+/**
  * Submits work for a checkpoint, runs it through AI evaluation, and
  * persists the honest result via complete_skill_checkpoint() — which
  * unlocks the next checkpoint and (on the final checkpoint) writes
