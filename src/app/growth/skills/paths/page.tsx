@@ -156,11 +156,11 @@ function PathCard({
           <Icon className="size-5" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <span className="truncate font-semibold text-foreground">{path.title}</span>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="min-w-0 truncate font-semibold text-foreground">{path.title}</span>
             {path.tier === "premium" && <Lock className="size-3.5 shrink-0 text-muted-foreground" />}
           </div>
-          {path.summary && <p className="mt-0.5 truncate text-sm text-muted-foreground">{path.summary}</p>}
+          {path.summary && <p className="mt-0.5 min-w-0 truncate text-sm text-muted-foreground">{path.summary}</p>}
           {enrollment && enrollment.status === "in_progress" && (
             <div className="mt-2 flex items-center gap-2">
               <div className="flex-1">
