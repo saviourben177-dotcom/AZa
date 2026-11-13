@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const supabase = await createClient();
 
-  const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }] =
+  const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }, { count: skillPathCount }] =
     await Promise.all([
       supabase.from("businesses").select("*", { count: "exact", head: true }),
       supabase.from("idea_library").select("*", { count: "exact", head: true }),
@@ -18,6 +18,7 @@ export default async function AdminPage() {
         .from("ideas")
         .select("*", { count: "exact", head: true })
         .eq("looking_for_collaborators", true),
+      supabase.from("skill_paths").select("*", { count: "exact", head: true }),
     ]);
 
   const { data: recentLog } = await supabase
@@ -30,7 +31,7 @@ export default async function AdminPage() {
     <AppShell>
       <PageHeader title="Admin" sub="Moderate content and manage the platform." />
 
-      <div className="mb-8 grid grid-cols-3 gap-3">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Link href="/admin/businesses">
           <Stat label="Businesses" value={businessCount ?? 0} />
         </Link>
@@ -39,6 +40,9 @@ export default async function AdminPage() {
         </Link>
         <Link href="/admin/teams">
           <Stat label="Open Teams" value={teamCount ?? 0} />
+        </Link>
+        <Link href="/admin/skills">
+          <Stat label="Skill Paths" value={skillPathCount ?? 0} />
         </Link>
       </div>
 
