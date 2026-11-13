@@ -66,7 +66,7 @@ export default async function SkillPathsPage() {
       {inProgress.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-lg font-display font-bold text-foreground">Continue where you left off</h2>
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {inProgress.map((path) => (
               <PathCard
                 key={path.id}
@@ -91,7 +91,7 @@ export default async function SkillPathsPage() {
         {notStarted.length === 0 && inProgress.length === 0 ? (
           <Empty title="No paths published yet" sub="Check back soon for new guided skill paths." />
         ) : (
-          <ul className="grid gap-3 md:grid-cols-2">
+          <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {notStarted.map((path) => (
               <PathCard
                 key={path.id}
