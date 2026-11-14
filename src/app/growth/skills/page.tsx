@@ -30,14 +30,23 @@ export default async function MySkillsPage() {
     );
   }
 
-  const [{ data: userSkills }, { data: allSkills }] = await Promise.all([
+  const [{ data: userSkills }, { data: allSkills }, { data: paths }] = await Promise.all([
     supabase
       .from("user_skills")
       .select("skill_id, level, progress_percent, skills(id, name, category)")
       .eq("user_id", user.id)
       .order("added_at", { ascending: false }),
     supabase.from("skills").select("*").order("name"),
+    supabase.from("skill_paths").select("category").eq("is_published", true),
   ]);
+
+  // Count of published Skill Paths per category, so "Add a skill" can point
+  // people at the guided-path system for sectors that have one, instead of
+  // only ever surfacing the flat external-course list.
+  const pathCountByCategory = new Map<string, number>();
+  (paths ?? []).forEach((p) => {
+    pathCountByCategory.set(p.category, (pathCountByCategory.get(p.category) ?? 0) + 1);
+  });
 
   const trackedIds = new Set((userSkills ?? []).map((s) => s.skill_id));
   const availableSkills = (allSkills ?? []).filter((s) => !trackedIds.has(s.id)) as Skill[];
@@ -91,18 +100,32 @@ export default async function MySkillsPage() {
         <p className="text-sm text-muted-foreground">You&apos;re tracking every available skill.</p>
       ) : (
         <div className="space-y-5">
-          {groupedAvailable.map(({ category, skills }) => (
-            <div key={category}>
-              <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
-                {getSkillCategoryLabel(category)}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
-                  <AddSkillChip key={skill.id} skillId={skill.id} name={skill.name} />
-                ))}
+          {groupedAvailable.map(({ category, skills }) => {
+            const pathCount = pathCountByCategory.get(category) ?? 0;
+            return (
+              <div key={category}>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-muted-foreground">
+                    {getSkillCategoryLabel(category)}
+                  </h3>
+                  {pathCount > 0 && (
+                    <Link
+                      href="/growth/skills/paths"
+                      className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary-strong"
+                    >
+                      {pathCount} guided path{pathCount === 1 ? "" : "s"}
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {skills.map((skill) => (
+                    <AddSkillChip key={skill.id} skillId={skill.id} name={skill.name} />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </AppShell>
