@@ -26,12 +26,6 @@ const CATEGORIES = [
   { label: "Competitions", category: "competition", icon: Trophy },
 ];
 
-function greeting(hour: number) {
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export default async function HomePage() {
   const supabase = await createClient();
 
@@ -118,10 +112,6 @@ export default async function HomePage() {
     })
   );
 
-  // Server-rendered, so this reflects the server's clock rather than the
-  // visitor's — fine for a greeting, not used anywhere that needs to be exact.
-  const hello = greeting(new Date().getHours());
-
   const gettingStarted = user ? await getGettingStartedState(supabase, user.id) : null;
 
   let streak: { currentStreakDays: number; lastActivityKind: string | null; atRisk: boolean } | null = null;
@@ -152,8 +142,7 @@ export default async function HomePage() {
   return (
     <AppShell>
       {showAppGuide && <AppGuideGate shouldShow />}
-      <p className="text-sm font-bold text-primary-strong">{hello}</p>
-      <h1 className="mt-1 text-2xl md:text-3xl font-display font-extrabold text-foreground">
+      <h1 className="text-2xl md:text-3xl font-display font-extrabold text-foreground">
         Find your next opportunity
       </h1>
 
