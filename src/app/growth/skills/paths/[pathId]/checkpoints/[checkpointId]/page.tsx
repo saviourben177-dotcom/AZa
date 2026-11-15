@@ -1,10 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { CheckCircle2, Circle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { CheckpointSubmission, LearningStyle, SkillCheckpoint, SkillPath } from "@/lib/types";
+import type { CheckpointSubmission, SkillCheckpoint, SkillPath } from "@/lib/types";
 import { AppShell } from "@/components/aza/app-shell";
 import { BackLink } from "@/components/aza/kit";
-import { PageHeader, Tag } from "@/components/aza/ui";
+import { PageHeader } from "@/components/aza/ui";
 import SubmissionForm from "./submission-form";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function CheckpointPage({
 
   if (!user) redirect(`/login?next=/growth/skills/paths/${pathId}/checkpoints/${checkpointId}`);
 
-  const [{ data: checkpoint }, { data: path }, { data: progress }, { data: enrollment }, { data: pastSubmissions }] =
+  const [{ data: checkpoint }, { data: path }, { data: progress }, { data: pastSubmissions }] =
     await Promise.all([
       supabase.from("skill_checkpoints").select("*").eq("id", checkpointId).single(),
       supabase.from("skill_paths").select("*").eq("id", pathId).single(),
@@ -32,7 +32,6 @@ export default async function CheckpointPage({
         .eq("user_id", user.id)
         .eq("checkpoint_id", checkpointId)
         .maybeSingle(),
-      supabase.from("user_skill_paths").select("learning_style").eq("user_id", user.id).eq("path_id", pathId).maybeSingle(),
       supabase
         .from("checkpoint_submissions")
         .select("*")
@@ -48,8 +47,7 @@ export default async function CheckpointPage({
 
   const typedCheckpoint = checkpoint as SkillCheckpoint;
   const typedPath = path as SkillPath;
-  const style = (enrollment?.learning_style as LearningStyle | null) ?? "focused";
-  const body = typedCheckpoint.content_by_style?.[style] ?? typedCheckpoint.content_by_style?.focused ?? typedCheckpoint.description;
+  const body = typedCheckpoint.content ?? typedCheckpoint.description;
   const latestPassed = (pastSubmissions as CheckpointSubmission[] | null)?.find((s) => s.status === "passed");
   const alreadyCompleted = progress.status === "completed";
 
@@ -78,11 +76,6 @@ export default async function CheckpointPage({
 
       {body && (
         <section className="mb-6">
-          <div className="mb-2 flex items-center gap-2">
-            <Tag tone="info">
-              {style === "entertaining" ? "Entertaining" : style === "practical" ? "Practical" : "Focused"} style
-            </Tag>
-          </div>
           <div className="whitespace-pre-wrap rounded-lg border bg-card p-4 text-sm leading-relaxed text-foreground">
             {body}
           </div>

@@ -388,7 +388,6 @@ export interface MarketplaceListing {
 // above, which remain the flat skill-tag + external-resource catalog.
 // ---------------------------------------------------------------------------
 
-export type LearningStyle = "entertaining" | "focused" | "practical";
 export type SkillPathOutputKind = "artifact" | "capability";
 export type SkillPathTier = "free" | "premium";
 export type CheckpointProgressStatus = "locked" | "in_progress" | "completed";
@@ -419,7 +418,7 @@ export interface SkillCheckpoint {
   title: string;
   description: string | null;
   learning_points: string[];
-  content_by_style: Partial<Record<LearningStyle, string>>;
+  content: string | null;
   is_final: boolean;
   requires_submission: boolean;
   evaluation_criteria: string | null;
@@ -429,7 +428,6 @@ export interface SkillCheckpoint {
 export interface UserSkillPath {
   user_id: string;
   path_id: string;
-  learning_style: LearningStyle | null;
   status: "in_progress" | "completed";
   started_at: string;
   completed_at: string | null;

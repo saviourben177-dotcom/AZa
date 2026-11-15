@@ -29,14 +29,3 @@ export function getSkillPathIcon(coverIcon: string | null): LucideIcon {
   return PATH_ICONS[coverIcon] ?? Target;
 }
 
-export const LEARNING_STYLE_LABELS: Record<string, string> = {
-  entertaining: "Entertaining",
-  focused: "Focused",
-  practical: "Practical",
-};
-
-export const LEARNING_STYLE_DESCRIPTIONS: Record<string, string> = {
-  entertaining: "Fun framing, stories, and mini-games to keep you engaged.",
-  focused: "Straight to the point — concise explanations, no fluff.",
-  practical: "Learn by doing — minimal theory, jump into the hands-on task.",
-};

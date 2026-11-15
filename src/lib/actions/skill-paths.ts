@@ -3,15 +3,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateCheckpointSubmission } from "@/lib/groq";
-import type { LearningStyle } from "@/lib/types";
 
 /**
- * Enrolls the current user in a skill path (or updates their learning style
- * if already enrolled). Delegates to the enroll_in_skill_path() DB function,
- * which atomically upserts user_skill_paths and seeds user_checkpoint_progress
- * rows (checkpoint 1 unlocked, the rest locked).
+ * Enrolls the current user in a skill path. Delegates to the
+ * enroll_in_skill_path() DB function, which atomically upserts
+ * user_skill_paths and seeds user_checkpoint_progress rows (checkpoint 1
+ * unlocked, the rest locked).
  */
-export async function enrollInSkillPath(pathId: string, learningStyle?: LearningStyle) {
+export async function enrollInSkillPath(pathId: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,29 +19,10 @@ export async function enrollInSkillPath(pathId: string, learningStyle?: Learning
 
   const { error } = await supabase.rpc("enroll_in_skill_path", {
     p_path_id: pathId,
-    p_learning_style: learningStyle ?? undefined,
   });
   if (error) throw new Error(error.message);
 
   revalidatePath("/growth/skills");
-  revalidatePath(`/growth/skills/paths/${pathId}`);
-}
-
-/** Changes the learning style for a path the user is already enrolled in. */
-export async function setLearningStyle(pathId: string, learningStyle: LearningStyle) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-
-  const { error } = await supabase
-    .from("user_skill_paths")
-    .update({ learning_style: learningStyle })
-    .eq("user_id", user.id)
-    .eq("path_id", pathId);
-  if (error) throw new Error(error.message);
-
   revalidatePath(`/growth/skills/paths/${pathId}`);
 }
 

@@ -8,7 +8,6 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink, btn, Progress } from "@/components/aza/kit";
 import { PageHeader, Tag } from "@/components/aza/ui";
 import EnrollPanel from "./enroll-panel";
-import LearningStylePicker from "./learning-style-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -90,10 +89,6 @@ export default async function SkillPathDetailPage({ params }: { params: Promise<
             </div>
             <Progress value={percent} />
           </div>
-
-          {typedEnrollment && (
-            <LearningStylePicker pathId={pathId} currentStyle={typedEnrollment.learning_style} />
-          )}
 
           {typedEnrollment?.status === "completed" && (
             <RatingsCard enrollment={typedEnrollment} />

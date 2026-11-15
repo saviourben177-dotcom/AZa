@@ -2247,7 +2247,7 @@ export type Database = {
       }
       skill_checkpoints: {
         Row: {
-          content_by_style: Json
+          content: string
           created_at: string
           description: string | null
           evaluation_criteria: string | null
@@ -2260,7 +2260,7 @@ export type Database = {
           title: string
         }
         Insert: {
-          content_by_style?: Json
+          content: string
           created_at?: string
           description?: string | null
           evaluation_criteria?: string | null
@@ -2273,7 +2273,7 @@ export type Database = {
           title: string
         }
         Update: {
-          content_by_style?: Json
+          content?: string
           created_at?: string
           description?: string | null
           evaluation_criteria?: string | null
@@ -2558,7 +2558,6 @@ export type Database = {
           completed_at: string | null
           current_streak_days: number
           last_activity_at: string
-          learning_style: string | null
           longest_streak_days: number
           path_id: string
           rating_consistency: number | null
@@ -2574,7 +2573,6 @@ export type Database = {
           completed_at?: string | null
           current_streak_days?: number
           last_activity_at?: string
-          learning_style?: string | null
           longest_streak_days?: number
           path_id: string
           rating_consistency?: number | null
@@ -2590,7 +2588,6 @@ export type Database = {
           completed_at?: string | null
           current_streak_days?: number
           last_activity_at?: string
-          learning_style?: string | null
           longest_streak_days?: number
           path_id?: string
           rating_consistency?: number | null
@@ -2778,7 +2775,7 @@ export type Database = {
       }
       delete_own_account: { Args: never; Returns: undefined }
       enroll_in_skill_path: {
-        Args: { p_learning_style?: string; p_path_id: string }
+        Args: { p_path_id: string }
         Returns: undefined
       }
       get_push_secret: { Args: { secret_name: string }; Returns: string }

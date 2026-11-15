@@ -29,7 +29,7 @@ import { skillPathInputSchema, type SkillPathInput } from "./skill-path-schema";
  * Preview step only — parses and validates, does not write to the DB.
  * Unlike the flat businesses/idea-library imports, this file format is an
  * array of nested objects (path + checkpoints), so it only supports JSON,
- * not CSV — a checkpoint's content_by_style and learning_points don't have
+ * not CSV — a checkpoint's content and learning_points don't have
  * a sane flat CSV representation.
  */
 export async function previewSkillPathImport(fileText: string): Promise<ImportPreview<SkillPathInput>> {
@@ -74,7 +74,7 @@ export async function commitSkillPathImport(paths: SkillPathInput[], createdBy: 
       title: c.title,
       description: c.description ?? null,
       learning_points: c.learning_points,
-      content_by_style: c.content_by_style,
+      content: c.content,
       is_final: c.is_final,
       requires_submission: c.requires_submission,
       evaluation_criteria: c.evaluation_criteria ?? null,

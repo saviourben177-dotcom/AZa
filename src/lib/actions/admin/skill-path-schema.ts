@@ -13,24 +13,17 @@
 
 import { z } from "zod";
 
-export const LEARNING_STYLES = ["entertaining", "focused", "practical"] as const;
-
 export const skillCheckpointInputSchema = z.object({
   order: z.number().int().min(1),
   title: z.string().min(1).max(150),
   description: z.string().optional().nullable(),
   learning_points: z.array(z.string().min(1)).default([]),
-  // Keyed by learning style; at minimum "focused" should be present since
-  // the UI falls back to it when a style is missing (see migration comment).
-  content_by_style: z
-    .object({
-      entertaining: z.string().optional(),
-      focused: z.string().optional(),
-      practical: z.string().optional(),
-    })
-    .refine((v) => Object.values(v).some((s) => s && s.trim().length > 0), {
-      message: "content_by_style must have at least one non-empty style",
-    }),
+  // The full lesson text for this checkpoint. Learning-style variants were
+  // removed (the three "styles" were never actually written distinctly in
+  // practice — every checkpoint only ever had one real version, and the
+  // other two silently fell back to the one-line `description`). One real,
+  // substantive lesson per checkpoint instead.
+  content: z.string().min(1, "content must not be empty"),
   is_final: z.boolean().default(false),
   requires_submission: z.boolean().default(true),
   evaluation_criteria: z.string().optional().nullable(),
