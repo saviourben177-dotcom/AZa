@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { evaluateCheckpointSubmission } from "@/lib/groq";
+import type { QuizQuestion } from "@/lib/types";
 
 /**
  * Enrolls the current user in a skill path. Delegates to the
@@ -81,12 +82,111 @@ export async function markMicroLessonComplete(checkpointId: string) {
     p_portfolio_description: undefined,
     p_portfolio_project_url: undefined,
     p_portfolio_tags: [],
+    // Lesson checkpoints are never the final checkpoint of a path by
+    // design, but set this explicitly rather than rely on the DB default.
+    p_add_to_portfolio: false,
   });
   if (completeError) throw new Error(completeError.message);
 
   revalidatePath(`/growth/skills/paths/${checkpoint.path_id}`);
   revalidatePath("/growth/skills");
   revalidatePath("/profile");
+}
+
+/**
+ * Grades a quiz checkpoint submission entirely server-side — no AI call,
+ * no ambiguity. The learner's picked option index per question is checked
+ * against quiz_questions[].correct_index read fresh from the DB (never
+ * trust indices/answers echoed back from the client), a pass requires
+ * every question correct, and the result is persisted via the same
+ * checkpoint_submissions + complete_skill_checkpoint() path a free-text
+ * submission uses, so streak/unlock/portfolio bookkeeping stays identical.
+ * On a fail, the learner can retry immediately — this inserts a fresh
+ * 'failed' submission row each attempt, same as a failed AI-graded one.
+ */
+export async function submitQuizCheckpoint(checkpointId: string, answers: number[]) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: checkpoint, error: checkpointError } = await supabase
+    .from("skill_checkpoints")
+    .select("id, path_id, is_final, checkpoint_type, quiz_questions")
+    .eq("id", checkpointId)
+    .single();
+  if (checkpointError || !checkpoint) throw new Error("Checkpoint not found");
+  if (checkpoint.checkpoint_type !== "quiz") throw new Error("This checkpoint isn't a quiz.");
+
+  const questions = (checkpoint.quiz_questions ?? []) as QuizQuestion[];
+  if (questions.length === 0) throw new Error("This quiz has no questions configured.");
+  if (answers.length !== questions.length) {
+    throw new Error("Answer count doesn't match the number of questions.");
+  }
+
+  const { data: progress } = await supabase
+    .from("user_checkpoint_progress")
+    .select("status")
+    .eq("user_id", user.id)
+    .eq("checkpoint_id", checkpointId)
+    .maybeSingle();
+  if (!progress || progress.status === "locked") {
+    throw new Error("This checkpoint isn't unlocked yet.");
+  }
+
+  const results = questions.map((q, i) => ({
+    correct: answers[i] === q.correct_index,
+    correctIndex: q.correct_index,
+    explanation: q.explanation ?? null,
+  }));
+  const correctCount = results.filter((r) => r.correct).length;
+  const passed = correctCount === questions.length;
+
+  const { data: submission, error: insertError } = await supabase
+    .from("checkpoint_submissions")
+    .insert({
+      user_id: user.id,
+      checkpoint_id: checkpointId,
+      path_id: checkpoint.path_id,
+      submission_text: `Quiz: ${correctCount}/${questions.length} correct`,
+      submission_url: null,
+      status: passed ? "passed" : "failed",
+      ai_feedback:
+        passed
+          ? "All questions answered correctly."
+          : `${correctCount}/${questions.length} correct — review the explanations and try again.`,
+      evaluated_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (insertError || !submission) throw new Error(insertError?.message ?? "Couldn't save quiz attempt");
+
+  const { error: completeError } = await supabase.rpc("complete_skill_checkpoint", {
+    p_submission_id: submission.id,
+    p_status: passed ? "passed" : "failed",
+    p_portfolio_title: undefined,
+    p_portfolio_description: undefined,
+    p_portfolio_project_url: undefined,
+    p_portfolio_tags: [],
+    // Quiz checkpoints are never the final checkpoint by design (the final
+    // checkpoint always needs a real deliverable), but set this explicitly
+    // rather than rely on the DB default.
+    p_add_to_portfolio: false,
+  });
+  if (completeError) throw new Error(completeError.message);
+
+  revalidatePath(`/growth/skills/paths/${checkpoint.path_id}`);
+  revalidatePath("/growth/skills");
+  revalidatePath("/profile");
+
+  return {
+    passed,
+    correctCount,
+    total: questions.length,
+    results,
+    isFinal: checkpoint.is_final,
+  };
 }
 
 /**
@@ -168,6 +268,12 @@ export async function submitCheckpoint(
     p_portfolio_description: input.portfolio?.description ?? undefined,
     p_portfolio_project_url: input.submissionUrl ?? undefined,
     p_portfolio_tags: [],
+    // Only the final checkpoint's completion ever reaches this flag; every
+    // other checkpoint passes p_add_to_portfolio=true harmlessly (the DB
+    // function only consults it when is_final). The learner's own checkbox
+    // on the final checkpoint is what decides this — never default to
+    // adding a portfolio entry they didn't ask for.
+    p_add_to_portfolio: Boolean(input.portfolio),
   });
   if (completeError) throw new Error(completeError.message);
 

@@ -45,6 +45,8 @@ export default function SubmissionForm({
         }
       : null
   );
+  const [addToPortfolio, setAddToPortfolio] = useState(true);
+
   function submit(formData: FormData) {
     const submissionText = String(formData.get("submission_text") ?? "");
     const submissionUrl = String(formData.get("submission_url") ?? "");
@@ -55,7 +57,7 @@ export default function SubmissionForm({
         const res = await submitCheckpoint(checkpointId, {
           submissionText,
           submissionUrl,
-          portfolio: isFinal ? { title: portfolioTitle || undefined } : undefined,
+          portfolio: isFinal && addToPortfolio ? { title: portfolioTitle || undefined } : undefined,
         });
         setResult(res);
         if (res.passed) {
@@ -107,10 +109,23 @@ export default function SubmissionForm({
 
         {isFinal && (
           <div className="space-y-3 rounded-md border border-dashed p-3">
-            <p className="text-xs font-semibold text-muted-foreground">
-              If this passes, it becomes a portfolio entry on your profile.
-            </p>
-            <TextField label="Portfolio title" name="portfolio_title" placeholder="e.g. My personal portfolio site" />
+            <label className="flex items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={addToPortfolio}
+                onChange={(e) => setAddToPortfolio(e.target.checked)}
+                className="mt-0.5 size-4 shrink-0 accent-primary"
+              />
+              <span>
+                <span className="font-semibold">Add this to my portfolio</span>
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Optional — shows up on your public profile if checked. Unchecking still completes the path.
+                </span>
+              </span>
+            </label>
+            {addToPortfolio && (
+              <TextField label="Portfolio title" name="portfolio_title" placeholder="e.g. My personal portfolio site" />
+            )}
           </div>
         )}
 

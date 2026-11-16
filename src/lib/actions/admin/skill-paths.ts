@@ -77,6 +77,8 @@ export async function commitSkillPathImport(paths: SkillPathInput[], createdBy: 
       content: c.content,
       is_final: c.is_final,
       requires_submission: c.requires_submission,
+      checkpoint_type: c.checkpoint_type,
+      quiz_questions: c.quiz_questions,
       evaluation_criteria: c.evaluation_criteria ?? null,
     }));
 

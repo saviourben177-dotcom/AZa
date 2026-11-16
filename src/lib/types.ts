@@ -392,6 +392,14 @@ export type SkillPathOutputKind = "artifact" | "capability";
 export type SkillPathTier = "free" | "premium";
 export type CheckpointProgressStatus = "locked" | "in_progress" | "completed";
 export type SubmissionStatus = "pending" | "passed" | "failed";
+export type CheckpointType = "lesson" | "quiz" | "submission";
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  correct_index: number;
+  explanation?: string;
+}
 
 export interface SkillPath {
   id: string;
@@ -409,6 +417,7 @@ export interface SkillPath {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  source_attribution: string | null;
 }
 
 export interface SkillCheckpoint {
@@ -421,6 +430,8 @@ export interface SkillCheckpoint {
   content: string | null;
   is_final: boolean;
   requires_submission: boolean;
+  checkpoint_type: CheckpointType;
+  quiz_questions: QuizQuestion[];
   evaluation_criteria: string | null;
   created_at: string;
 }

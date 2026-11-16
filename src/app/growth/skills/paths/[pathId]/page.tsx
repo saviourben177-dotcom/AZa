@@ -100,6 +100,12 @@ export default async function SkillPathDetailPage({ params }: { params: Promise<
         <p className="mb-6 text-sm text-muted-foreground">{typedPath.description}</p>
       )}
 
+      {typedPath.source_attribution && (
+        <p className="mb-6 rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
+          {typedPath.source_attribution}
+        </p>
+      )}
+
       <section>
         <h2 className="mb-3 text-lg font-display font-bold text-foreground">Checkpoints</h2>
         <ol className="space-y-2">

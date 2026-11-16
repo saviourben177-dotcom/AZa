@@ -6,6 +6,9 @@ import { AppShell } from "@/components/aza/app-shell";
 import { BackLink } from "@/components/aza/kit";
 import { PageHeader } from "@/components/aza/ui";
 import SubmissionForm from "./submission-form";
+import QuizForm from "./quiz-form";
+import MarkDoneButton from "./mark-done-button";
+import LessonContent from "@/components/aza/lesson-content";
 
 export const dynamic = "force-dynamic";
 
@@ -75,14 +78,25 @@ export default async function CheckpointPage({
       )}
 
       {body && (
-        <section className="mb-6">
-          <div className="whitespace-pre-wrap rounded-lg border bg-card p-4 text-sm leading-relaxed text-foreground">
-            {body}
-          </div>
+        <section className="mb-6 rounded-lg border bg-card p-4 shadow-[var(--shadow-card)]">
+          <LessonContent content={body} />
         </section>
       )}
 
-      {typedCheckpoint.requires_submission && (
+      {typedCheckpoint.checkpoint_type === "lesson" && (
+        <MarkDoneButton checkpointId={checkpointId} alreadyCompleted={alreadyCompleted} />
+      )}
+
+      {typedCheckpoint.checkpoint_type === "quiz" && (
+        <QuizForm
+          checkpointId={checkpointId}
+          pathId={pathId}
+          questions={typedCheckpoint.quiz_questions}
+          alreadyCompleted={alreadyCompleted}
+        />
+      )}
+
+      {typedCheckpoint.checkpoint_type === "submission" && (
         <SubmissionForm
           checkpointId={checkpointId}
           pathId={pathId}
