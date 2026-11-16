@@ -60,7 +60,8 @@ export const skillCheckpointInputSchema = z
         path: ["quiz_questions"],
       });
     }
-    for (const [i, q] of checkpoint.quiz_questions.entries()) {
+    for (let i = 0; i < checkpoint.quiz_questions.length; i++) {
+      const q = checkpoint.quiz_questions[i];
       if (q.correct_index >= q.options.length) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
