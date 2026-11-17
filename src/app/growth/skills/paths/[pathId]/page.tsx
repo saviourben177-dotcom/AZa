@@ -37,7 +37,7 @@ export default async function SkillPathDetailPage({ params }: { params: Promise<
   ]);
 
   const typedPath = path as SkillPath;
-  const typedCheckpoints = (checkpoints ?? []) as SkillCheckpoint[];
+  const typedCheckpoints = (checkpoints ?? []) as unknown as SkillCheckpoint[];
   const progressByCheckpoint = new Map(
     ((progressRows ?? []) as UserCheckpointProgress[]).map((p) => [p.checkpoint_id, p])
   );

@@ -119,7 +119,7 @@ export async function submitQuizCheckpoint(checkpointId: string, answers: number
   if (checkpointError || !checkpoint) throw new Error("Checkpoint not found");
   if (checkpoint.checkpoint_type !== "quiz") throw new Error("This checkpoint isn't a quiz.");
 
-  const questions = (checkpoint.quiz_questions ?? []) as QuizQuestion[];
+  const questions = (checkpoint.quiz_questions ?? []) as unknown as QuizQuestion[];
   if (questions.length === 0) throw new Error("This quiz has no questions configured.");
   if (answers.length !== questions.length) {
     throw new Error("Answer count doesn't match the number of questions.");

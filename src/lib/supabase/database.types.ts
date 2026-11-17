@@ -522,36 +522,6 @@ export type Database = {
         }
         Relationships: []
       }
-      push_registration_debug: {
-        Row: {
-          app_version: string | null
-          created_at: string
-          detail: Json | null
-          event: string
-          id: string
-          platform: string | null
-          user_id: string | null
-        }
-        Insert: {
-          app_version?: string | null
-          created_at?: string
-          detail?: Json | null
-          event: string
-          id?: string
-          platform?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          app_version?: string | null
-          created_at?: string
-          detail?: Json | null
-          event?: string
-          id?: string
-          platform?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       dismissed_opportunities: {
         Row: {
           dismissed_at: string
@@ -736,6 +706,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "growth_hub_visits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1520,7 +1497,6 @@ export type Database = {
           eligibility: string | null
           eligibility_flag: boolean
           experience_required: string | null
-          expires_at: string | null
           id: string
           job_type: string | null
           level: string | null
@@ -1551,7 +1527,6 @@ export type Database = {
           eligibility?: string | null
           eligibility_flag?: boolean
           experience_required?: string | null
-          expires_at?: string | null
           id?: string
           job_type?: string | null
           level?: string | null
@@ -1582,7 +1557,6 @@ export type Database = {
           eligibility?: string | null
           eligibility_flag?: boolean
           experience_required?: string | null
-          expires_at?: string | null
           id?: string
           job_type?: string | null
           level?: string | null
@@ -1937,6 +1911,96 @@ export type Database = {
         }
         Relationships: []
       }
+      push_delivery_attempts: {
+        Row: {
+          attempted_at: string
+          device_token_id: string | null
+          fcm_status: string | null
+          id: string
+          notification_id: string
+          outcome: string
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          device_token_id?: string | null
+          fcm_status?: string | null
+          id?: string
+          notification_id: string
+          outcome: string
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          device_token_id?: string | null
+          fcm_status?: string | null
+          id?: string
+          notification_id?: string
+          outcome?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_delivery_attempts_device_token_id_fkey"
+            columns: ["device_token_id"]
+            isOneToOne: false
+            referencedRelation: "device_push_tokens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_delivery_attempts_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_function_config: {
+        Row: {
+          key: string
+          value: string
+        }
+        Insert: {
+          key: string
+          value: string
+        }
+        Update: {
+          key?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      push_registration_debug: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          detail: Json | null
+          event: string
+          id: string
+          platform: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          detail?: Json | null
+          event: string
+          id?: string
+          platform?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          detail?: Json | null
+          event?: string
+          id?: string
+          platform?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       rejected_opportunities: {
         Row: {
           category: string
@@ -2247,6 +2311,7 @@ export type Database = {
       }
       skill_checkpoints: {
         Row: {
+          checkpoint_type: string
           content: string
           created_at: string
           description: string | null
@@ -2256,10 +2321,12 @@ export type Database = {
           learning_points: string[]
           order: number
           path_id: string
+          quiz_questions: Json
           requires_submission: boolean
           title: string
         }
         Insert: {
+          checkpoint_type?: string
           content: string
           created_at?: string
           description?: string | null
@@ -2269,10 +2336,12 @@ export type Database = {
           learning_points?: string[]
           order: number
           path_id: string
+          quiz_questions?: Json
           requires_submission?: boolean
           title: string
         }
         Update: {
+          checkpoint_type?: string
           content?: string
           created_at?: string
           description?: string | null
@@ -2282,6 +2351,7 @@ export type Database = {
           learning_points?: string[]
           order?: number
           path_id?: string
+          quiz_questions?: Json
           requires_submission?: boolean
           title?: string
         }
@@ -2308,6 +2378,7 @@ export type Database = {
           output_kind: string
           slug: string
           sort_order: number
+          source_attribution: string | null
           summary: string | null
           tier: string
           title: string
@@ -2325,6 +2396,7 @@ export type Database = {
           output_kind?: string
           slug: string
           sort_order?: number
+          source_attribution?: string | null
           summary?: string | null
           tier?: string
           title: string
@@ -2342,6 +2414,7 @@ export type Database = {
           output_kind?: string
           slug?: string
           sort_order?: number
+          source_attribution?: string | null
           summary?: string | null
           tier?: string
           title?: string
@@ -2550,6 +2623,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_core_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_skill_paths: {
@@ -2716,7 +2796,32 @@ export type Database = {
           longest_streak_days: number | null
           user_id: string | null
         }
-        Relationships: []
+        Insert: {
+          current_streak_days?: number | null
+          longest_streak_days?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          current_streak_days?: number | null
+          longest_streak_days?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_core_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_core_streaks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       public_profiles: {
         Row: {
@@ -2750,20 +2855,9 @@ export type Database = {
         Args: { p_fcm_token: string; p_platform?: string }
         Returns: undefined
       }
-      release_push_token: {
-        Args: { p_fcm_token: string }
-        Returns: undefined
-      }
-      record_growth_hub_visit: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      send_getting_started_reminders: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       complete_skill_checkpoint: {
         Args: {
+          p_add_to_portfolio?: boolean
           p_portfolio_description?: string
           p_portfolio_project_url?: string
           p_portfolio_tags?: string[]
@@ -2774,10 +2868,7 @@ export type Database = {
         Returns: undefined
       }
       delete_own_account: { Args: never; Returns: undefined }
-      enroll_in_skill_path: {
-        Args: { p_path_id: string }
-        Returns: undefined
-      }
+      enroll_in_skill_path: { Args: { p_path_id: string }; Returns: undefined }
       get_push_secret: { Args: { secret_name: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_curator_or_admin: { Args: never; Returns: boolean }
@@ -2791,7 +2882,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_followers_of_post: {
+        Args: {
+          p_author_id: string
+          p_content_kind: string
+          p_link_path: string
+          p_title: string
+        }
+        Returns: undefined
+      }
+      record_growth_hub_visit: { Args: never; Returns: undefined }
+      release_push_token: { Args: { p_fcm_token: string }; Returns: undefined }
+      send_come_back_reminders: { Args: never; Returns: undefined }
       send_deadline_reminders: { Args: never; Returns: undefined }
+      send_getting_started_reminders: { Args: never; Returns: undefined }
       send_opportunity_match_notifications: { Args: never; Returns: undefined }
       send_skill_streak_risk_notifications: { Args: never; Returns: undefined }
     }
@@ -2830,6 +2934,8 @@ export type Database = {
         | "system"
         | "idea_comment"
         | "getting_started_reminder"
+        | "come_back_reminder"
+        | "followed_user_post"
       opportunity_category:
         | "scholarship"
         | "grant"
@@ -3015,6 +3121,8 @@ export const Constants = {
         "system",
         "idea_comment",
         "getting_started_reminder",
+        "come_back_reminder",
+        "followed_user_post",
       ],
       opportunity_category: [
         "scholarship",

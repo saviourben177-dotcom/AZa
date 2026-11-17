@@ -48,7 +48,7 @@ export default async function CheckpointPage({
     redirect(`/growth/skills/paths/${pathId}`);
   }
 
-  const typedCheckpoint = checkpoint as SkillCheckpoint;
+  const typedCheckpoint = checkpoint as unknown as SkillCheckpoint;
   const typedPath = path as SkillPath;
   const body = typedCheckpoint.content ?? typedCheckpoint.description;
   const latestPassed = (pastSubmissions as CheckpointSubmission[] | null)?.find((s) => s.status === "passed");
