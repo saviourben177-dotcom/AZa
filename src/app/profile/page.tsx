@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Bookmark, FileText, Lightbulb, PenLine, Settings, Trophy, Users } from "lucide-react";
+import { Bookmark, Coins, FileText, Lightbulb, PenLine, Settings, Users } from "lucide-react";
 import { Tile, Empty } from "@/components/aza/kit";
 import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
@@ -41,7 +41,7 @@ export default async function ProfilePage() {
 
   if (!user) redirect("/login?next=/profile");
 
-  const [{ data: p }, { data: dbIdeas, error: ideasError }, { data: dbSaved }, { data: dbApps }, { data: cv }] =
+  const [{ data: p }, { data: dbIdeas, error: ideasError }, { data: dbSaved }, { data: dbApps }, { data: cv }, { data: coinRow }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
       supabase
@@ -55,6 +55,7 @@ export default async function ProfilePage() {
       supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id),
       supabase.from("saved_opportunities").select("opportunity_id").eq("user_id", user.id).eq("status", "applied"),
       supabase.from("cv_profiles").select("summary, skills, education, experience").eq("user_id", user.id).maybeSingle(),
+      supabase.from("user_coins").select("balance").eq("user_id", user.id).maybeSingle(),
     ]);
 
   if (ideasError) throw new Error(`Could not load your ideas: ${ideasError.message}`);
@@ -140,7 +141,7 @@ export default async function ProfilePage() {
         <Tile to="/profile/cv" icon={FileText} title="CV" sub="View and tailor" />
         <Tile to="/profile/saved" icon={Bookmark} title="Saved" sub="Opportunities, ideas" />
         <Tile to="/growth/my-ideas" icon={Lightbulb} title="My ideas" sub="Manage posts" />
-        <Tile to="/profile/portfolio" icon={Trophy} title="Portfolio" sub="Verified skill projects" />
+        <Tile to="/growth/courses" icon={Coins} title="Coins" sub={`${(coinRow?.balance ?? 0).toLocaleString()} balance`} />
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">

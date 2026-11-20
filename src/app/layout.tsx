@@ -5,6 +5,7 @@ import "./globals.css";
 import PushNotificationsMount from "@/components/push-notifications-mount";
 import PushPermissionBanner from "@/components/push-permission-banner";
 import ServiceWorkerRegister from "@/components/sw-register";
+import DailyCheckinMount from "@/components/daily-checkin-mount";
 import { THEME_COOKIE, isValidTheme } from "@/lib/theme/cookie";
 import { Toaster } from "sonner";
 
@@ -59,6 +60,7 @@ export default async function RootLayout({
         <ServiceWorkerRegister />
         <PushNotificationsMount />
         <PushPermissionBanner />
+        <DailyCheckinMount />
         {children}
         <Toaster position="top-center" />
       </body>

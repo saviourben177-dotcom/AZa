@@ -16,7 +16,7 @@ export type AdminAction = "create" | "update" | "delete" | "bulk_import";
 
 export async function logAdminAction(params: {
   action: AdminAction;
-  tableName: "businesses" | "idea_library" | "ideas" | "idea_roles" | "skill_paths" | "skill_checkpoints";
+  tableName: "businesses" | "idea_library" | "ideas" | "idea_roles" | "courses" | "prep_fields" | "prep_questions";
   recordId?: string | null;
   summary: string;
 }): Promise<void> {

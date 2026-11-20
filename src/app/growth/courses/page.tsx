@@ -1,16 +1,16 @@
-import { Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AppShell } from "@/components/aza/app-shell";
-import { BackLink } from "@/components/aza/kit";
-import { PageHeader, Tag } from "@/components/aza/ui";
-import SaveResourceButton from "@/components/save-resource-button";
-import MarkCompleteButton from "@/components/mark-complete-button";
+import { BackLink, Empty } from "@/components/aza/kit";
+import { PageHeader } from "@/components/aza/ui";
+import CoinBadge from "@/components/aza/coin-badge";
 import CategoryPills from "./category-pills";
+import CourseCard from "./course-card";
+import { suggestGrowthDefaults } from "@/lib/growth-personalization";
 
 export const dynamic = "force-dynamic";
 
 function categoryLabel(c: string): string {
-  return c.replace("_", " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+  return c.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
 }
 
 export default async function CoursesPage({
@@ -18,81 +18,106 @@ export default async function CoursesPage({
 }: {
   searchParams: Promise<{ category?: string }>;
 }) {
-  const { category } = await searchParams;
+  const { category: explicitCategory } = await searchParams;
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: resources } = await supabase
-    .from("skill_resources")
-    .select("*, skills(id, name, category)")
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const filtered = category
-    ? (resources ?? []).filter((r) => (r.skills as unknown as { category: string })?.category === category)
-    : resources ?? [];
-
-  const { data: skillRows } = await supabase.from("skills").select("category");
-  const categories = Array.from(new Set((skillRows ?? []).map((s) => s.category))).sort();
-
-  let savedIds = new Set<string>();
-  let completedIds = new Set<string>();
-  if (user) {
-    const [{ data: savedResources }, { data: completedResources }] = await Promise.all([
-      supabase.from("saved_resources").select("resource_id").eq("user_id", user.id),
-      supabase.from("user_skill_resources").select("resource_id").eq("user_id", user.id),
-    ]);
-    savedIds = new Set((savedResources ?? []).map((s) => s.resource_id));
-    completedIds = new Set((completedResources ?? []).map((s) => s.resource_id));
+  // Tailoring: when the person hasn't picked a category explicitly (no
+  // ?category= in the URL — including never having clicked "All", which
+  // sets category=all below), default to the one their onboarding
+  // profile suggests. This never hides other categories — it's only
+  // which pill starts selected — and a signed-out visitor or a profile
+  // with no recognizable field simply sees every category, unfiltered,
+  // exactly as before.
+  let suggestedCategory: string | null = null;
+  if (user && !explicitCategory) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("field_of_interest, industry, business_description, freelance_skill, skilled_or_unskilled")
+      .eq("id", user.id)
+      .maybeSingle();
+    suggestedCategory = suggestGrowthDefaults(profile).category;
   }
+
+  // "all" is a real, explicit choice (the "All" pill) distinct from "no
+  // choice made yet" — only the latter gets the suggested default.
+  const effectiveCategory = explicitCategory === "all" ? null : explicitCategory ?? suggestedCategory;
+
+  const coursesQuery = supabase
+    .from("courses")
+    .select("*")
+    .eq("is_published", true)
+    .order("created_at", { ascending: false })
+    .limit(60);
+
+  const { data: courses } = effectiveCategory
+    ? await coursesQuery.eq("category", effectiveCategory)
+    : await coursesQuery;
+
+  // Category pills are built from the full published set, not the
+  // filtered one, so switching categories never hides a pill you'd want
+  // to switch back to.
+  const { data: allPublished } = await supabase
+    .from("courses")
+    .select("category")
+    .eq("is_published", true);
+  const categories = Array.from(new Set((allPublished ?? []).map((c) => c.category))).sort();
+
+  let progressByCourse = new Map<string, { is_unlocked: boolean; progress_percent: number | null; completed_at: string | null }>();
+  let coinBalance = 0;
+
+  if (user) {
+    const [{ data: progressRows }, { data: coinRow }] = await Promise.all([
+      supabase
+        .from("course_progress")
+        .select("course_id, is_unlocked, progress_percent, completed_at")
+        .eq("user_id", user.id),
+      supabase.from("user_coins").select("balance").eq("user_id", user.id).maybeSingle(),
+    ]);
+    progressByCourse = new Map((progressRows ?? []).map((p) => [p.course_id, p]));
+    coinBalance = coinRow?.balance ?? 0;
+  }
+
+  const isShowingSuggestion = !explicitCategory && !!suggestedCategory;
 
   return (
     <AppShell>
       <BackLink to="/growth" label="Growth" />
-      <PageHeader title="Courses" sub="Picked for young founders" />
+      <PageHeader
+        title="Courses"
+        sub="Free and paid"
+        action={user ? <CoinBadge balance={coinBalance} /> : undefined}
+      />
 
-      <CategoryPills categories={categories} active={category ?? null} labelFn={categoryLabel} />
+      <CategoryPills categories={categories} active={effectiveCategory} labelFn={categoryLabel} />
 
-      {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No courses yet in this category.</p>
+      {isShowingSuggestion ? (
+        <p className="mb-4 text-xs font-medium text-muted-foreground">
+          Showing {categoryLabel(suggestedCategory!)} courses based on your profile — tap &quot;All&quot; to see everything.
+        </p>
+      ) : null}
+
+      {!courses || courses.length === 0 ? (
+        <Empty title="No courses yet in this category" sub="Check back soon — new courses are added regularly." />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((r) => (
-            <a
-              key={r.id}
-              href={r.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="card-lift flex flex-col gap-3 rounded-lg border bg-card p-4 transition-colors hover:border-border-strong"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-xs font-bold uppercase tracking-wide text-primary-strong">
-                  {(r.skills as unknown as { name: string })?.name}
-                  {r.curator_verified ? " · Verified" : ""}
-                </p>
-                <SaveResourceButton resourceId={r.id} initialSaved={savedIds.has(r.id)} isAuthed={!!user} />
-              </div>
-              <h3 className="text-base font-display font-bold leading-snug text-foreground">{r.title}</h3>
-              <p className="text-sm text-muted-foreground">{r.provider ?? "Unknown provider"}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {r.is_free ? <Tag tone="primary">Free</Tag> : <Tag>Paid</Tag>}
-                <Tag>{r.level}</Tag>
-                {r.duration_hours ? <Tag icon={<Clock className="size-3.5" />}>{r.duration_hours}h</Tag> : null}
-                {r.rating ? <Tag>★{r.rating}</Tag> : null}
-              </div>
-              <div className="mt-auto">
-                <MarkCompleteButton
-                  skillId={(r.skills as unknown as { id: string })?.id}
-                  resourceId={r.id}
-                  initialCompleted={completedIds.has(r.id)}
-                  isAuthed={!!user}
-                />
-              </div>
-            </a>
-          ))}
+          {courses.map((course) => {
+            const progress = progressByCourse.get(course.id);
+            const isUnlocked = !course.is_coin_gated || progress?.is_unlocked === true;
+            return (
+              <CourseCard
+                key={course.id}
+                course={course}
+                isAuthed={!!user}
+                isUnlocked={isUnlocked}
+                progressPercent={progress?.progress_percent ?? null}
+                isCompleted={!!progress?.completed_at}
+              />
+            );
+          })}
         </div>
       )}
     </AppShell>

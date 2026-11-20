@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   const supabase = await createClient();
 
-  const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }, { count: skillPathCount }] =
+  const [{ count: businessCount }, { count: ideaLibraryCount }, { count: teamCount }, { count: courseCount }] =
     await Promise.all([
       supabase.from("businesses").select("*", { count: "exact", head: true }),
       supabase.from("idea_library").select("*", { count: "exact", head: true }),
@@ -18,7 +18,11 @@ export default async function AdminPage() {
         .from("ideas")
         .select("*", { count: "exact", head: true })
         .eq("looking_for_collaborators", true),
-      supabase.from("skill_paths").select("*", { count: "exact", head: true }),
+      // Replaces the retired skill_paths count (guided Skills paths feature
+      // dropped — see the courses_prep_coins_schema migration). There is no
+      // dedicated /admin/courses moderation page yet, so this stat links
+      // through to the live /growth/courses list for now.
+      supabase.from("courses").select("*", { count: "exact", head: true }),
     ]);
 
   const { data: recentLog } = await supabase
@@ -41,8 +45,8 @@ export default async function AdminPage() {
         <Link href="/admin/teams">
           <Stat label="Open Teams" value={teamCount ?? 0} />
         </Link>
-        <Link href="/admin/skills">
-          <Stat label="Skill Paths" value={skillPathCount ?? 0} />
+        <Link href="/growth/courses">
+          <Stat label="Courses" value={courseCount ?? 0} />
         </Link>
       </div>
 

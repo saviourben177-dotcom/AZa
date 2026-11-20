@@ -2,7 +2,7 @@
 
 import { useTransition } from "react";
 import Link from "next/link";
-import { Briefcase, Code2, GraduationCap, Trophy, Users } from "lucide-react";
+import { Briefcase, BookOpen, GraduationCap, Trophy, Users } from "lucide-react";
 import { completeIntro, completeIntroAndSignUp } from "./actions";
 
 const categories = [
@@ -10,7 +10,10 @@ const categories = [
   { label: "Scholarships & Grants", icon: GraduationCap, href: "/discover?category=scholarship" },
   { label: "Hackathons & Competitions", icon: Trophy, href: "/discover?category=hackathon" },
   { label: "Fellowships", icon: Users, href: "/discover?category=fellowship" },
-  { label: "Skills & Tools", icon: Code2, href: "/growth/skills" },
+  // Retired Skills guided-paths feature replaced by Courses + Prep (see
+  // the courses_prep_coins_schema migration) — pointing this pre-signup
+  // category link at the new free Courses list.
+  { label: "Free Courses", icon: BookOpen, href: "/growth/courses" },
 ];
 
 export default function WelcomeCard({ opportunityCount: _opportunityCount }: { opportunityCount: number }) {

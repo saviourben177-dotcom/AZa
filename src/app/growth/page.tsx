@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { BookOpen, Lightbulb, MessageSquareText, PenLine, Sprout } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Lightbulb, MessageSquareText, PenLine, GraduationCap, Sprout } from "lucide-react";
 import { AppShell } from "@/components/aza/app-shell";
 import { IdeaCard } from "@/components/aza/idea-card";
 import { Empty, Progress, Section, Tile } from "@/components/aza/kit";
@@ -67,11 +68,12 @@ export default async function GrowthHubPage() {
   return (
     <AppShell>
       <PageHeader title="Growth" sub="Learn, build and get feedback" />
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-6">
         <Tile to="/growth/ideas" icon={Lightbulb} title="Ideas" sub="Community feed" />
         <Tile to="/growth/ideas/new" icon={PenLine} title="Share" sub="Post an idea" />
         <Tile to="/growth/skills" icon={Sprout} title="Skills" sub="Your progress" />
         <Tile to="/growth/courses" icon={BookOpen} title="Courses" sub="Free and paid" />
+        <Tile to="/growth/prep" icon={GraduationCap} title="Prep" sub="Interview ready" />
         <Tile to="/growth/assistant" icon={MessageSquareText} title="Assistant" sub="Ask anything" />
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -90,7 +92,10 @@ export default async function GrowthHubPage() {
           {userSkills.length === 0 ? (
             <Empty title="No skills tracked yet" />
           ) : (
-            <div className="space-y-4 rounded-lg border bg-card p-5 shadow-[var(--shadow-card)]">
+            <Link
+              href="/growth/skills"
+              className="card-lift block space-y-4 rounded-lg border bg-card p-5 shadow-[var(--shadow-card)]"
+            >
               {userSkills.map((s) => (
                 <div key={s.name}>
                   <div className="mb-1.5 flex justify-between text-sm">
@@ -100,7 +105,7 @@ export default async function GrowthHubPage() {
                   <Progress value={s.progress_percent} />
                 </div>
               ))}
-            </div>
+            </Link>
           )}
         </Section>
       </div>

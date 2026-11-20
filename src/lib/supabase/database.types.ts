@@ -214,73 +214,61 @@ export type Database = {
           },
         ]
       }
-      checkpoint_submissions: {
+      coin_transactions: {
         Row: {
-          ai_feedback: string | null
-          ai_gaps: string[]
-          ai_strengths: string[]
-          checkpoint_id: string
+          amount: number
+          balance_after: number
+          course_id: string | null
           created_at: string
-          evaluated_at: string | null
           id: string
-          path_id: string
-          status: string
-          submission_text: string | null
-          submission_url: string | null
+          prep_attempt_id: string | null
+          reason: string
           user_id: string
         }
         Insert: {
-          ai_feedback?: string | null
-          ai_gaps?: string[]
-          ai_strengths?: string[]
-          checkpoint_id: string
+          amount: number
+          balance_after: number
+          course_id?: string | null
           created_at?: string
-          evaluated_at?: string | null
           id?: string
-          path_id: string
-          status?: string
-          submission_text?: string | null
-          submission_url?: string | null
+          prep_attempt_id?: string | null
+          reason: string
           user_id: string
         }
         Update: {
-          ai_feedback?: string | null
-          ai_gaps?: string[]
-          ai_strengths?: string[]
-          checkpoint_id?: string
+          amount?: number
+          balance_after?: number
+          course_id?: string | null
           created_at?: string
-          evaluated_at?: string | null
           id?: string
-          path_id?: string
-          status?: string
-          submission_text?: string | null
-          submission_url?: string | null
+          prep_attempt_id?: string | null
+          reason?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "checkpoint_submissions_checkpoint_id_fkey"
-            columns: ["checkpoint_id"]
+            foreignKeyName: "coin_transactions_course_id_fkey"
+            columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "skill_checkpoints"
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "checkpoint_submissions_path_id_fkey"
-            columns: ["path_id"]
+            foreignKeyName: "coin_transactions_prep_attempt_id_fkey"
+            columns: ["prep_attempt_id"]
             isOneToOne: false
-            referencedRelation: "skill_paths"
+            referencedRelation: "prep_attempts"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "checkpoint_submissions_user_id_fkey"
+            foreignKeyName: "coin_transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "checkpoint_submissions_user_id_fkey"
+            foreignKeyName: "coin_transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
@@ -337,6 +325,130 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      course_progress: {
+        Row: {
+          completed_at: string | null
+          course_id: string
+          created_at: string
+          is_unlocked: boolean
+          last_opened_at: string | null
+          progress_percent: number | null
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          course_id: string
+          created_at?: string
+          is_unlocked?: boolean
+          last_opened_at?: string | null
+          progress_percent?: number | null
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          course_id?: string
+          created_at?: string
+          is_unlocked?: boolean
+          last_opened_at?: string | null
+          progress_percent?: number | null
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          author: string | null
+          category: string
+          created_at: string
+          estimated_minutes: number | null
+          external_url: string | null
+          flowable_content: string | null
+          id: string
+          ingested_at: string | null
+          is_coin_gated: boolean
+          is_published: boolean
+          license: string | null
+          pdf_url: string | null
+          reader_mode: string
+          source: string
+          source_ref: string | null
+          source_url: string | null
+          summary: string | null
+          title: string
+          unlock_cost: number
+          updated_at: string
+        }
+        Insert: {
+          author?: string | null
+          category?: string
+          created_at?: string
+          estimated_minutes?: number | null
+          external_url?: string | null
+          flowable_content?: string | null
+          id?: string
+          ingested_at?: string | null
+          is_coin_gated?: boolean
+          is_published?: boolean
+          license?: string | null
+          pdf_url?: string | null
+          reader_mode?: string
+          source: string
+          source_ref?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title: string
+          unlock_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          author?: string | null
+          category?: string
+          created_at?: string
+          estimated_minutes?: number | null
+          external_url?: string | null
+          flowable_content?: string | null
+          id?: string
+          ingested_at?: string | null
+          is_coin_gated?: boolean
+          is_published?: boolean
+          license?: string | null
+          pdf_url?: string | null
+          reader_mode?: string
+          source?: string
+          source_ref?: string | null
+          source_url?: string | null
+          summary?: string | null
+          title?: string
+          unlock_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       cv_documents: {
         Row: {
@@ -1699,70 +1811,146 @@ export type Database = {
           },
         ]
       }
-      portfolio_entries: {
+      prep_attempts: {
         Row: {
-          created_at: string
-          description: string | null
+          answers: Json
+          coins_awarded: number
+          completed_at: string | null
+          field_id: string
           id: string
-          path_id: string
-          project_url: string | null
-          submission_id: string | null
-          tags: string[]
-          title: string
+          question_ids: string[]
+          score: number
+          started_at: string
+          total: number
           user_id: string
-          verified: boolean
         }
         Insert: {
-          created_at?: string
-          description?: string | null
+          answers: Json
+          coins_awarded?: number
+          completed_at?: string | null
+          field_id: string
           id?: string
-          path_id: string
-          project_url?: string | null
-          submission_id?: string | null
-          tags?: string[]
-          title: string
+          question_ids: string[]
+          score: number
+          started_at?: string
+          total: number
           user_id: string
-          verified?: boolean
         }
         Update: {
-          created_at?: string
-          description?: string | null
+          answers?: Json
+          coins_awarded?: number
+          completed_at?: string | null
+          field_id?: string
           id?: string
-          path_id?: string
-          project_url?: string | null
-          submission_id?: string | null
-          tags?: string[]
-          title?: string
+          question_ids?: string[]
+          score?: number
+          started_at?: string
+          total?: number
           user_id?: string
-          verified?: boolean
         }
         Relationships: [
           {
-            foreignKeyName: "portfolio_entries_path_id_fkey"
-            columns: ["path_id"]
+            foreignKeyName: "prep_attempts_field_id_fkey"
+            columns: ["field_id"]
             isOneToOne: false
-            referencedRelation: "skill_paths"
+            referencedRelation: "prep_fields"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portfolio_entries_submission_id_fkey"
-            columns: ["submission_id"]
-            isOneToOne: false
-            referencedRelation: "checkpoint_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "portfolio_entries_user_id_fkey"
+            foreignKeyName: "prep_attempts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "portfolio_entries_user_id_fkey"
+            foreignKeyName: "prep_attempts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prep_fields: {
+        Row: {
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_published: boolean
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_published?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      prep_questions: {
+        Row: {
+          correct_option_index: number
+          created_at: string
+          difficulty: string
+          explanation: string | null
+          field_id: string
+          id: string
+          is_coin_gated: boolean
+          is_published: boolean
+          options: Json
+          prompt: string
+          unlock_cost: number
+        }
+        Insert: {
+          correct_option_index: number
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          field_id: string
+          id?: string
+          is_coin_gated?: boolean
+          is_published?: boolean
+          options: Json
+          prompt: string
+          unlock_cost?: number
+        }
+        Update: {
+          correct_option_index?: number
+          created_at?: string
+          difficulty?: string
+          explanation?: string | null
+          field_id?: string
+          id?: string
+          is_coin_gated?: boolean
+          is_published?: boolean
+          options?: Json
+          prompt?: string
+          unlock_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prep_questions_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "prep_fields"
             referencedColumns: ["id"]
           },
         ]
@@ -2309,134 +2497,6 @@ export type Database = {
           },
         ]
       }
-      skill_checkpoints: {
-        Row: {
-          checkpoint_type: string
-          content: string
-          created_at: string
-          description: string | null
-          evaluation_criteria: string | null
-          id: string
-          is_final: boolean
-          learning_points: string[]
-          order: number
-          path_id: string
-          quiz_questions: Json
-          requires_submission: boolean
-          title: string
-        }
-        Insert: {
-          checkpoint_type?: string
-          content: string
-          created_at?: string
-          description?: string | null
-          evaluation_criteria?: string | null
-          id?: string
-          is_final?: boolean
-          learning_points?: string[]
-          order: number
-          path_id: string
-          quiz_questions?: Json
-          requires_submission?: boolean
-          title: string
-        }
-        Update: {
-          checkpoint_type?: string
-          content?: string
-          created_at?: string
-          description?: string | null
-          evaluation_criteria?: string | null
-          id?: string
-          is_final?: boolean
-          learning_points?: string[]
-          order?: number
-          path_id?: string
-          quiz_questions?: Json
-          requires_submission?: boolean
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "skill_checkpoints_path_id_fkey"
-            columns: ["path_id"]
-            isOneToOne: false
-            referencedRelation: "skill_paths"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      skill_paths: {
-        Row: {
-          category: string
-          cover_icon: string | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          estimated_weeks: number | null
-          id: string
-          is_published: boolean
-          output_kind: string
-          slug: string
-          sort_order: number
-          source_attribution: string | null
-          summary: string | null
-          tier: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category: string
-          cover_icon?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          estimated_weeks?: number | null
-          id?: string
-          is_published?: boolean
-          output_kind?: string
-          slug: string
-          sort_order?: number
-          source_attribution?: string | null
-          summary?: string | null
-          tier?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          cover_icon?: string | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          estimated_weeks?: number | null
-          id?: string
-          is_published?: boolean
-          output_kind?: string
-          slug?: string
-          sort_order?: number
-          source_attribution?: string | null
-          summary?: string | null
-          tier?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "skill_paths_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "skill_paths_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       skill_resources: {
         Row: {
           created_at: string
@@ -2531,57 +2591,92 @@ export type Database = {
         }
         Relationships: []
       }
-      user_checkpoint_progress: {
+      unlock_attempts: {
         Row: {
-          checkpoint_id: string
-          completed_at: string | null
-          path_id: string
-          started_at: string | null
-          status: string
+          coin_balance_at_attempt: number
+          cost: number
+          course_id: string | null
+          created_at: string
+          id: string
+          prep_item_id: string | null
+          succeeded: boolean
           user_id: string
         }
         Insert: {
-          checkpoint_id: string
-          completed_at?: string | null
-          path_id: string
-          started_at?: string | null
-          status?: string
+          coin_balance_at_attempt: number
+          cost: number
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          prep_item_id?: string | null
+          succeeded: boolean
           user_id: string
         }
         Update: {
-          checkpoint_id?: string
-          completed_at?: string | null
-          path_id?: string
-          started_at?: string | null
-          status?: string
+          coin_balance_at_attempt?: number
+          cost?: number
+          course_id?: string | null
+          created_at?: string
+          id?: string
+          prep_item_id?: string | null
+          succeeded?: boolean
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "user_checkpoint_progress_checkpoint_id_fkey"
-            columns: ["checkpoint_id"]
+            foreignKeyName: "unlock_attempts_course_id_fkey"
+            columns: ["course_id"]
             isOneToOne: false
-            referencedRelation: "skill_checkpoints"
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_checkpoint_progress_path_id_fkey"
-            columns: ["path_id"]
-            isOneToOne: false
-            referencedRelation: "skill_paths"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_checkpoint_progress_user_id_fkey"
+            foreignKeyName: "unlock_attempts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_checkpoint_progress_user_id_fkey"
+            foreignKeyName: "unlock_attempts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_coins: {
+        Row: {
+          balance: number
+          last_daily_checkin_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          last_daily_checkin_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          last_daily_checkin_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_coins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_coins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
@@ -2627,76 +2722,6 @@ export type Database = {
             foreignKeyName: "user_core_streaks_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: "public_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_skill_paths: {
-        Row: {
-          active_days_count: number
-          completed_at: string | null
-          current_streak_days: number
-          last_activity_at: string
-          longest_streak_days: number
-          path_id: string
-          rating_consistency: number | null
-          rating_overall: number | null
-          rating_speed: number | null
-          started_at: string
-          status: string
-          streak_last_counted_date: string | null
-          user_id: string
-        }
-        Insert: {
-          active_days_count?: number
-          completed_at?: string | null
-          current_streak_days?: number
-          last_activity_at?: string
-          longest_streak_days?: number
-          path_id: string
-          rating_consistency?: number | null
-          rating_overall?: number | null
-          rating_speed?: number | null
-          started_at?: string
-          status?: string
-          streak_last_counted_date?: string | null
-          user_id: string
-        }
-        Update: {
-          active_days_count?: number
-          completed_at?: string | null
-          current_streak_days?: number
-          last_activity_at?: string
-          longest_streak_days?: number
-          path_id?: string
-          rating_consistency?: number | null
-          rating_overall?: number | null
-          rating_speed?: number | null
-          started_at?: string
-          status?: string
-          streak_last_counted_date?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_skill_paths_path_id_fkey"
-            columns: ["path_id"]
-            isOneToOne: false
-            referencedRelation: "skill_paths"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_skill_paths_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_skill_paths_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
@@ -2790,6 +2815,53 @@ export type Database = {
       }
     }
     Views: {
+      prep_questions_public: {
+        Row: {
+          created_at: string | null
+          difficulty: string | null
+          explanation: string | null
+          field_id: string | null
+          id: string | null
+          is_coin_gated: boolean | null
+          is_published: boolean | null
+          options: Json | null
+          prompt: string | null
+          unlock_cost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          field_id?: string | null
+          id?: string | null
+          is_coin_gated?: boolean | null
+          is_published?: boolean | null
+          options?: Json | null
+          prompt?: string | null
+          unlock_cost?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: string | null
+          explanation?: string | null
+          field_id?: string | null
+          id?: string | null
+          is_coin_gated?: boolean | null
+          is_published?: boolean | null
+          options?: Json | null
+          prompt?: string | null
+          unlock_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prep_questions_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "prep_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_core_streaks: {
         Row: {
           current_streak_days: number | null
@@ -2843,33 +2915,34 @@ export type Database = {
       }
     }
     Functions: {
+      award_daily_checkin_coin: {
+        Args: never
+        Returns: {
+          awarded: boolean
+          balance: number
+        }[]
+      }
       bump_core_streak: {
         Args: { p_kind: string; p_user_id: string }
-        Returns: undefined
-      }
-      bump_skill_path_streak: {
-        Args: { p_path_id: string; p_user_id: string }
         Returns: undefined
       }
       claim_push_token: {
         Args: { p_fcm_token: string; p_platform?: string }
         Returns: undefined
       }
-      complete_skill_checkpoint: {
-        Args: {
-          p_add_to_portfolio?: boolean
-          p_portfolio_description?: string
-          p_portfolio_project_url?: string
-          p_portfolio_tags?: string[]
-          p_portfolio_title?: string
-          p_status: string
-          p_submission_id: string
-        }
-        Returns: undefined
-      }
       delete_own_account: { Args: never; Returns: undefined }
-      enroll_in_skill_path: { Args: { p_path_id: string }; Returns: undefined }
       get_push_secret: { Args: { secret_name: string }; Returns: string }
+      grade_prep_attempt: {
+        Args: { p_answers: Json; p_field_id: string; p_question_ids: string[] }
+        Returns: {
+          answer_key: Json
+          attempt_id: string
+          coins_awarded: number
+          new_balance: number
+          score: number
+          total: number
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_curator_or_admin: { Args: never; Returns: boolean }
       is_profile_public: { Args: { p_user_id: string }; Returns: boolean }
@@ -2897,7 +2970,14 @@ export type Database = {
       send_deadline_reminders: { Args: never; Returns: undefined }
       send_getting_started_reminders: { Args: never; Returns: undefined }
       send_opportunity_match_notifications: { Args: never; Returns: undefined }
-      send_skill_streak_risk_notifications: { Args: never; Returns: undefined }
+      unlock_course: {
+        Args: { p_course_id: string }
+        Returns: {
+          new_balance: number
+          reason: string
+          success: boolean
+        }[]
+      }
     }
     Enums: {
       application_status:

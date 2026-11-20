@@ -87,7 +87,6 @@ export async function markResourceComplete(skillId: string, resourceId: string) 
 
   const percent = await recomputeSkillProgress(supabase, user.id, skillId);
   revalidatePath("/growth");
-  revalidatePath("/growth/skills");
   revalidatePath("/growth/courses");
   return percent;
 }
@@ -109,7 +108,6 @@ export async function markResourceIncomplete(skillId: string, resourceId: string
 
   const percent = await recomputeSkillProgress(supabase, user.id, skillId);
   revalidatePath("/growth");
-  revalidatePath("/growth/skills");
   revalidatePath("/growth/courses");
   return percent;
 }
