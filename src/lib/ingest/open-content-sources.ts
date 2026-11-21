@@ -329,8 +329,25 @@ async function fetchOpenTextbookLibrary(diagnostics: QueryDiagnostic[]): Promise
 
       for (const book of list as OtlBook[]) {
         const license = otlLicenseName(book.license);
-        if (!license || !/attribution.*cc.?by|cc.?by/i.test(license)) {
-          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title ?? "untitled", 40)}" rejected: license was "${license ?? "none"}", not CC BY`);
+        // Broadened from strict CC BY: a live run against OTL's real
+        // catalog (confirmed via the diagnostics above) showed every
+        // title in Business/Finance/Management/Engineering/Computer
+        // Science/Arts is "Attribution", "Attribution-NonCommercial",
+        // "Attribution-NonCommercial-ShareAlike", or "Attribution-
+        // NonCommercial-NoDerivs" — none plain CC BY. Requiring strict
+        // CC BY here meant zero rows could ever be accepted from OTL at
+        // all, no matter how many subjects were queried. Per product
+        // decision, any license that at minimum requires attribution
+        // (i.e. starts with "Attribution") is now accepted — this is a
+        // real scope change from the original "CC BY only" spec: a
+        // NonCommercial-licensed book can be shown and read for free,
+        // but is not technically licensed for Aza (or its users) to
+        // modify/redistribute/monetize it, only strict CC BY content
+        // would allow that. Still rejects anything with no attribution
+        // requirement at all (there is no such case observed from OTL,
+        // but the check stays defensive).
+        if (!license || !/^attribution/i.test(license)) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title ?? "untitled", 40)}" rejected: license was "${license ?? "none"}", no attribution requirement found`);
           continue;
         }
         if (!book.title || book.id == null) {
