@@ -28,6 +28,16 @@
 // "open catalog" described in the original brief does not correspond to
 // anything exposed publicly. Flagged to the product owner; revisit only
 // if Saylor issues real Program Partner credentials for this purpose.
+//
+// DIAGNOSTICS: the first real run of this pipeline against production
+// returned zero rows from both sources with no visible cause — only
+// console.error output exists on Vercel, which isn't reachable from a
+// plain curl call against the ingest route. Every fetch below now also
+// appends a QueryDiagnostic (what URL was hit, the HTTP status, how many
+// raw items came back, how many survived filtering, and why rows were
+// dropped) to a shared `diagnostics` array that fetchAllOpenContent()
+// returns alongside rows/summary — so a single curl call now shows
+// exactly what each live request did, without needing Vercel log access.
 
 export type IngestSource = "doab" | "open_textbook_library";
 
@@ -43,25 +53,58 @@ export interface OpenContentIngestRow {
   pdf_url: string | null;
 }
 
-async function safeFetchJson(url: string, init?: RequestInit): Promise<unknown | null> {
+export interface QueryDiagnostic {
+  source: IngestSource;
+  url: string;
+  httpStatus: number | "fetch_threw";
+  httpStatusText?: string;
+  errorMessage?: string;
+  responseShape: string; // e.g. "array(12)", "object(keys: data,meta)", "null"
+  rawItemCount: number;
+  acceptedCount: number;
+  rejectedSamples: string[]; // up to 3 short reasons for the first few rejected items, for quick diagnosis
+}
+
+interface FetchJsonResult {
+  data: unknown | null;
+  httpStatus: number | "fetch_threw";
+  httpStatusText?: string;
+  errorMessage?: string;
+}
+
+async function safeFetchJson(url: string): Promise<FetchJsonResult> {
   try {
     const res = await fetch(url, {
-      ...init,
       headers: {
         "User-Agent": "AzaCourseIngest/1.0 (+https://a-za.vercel.app)",
         Accept: "application/json",
-        ...(init?.headers ?? {}),
       },
     });
     if (!res.ok) {
-      console.error(`[open-content-ingest] fetch failed: ${url} -> HTTP ${res.status} ${res.statusText}`);
-      return null;
+      return { data: null, httpStatus: res.status, httpStatusText: res.statusText };
     }
-    return await res.json();
+    try {
+      const json = await res.json();
+      return { data: json, httpStatus: res.status };
+    } catch (parseErr) {
+      // A non-JSON 200 (an HTML error/consent page, a block page, etc.)
+      // throws here — surfaced distinctly from a network-level failure.
+      return {
+        data: null,
+        httpStatus: res.status,
+        errorMessage: `response was not valid JSON: ${parseErr instanceof Error ? parseErr.message : String(parseErr)}`,
+      };
+    }
   } catch (err) {
-    console.error(`[open-content-ingest] fetch threw: ${url} ->`, err instanceof Error ? err.message : err);
-    return null;
+    return { data: null, httpStatus: "fetch_threw", errorMessage: err instanceof Error ? err.message : String(err) };
   }
+}
+
+function describeShape(data: unknown): string {
+  if (data === null || data === undefined) return "null";
+  if (Array.isArray(data)) return `array(${data.length})`;
+  if (typeof data === "object") return `object(keys: ${Object.keys(data as object).slice(0, 8).join(",")})`;
+  return typeof data;
 }
 
 function truncate(s: string, max: number): string {
@@ -99,9 +142,6 @@ function doabMeta(item: DoabItem, key: string): string | null {
 function doabPdfUrl(item: DoabItem): string | null {
   const pdf = item.bitstreams?.find((b) => b.mimeType === "application/pdf" && b.retrieveLink);
   if (!pdf?.retrieveLink) return null;
-  // retrieveLink is a path (e.g. "/bitstream/handle/.../x.pdf") — DOAB's
-  // own docs give examples without a host, so build the absolute URL off
-  // the same directory.doabooks.org host used for search.
   return pdf.retrieveLink.startsWith("http")
     ? pdf.retrieveLink
     : `https://directory.doabooks.org${pdf.retrieveLink}`;
@@ -122,43 +162,64 @@ const DOAB_QUERIES: { query: string; category: string }[] = [
   },
 ];
 
-async function fetchDoab(): Promise<OpenContentIngestRow[]> {
+async function fetchDoab(diagnostics: QueryDiagnostic[]): Promise<OpenContentIngestRow[]> {
   const results = await Promise.all(
     DOAB_QUERIES.map(async ({ query, category }) => {
       const url = `https://directory.doabooks.org/rest/search?query=${encodeURIComponent(query)}&expand=metadata,bitstreams&limit=30`;
-      const data = await safeFetchJson(url);
+      const { data, httpStatus, httpStatusText, errorMessage } = await safeFetchJson(url);
+
+      const diag: QueryDiagnostic = {
+        source: "doab",
+        url,
+        httpStatus,
+        httpStatusText,
+        errorMessage,
+        responseShape: describeShape(data),
+        rawItemCount: 0,
+        acceptedCount: 0,
+        rejectedSamples: [],
+      };
+
       if (!Array.isArray(data)) {
-        if (data !== null) {
-          console.error(`[open-content-ingest] DOAB response for category "${category}" was not an array — skipping.`);
-        }
+        diagnostics.push(diag);
         return [];
       }
-      return (data as DoabItem[]).flatMap((item): OpenContentIngestRow[] => {
+
+      diag.rawItemCount = data.length;
+      const accepted: OpenContentIngestRow[] = [];
+
+      for (const item of data as DoabItem[]) {
         const title = doabMeta(item, "dc.title") || item.name;
-        if (!title) return [];
+        if (!title) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push("no title field found");
+          continue;
+        }
         const license = doabMeta(item, "dc.rights");
-        // Per spec: only rows explicitly CC BY — DOAB's search query already
-        // filters for "CC BY" in free text, but that matches anywhere in the
-        // record, not just the license field, so re-check the actual
-        // dc.rights value before accepting the row.
-        if (!license || !/CC[\s-]?BY/i.test(license)) return [];
-        const pdfUrl = doabPdfUrl(item);
+        if (!license || !/CC[\s-]?BY/i.test(license)) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(title, 40)}" rejected: license was "${license ?? "none"}", not CC BY`);
+          continue;
+        }
         const ref = item.uuid || item.handle;
-        if (!ref) return [];
-        return [
-          {
-            source: "doab",
-            source_ref: `doab-${ref}`,
-            title: truncate(title, 300),
-            author: doabMeta(item, "dc.contributor.author"),
-            summary: doabMeta(item, "dc.description.abstract"),
-            category,
-            license,
-            source_url: item.handle ? `https://directory.doabooks.org/handle/${item.handle}` : null,
-            pdf_url: pdfUrl,
-          },
-        ];
-      });
+        if (!ref) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(title, 40)}" rejected: no uuid/handle`);
+          continue;
+        }
+        accepted.push({
+          source: "doab",
+          source_ref: `doab-${ref}`,
+          title: truncate(title, 300),
+          author: doabMeta(item, "dc.contributor.author"),
+          summary: doabMeta(item, "dc.description.abstract"),
+          category,
+          license,
+          source_url: item.handle ? `https://directory.doabooks.org/handle/${item.handle}` : null,
+          pdf_url: doabPdfUrl(item),
+        });
+      }
+
+      diag.acceptedCount = accepted.length;
+      diagnostics.push(diag);
+      return accepted;
     })
   );
   return results.flat();
@@ -166,13 +227,6 @@ async function fetchDoab(): Promise<OpenContentIngestRow[]> {
 
 // ---------------------------------------------------------------------
 // Open Textbook Library — one subject-filtered query per target category.
-// Response shape per the public JSON API (confirmed field names: title,
-// authors (array of {first_name,last_name} or strings depending on
-// endpoint version), description, license, subjects, formats). Parsing
-// here is deliberately defensive about field-name variance, since the
-// exact nesting isn't independently re-verifiable from a sandboxed
-// environment that can't reach open.umn.edu directly — unexpected shapes
-// are skipped per-row rather than thrown.
 // ---------------------------------------------------------------------
 
 interface OtlFormat {
@@ -220,45 +274,65 @@ function otlLicenseName(license: OtlBook["license"]): string | null {
   return typeof license === "string" ? license : license.name ?? null;
 }
 
-async function fetchOpenTextbookLibrary(): Promise<OpenContentIngestRow[]> {
+async function fetchOpenTextbookLibrary(diagnostics: QueryDiagnostic[]): Promise<OpenContentIngestRow[]> {
   const results = await Promise.all(
     OTL_SUBJECT_QUERIES.map(async ({ subject, category }) => {
       const url = `https://open.umn.edu/opentextbooks/subjects/${encodeURIComponent(subject)}.json`;
-      const data = await safeFetchJson(url);
-      // The API nests results under different keys depending on endpoint
-      // (observed: a bare array, or { data: [...] }, or { textbooks: [...] })
-      // — handle all three defensively rather than assuming one shape.
+      const { data, httpStatus, httpStatusText, errorMessage } = await safeFetchJson(url);
+
+      const diag: QueryDiagnostic = {
+        source: "open_textbook_library",
+        url,
+        httpStatus,
+        httpStatusText,
+        errorMessage,
+        responseShape: describeShape(data),
+        rawItemCount: 0,
+        acceptedCount: 0,
+        rejectedSamples: [],
+      };
+
       const list: unknown = Array.isArray(data)
         ? data
         : (data as { data?: unknown; textbooks?: unknown } | null)?.data ??
           (data as { textbooks?: unknown } | null)?.textbooks ??
           null;
+
       if (!Array.isArray(list)) {
-        if (data !== null) {
-          console.error(`[open-content-ingest] OTL response for subject "${subject}" had an unrecognized shape — skipping.`);
-        }
+        diagnostics.push(diag);
         return [];
       }
-      return (list as OtlBook[]).flatMap((book): OpenContentIngestRow[] => {
+
+      diag.rawItemCount = list.length;
+      const accepted: OpenContentIngestRow[] = [];
+
+      for (const book of list as OtlBook[]) {
         const license = otlLicenseName(book.license);
-        // Per spec: only "Attribution CC BY" rows.
-        if (!license || !/attribution.*cc.?by|cc.?by/i.test(license)) return [];
-        if (!book.title || book.id == null) return [];
+        if (!license || !/attribution.*cc.?by|cc.?by/i.test(license)) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title ?? "untitled", 40)}" rejected: license was "${license ?? "none"}", not CC BY`);
+          continue;
+        }
+        if (!book.title || book.id == null) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push("missing title or id");
+          continue;
+        }
         const pdfFormat = book.formats?.find((f) => (f.format ?? "").toUpperCase() === "PDF" && f.url);
-        return [
-          {
-            source: "open_textbook_library",
-            source_ref: `otl-${book.id}`,
-            title: truncate(book.title, 300),
-            author: otlAuthorNames(book.authors),
-            summary: book.description ?? null,
-            category,
-            license,
-            source_url: book.url ?? `https://open.umn.edu/opentextbooks/textbooks/${book.id}`,
-            pdf_url: pdfFormat?.url ?? null,
-          },
-        ];
-      });
+        accepted.push({
+          source: "open_textbook_library",
+          source_ref: `otl-${book.id}`,
+          title: truncate(book.title, 300),
+          author: otlAuthorNames(book.authors),
+          summary: book.description ?? null,
+          category,
+          license,
+          source_url: book.url ?? `https://open.umn.edu/opentextbooks/textbooks/${book.id}`,
+          pdf_url: pdfFormat?.url ?? null,
+        });
+      }
+
+      diag.acceptedCount = accepted.length;
+      diagnostics.push(diag);
+      return accepted;
     })
   );
   return results.flat();
@@ -273,12 +347,11 @@ export interface OpenContentIngestSummary {
 export async function fetchAllOpenContent(): Promise<{
   rows: OpenContentIngestRow[];
   summary: OpenContentIngestSummary;
+  diagnostics: QueryDiagnostic[];
 }> {
-  const [doabRows, otlRows] = await Promise.all([fetchDoab(), fetchOpenTextbookLibrary()]);
+  const diagnostics: QueryDiagnostic[] = [];
+  const [doabRows, otlRows] = await Promise.all([fetchDoab(diagnostics), fetchOpenTextbookLibrary(diagnostics)]);
 
-  // Dedup across sources by source_ref, in case a category overlap (e.g.
-  // the same OTL subject matched by two queries above) produced the same
-  // row twice — keep the first occurrence.
   const seen = new Set<string>();
   const rows = [...doabRows, ...otlRows].filter((r) => {
     if (seen.has(r.source_ref)) return false;
@@ -293,5 +366,6 @@ export async function fetchAllOpenContent(): Promise<{
       open_textbook_library: otlRows.length,
       total: rows.length,
     },
+    diagnostics,
   };
 }

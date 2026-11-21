@@ -1,5 +1,5 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { fetchAllOpenContent, type OpenContentIngestRow } from "@/lib/ingest/open-content-sources";
+import { fetchAllOpenContent, type OpenContentIngestRow, type QueryDiagnostic } from "@/lib/ingest/open-content-sources";
 import { extractPdfForReader } from "@/lib/ingest/pdf-extract";
 
 // Vercel's Hobby plan silently caps serverless function duration at 10s
@@ -34,6 +34,12 @@ export interface MetadataPhaseResult {
   fetched?: Awaited<ReturnType<typeof fetchAllOpenContent>>["summary"];
   upserted: number;
   error?: string;
+  // Per-query detail (HTTP status, response shape, raw vs. accepted
+  // counts, sample rejection reasons) — included whenever fetched.total
+  // is 0 so a single curl call shows exactly what each live request to
+  // DOAB/Open Textbook Library actually did, without needing server log
+  // access. Omitted on a normal non-zero run to keep the response small.
+  diagnostics?: QueryDiagnostic[];
 }
 
 export interface ExtractionBatchResult {
@@ -72,10 +78,14 @@ export async function runMetadataIngestPhase(): Promise<MetadataPhaseResult> {
     return { ok: false, upserted: 0, error: "Server misconfigured." };
   }
 
-  const { rows, summary } = await fetchAllOpenContent();
+  const { rows, summary, diagnostics } = await fetchAllOpenContent();
 
   if (rows.length === 0) {
-    return { ok: true, fetched: summary, upserted: 0 };
+    // Always include diagnostics on a zero-row result — this is the
+    // unexpected case, and the whole point of carrying diagnostics at
+    // all is to make a zero-row response self-explanatory from curl
+    // output alone.
+    return { ok: true, fetched: summary, upserted: 0, diagnostics };
   }
 
   const payload = rows.map((row) => metadataRow(row));
