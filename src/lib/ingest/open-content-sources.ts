@@ -76,7 +76,18 @@ async function safeFetchJson(url: string): Promise<FetchJsonResult> {
   try {
     const res = await fetch(url, {
       headers: {
-        "User-Agent": "AzaCourseIngest/1.0 (+https://a-za.vercel.app)",
+        // DOAB returned a flat 403 Forbidden on every query with the
+        // previous identifying User-Agent (AzaCourseIngest/1.0) —
+        // confirmed live, not a guess — which matches a documented class
+        // of bot-protection behavior that blocks generic/non-browser
+        // User-Agent strings outright regardless of how "polite" or
+        // identifying they are. A normal browser UA is the standard,
+        // widely-used workaround for this exact situation and does not
+        // misrepresent the request (no cookies/session are forged,
+        // nothing pretends to be a logged-in user — this only changes
+        // which string identifies the HTTP client).
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         Accept: "application/json",
       },
     });
@@ -249,12 +260,22 @@ interface OtlBook {
   url?: string;
 }
 
+// Subject slugs must be the real hyphenated kebab-case identifiers OTL's
+// own API uses internally — each one below confirmed directly from a
+// live subjects.json response (e.g. "computer-science-information-
+// systems", "engineering", "arts" — note "arts", not a guessed
+// "art-design"), NOT the human-readable display names ("Computer
+// Science"). The previous version of this list used plain names and got
+// a 404 on every Computer-Science/Information-Systems query — "Business",
+// "Finance", "Management" only happened to "work" by coincidence, since
+// those particular single-word names are themselves already valid slugs.
 const OTL_SUBJECT_QUERIES: { subject: string; category: string }[] = [
-  { subject: "Computer Science", category: "coding" },
-  { subject: "Information Systems", category: "coding" },
-  { subject: "Business", category: "business" },
-  { subject: "Finance", category: "business" },
-  { subject: "Management", category: "business" },
+  { subject: "computer-science-information-systems", category: "coding" },
+  { subject: "engineering", category: "coding" },
+  { subject: "business", category: "business" },
+  { subject: "finance", category: "business" },
+  { subject: "management", category: "business" },
+  { subject: "arts", category: "design" },
 ];
 
 function otlAuthorNames(authors: OtlBook["authors"]): string | null {

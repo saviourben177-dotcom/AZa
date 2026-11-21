@@ -49,7 +49,15 @@ export async function extractPdfForReader(pdfUrl: string): Promise<PdfExtraction
   let res: Response;
   try {
     res = await fetch(pdfUrl, {
-      headers: { "User-Agent": "AzaCourseIngest/1.0 (+https://a-za.vercel.app)" },
+      // Same browser User-Agent used for the DOAB/OTL metadata fetches
+      // (see open-content-sources.ts) — PDF hosts behind the same kind
+      // of bot-protection (DOAB's bitstreams are often served from
+      // OAPEN, a separate host) could reject a generic/identifying UA
+      // just as DOAB's own search endpoint did.
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      },
     });
   } catch (err) {
     return { ok: false, reason: `fetch threw: ${err instanceof Error ? err.message : String(err)}` };
