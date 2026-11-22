@@ -4,6 +4,7 @@ import { ExternalLink } from "lucide-react";
 import type { FeaturedOpportunity } from "@/lib/aza/featured-opportunities";
 import { logFeaturedOpportunityClick } from "@/lib/actions/featured-opportunities";
 import FeaturedStatusControl from "./featured-status-control";
+import { openExternalUrl } from "@/lib/open-external-url";
 import type { ApplicationStatus } from "@/lib/types";
 
 export default function FeaturedOpportunityCard({
@@ -17,9 +18,10 @@ export default function FeaturedOpportunityCard({
 }) {
   function handleOpen() {
     // Fire-and-forget: logging must never block or delay the external
-    // link opening (target="_blank" below handles the actual navigation,
+    // link opening (openExternalUrl below handles the actual navigation,
     // so this just records the click alongside it).
     void logFeaturedOpportunityClick(featured.id);
+    void openExternalUrl(featured.url);
   }
 
   return (

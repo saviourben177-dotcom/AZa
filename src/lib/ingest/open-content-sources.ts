@@ -486,7 +486,16 @@ async function fetchGutendex(diagnostics: QueryDiagnostic[]): Promise<OpenConten
           if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: copyright=true (not public domain)`);
           continue;
         }
-        const pdfUrl = book.formats?.["application/pdf"] ?? null;
+        // Exact-key lookup on "application/pdf" was the bug: Gutendex's
+        // own API treats mime_type as a prefix match (confirmed against
+        // its README — "/books?mime_type=text%2Fhtml gives books with
+        // types text/html, text/html; charset=utf-8, etc."), so a format
+        // key can legitimately come back as "application/pdf" with a
+        // trailing "; charset=..." or similar. Match on any key that
+        // *starts with* "application/pdf" instead of requiring an exact
+        // match, so those variants aren't silently dropped client-side.
+        const pdfFormatKey = Object.keys(book.formats ?? {}).find((k) => k.toLowerCase().startsWith("application/pdf"));
+        const pdfUrl = pdfFormatKey ? book.formats![pdfFormatKey] : null;
         if (!pdfUrl) {
           if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: no application/pdf format available`);
           continue;

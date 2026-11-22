@@ -3,6 +3,7 @@ import type { Business } from "@/lib/types";
 import SaveBusinessButton from "@/components/save-business-button";
 import VerifiedBadge from "@/components/verified-badge";
 import StarRatingDisplay from "@/components/business/star-rating-display";
+import ExternalLinkButton from "@/components/aza/external-link-button";
 
 export default function BusinessCard({
   business,
@@ -61,14 +62,12 @@ export default function BusinessCard({
 
         <div className="mt-2.5 flex gap-2">
           {business.whatsapp && (
-            <a
-              href={`https://wa.me/${business.whatsapp.replace(/[^0-9]/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <ExternalLinkButton
+              url={`https://wa.me/${business.whatsapp.replace(/[^0-9]/g, "")}`}
               className="rounded-pill bg-aza-light px-2.5 py-1 text-[11.5px] font-bold text-aza"
             >
               WhatsApp
-            </a>
+            </ExternalLinkButton>
           )}
           {business.phone && (
             <a href={`tel:${business.phone}`} className="rounded-pill bg-paper-dim px-2.5 py-1 text-[11.5px] font-bold text-ink/70">
