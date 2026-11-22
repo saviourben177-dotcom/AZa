@@ -241,7 +241,13 @@ async function fetchDoab(diagnostics: QueryDiagnostic[]): Promise<OpenContentIng
 // ---------------------------------------------------------------------
 
 interface OtlFormat {
-  format?: string;
+  // Confirmed from a real live JSON fragment (format entries look like
+  // {"id":2248,"type":"Book","url":"...","price":{...},"isbn":null}) —
+  // the field is "type", not "format". The original "format" guess was
+  // never actually verified against a real response and silently
+  // produced zero matches on every single one of 56 live rows (every
+  // row landed as external_link with no pdf_url) until caught here.
+  type?: string;
   url?: string;
 }
 interface OtlAuthor {
@@ -354,7 +360,7 @@ async function fetchOpenTextbookLibrary(diagnostics: QueryDiagnostic[]): Promise
           if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push("missing title or id");
           continue;
         }
-        const pdfFormat = book.formats?.find((f) => (f.format ?? "").toUpperCase() === "PDF" && f.url);
+        const pdfFormat = book.formats?.find((f) => (f.type ?? "").toUpperCase() === "PDF" && f.url);
         accepted.push({
           source: "open_textbook_library",
           source_ref: `otl-${book.id}`,
