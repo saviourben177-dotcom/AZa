@@ -29,6 +29,26 @@
 // anything exposed publicly. Flagged to the product owner; revisit only
 // if Saylor issues real Program Partner credentials for this purpose.
 //
+//   - Gutendex (Project Gutenberg catalog API) — public, no-key JSON API
+//     at https://gutendex.com/books?topic=...&mime_type=application%2Fpdf,
+//     documented at github.com/garethbjohnson/gutendex. Added after DOAB's
+//     /rest/search endpoint returned a persistent 403 Forbidden in
+//     production (confirmed live, not a guess — the plain DOAB website
+//     works fine, only the REST search API is blocked, likely by
+//     datacenter/hosting-IP-range blocking common to this kind of
+//     anti-scraping defense; never resolved, so DOAB is left in place
+//     but effectively contributes nothing until that's fixed some other
+//     way). Gutendex's catalog is 100% public-domain (not CC-BY-NC/CC-BY
+//     like the other two sources) — per product decision, course license
+//     filtering was already relaxed beyond strict CC BY, and public
+//     domain is strictly more permissive than any CC license, so nothing
+//     extra is needed to accept it. Coverage skews toward classic
+//     literature rather than modern coding/business content, but topic
+//     filtering (e.g. ?topic=economics, ?topic=business) surfaces real,
+//     relevant non-fiction (economics, early computing, business
+//     history) to round out the coding/business/design categories
+//     alongside OTL.
+//
 // DIAGNOSTICS: the first real run of this pipeline against production
 // returned zero rows from both sources with no visible cause — only
 // console.error output exists on Vercel, which isn't reachable from a
@@ -39,7 +59,7 @@
 // returns alongside rows/summary — so a single curl call now shows
 // exactly what each live request did, without needing Vercel log access.
 
-export type IngestSource = "doab" | "open_textbook_library";
+export type IngestSource = "doab" | "open_textbook_library" | "gutendex";
 
 export interface OpenContentIngestRow {
   source: IngestSource;
@@ -382,9 +402,120 @@ async function fetchOpenTextbookLibrary(diagnostics: QueryDiagnostic[]): Promise
   return results.flat();
 }
 
+// ---------------------------------------------------------------------
+// Gutendex (Project Gutenberg) — real, confirmed shape per the project's
+// own OpenAPI spec and JSON Schema (github.com/garethbjohnson/gutendex):
+// Book.formats is a flat object keyed by MIME type, NOT an array of
+// {type,url} objects like OTL's shape — e.g.
+// { "text/html": "...", "application/pdf": "..." }. Verified against
+// multiple independent sources (GitHub README, OpenAPI YAML, JSON
+// Schema) before writing this, specifically because two earlier guesses
+// at OTL's shape were each wrong on the first try.
+// ---------------------------------------------------------------------
+
+interface GutendexPerson {
+  name?: string;
+}
+interface GutendexBook {
+  id?: number;
+  title?: string;
+  authors?: GutendexPerson[];
+  summaries?: string[];
+  subjects?: string[];
+  copyright?: boolean | null;
+  formats?: Record<string, string>; // MIME type -> URL, confirmed shape
+}
+interface GutendexListResponse {
+  count?: number;
+  next?: string | null;
+  results?: GutendexBook[];
+}
+
+const GUTENDEX_QUERIES: { topic: string; category: string }[] = [
+  { topic: "business", category: "business" },
+  { topic: "economics", category: "business" },
+  { topic: "computer", category: "coding" },
+  { topic: "engineering", category: "coding" },
+  { topic: "art", category: "design" },
+];
+
+function gutendexAuthorNames(authors: GutendexBook["authors"]): string | null {
+  if (!authors || authors.length === 0) return null;
+  const names = authors.map((a) => a.name).filter((n): n is string => !!n);
+  return names.length > 0 ? names.join(", ") : null;
+}
+
+async function fetchGutendex(diagnostics: QueryDiagnostic[]): Promise<OpenContentIngestRow[]> {
+  const results = await Promise.all(
+    GUTENDEX_QUERIES.map(async ({ topic, category }) => {
+      const url = `https://gutendex.com/books?topic=${encodeURIComponent(topic)}&languages=en&mime_type=application%2Fpdf`;
+      const { data, httpStatus, httpStatusText, errorMessage } = await safeFetchJson(url);
+
+      const diag: QueryDiagnostic = {
+        source: "gutendex",
+        url,
+        httpStatus,
+        httpStatusText,
+        errorMessage,
+        responseShape: describeShape(data),
+        rawItemCount: 0,
+        acceptedCount: 0,
+        rejectedSamples: [],
+      };
+
+      const books = (data as GutendexListResponse | null)?.results;
+      if (!Array.isArray(books)) {
+        diagnostics.push(diag);
+        return [];
+      }
+
+      diag.rawItemCount = books.length;
+      const accepted: OpenContentIngestRow[] = [];
+
+      for (const book of books) {
+        if (!book.title || book.id == null) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push("missing title or id");
+          continue;
+        }
+        // Public domain: copyright === false (Gutendex's documented
+        // meaning) or null (unknown/pre-1928 — Gutenberg's own inclusion
+        // policy already restricts the catalog to US-public-domain
+        // works, so null here means "not determined" rather than
+        // "possibly in copyright").
+        if (book.copyright === true) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: copyright=true (not public domain)`);
+          continue;
+        }
+        const pdfUrl = book.formats?.["application/pdf"] ?? null;
+        if (!pdfUrl) {
+          if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: no application/pdf format available`);
+          continue;
+        }
+        accepted.push({
+          source: "gutendex",
+          source_ref: `gutendex-${book.id}`,
+          title: truncate(book.title, 300),
+          author: gutendexAuthorNames(book.authors),
+          summary: book.summaries?.[0] ?? null,
+          category,
+          license: "Public Domain",
+          source_url: `https://www.gutenberg.org/ebooks/${book.id}`,
+          pdf_url: pdfUrl,
+        });
+      }
+
+      diag.acceptedCount = accepted.length;
+      diagnostics.push(diag);
+      return accepted;
+    })
+  );
+  return results.flat();
+}
+
 export interface OpenContentIngestSummary {
   doab: number;
   open_textbook_library: number;
+  gutendex: number;
   total: number;
 }
 
@@ -394,10 +525,14 @@ export async function fetchAllOpenContent(): Promise<{
   diagnostics: QueryDiagnostic[];
 }> {
   const diagnostics: QueryDiagnostic[] = [];
-  const [doabRows, otlRows] = await Promise.all([fetchDoab(diagnostics), fetchOpenTextbookLibrary(diagnostics)]);
+  const [doabRows, otlRows, gutendexRows] = await Promise.all([
+    fetchDoab(diagnostics),
+    fetchOpenTextbookLibrary(diagnostics),
+    fetchGutendex(diagnostics),
+  ]);
 
   const seen = new Set<string>();
-  const rows = [...doabRows, ...otlRows].filter((r) => {
+  const rows = [...doabRows, ...otlRows, ...gutendexRows].filter((r) => {
     if (seen.has(r.source_ref)) return false;
     seen.add(r.source_ref);
     return true;
@@ -408,6 +543,7 @@ export async function fetchAllOpenContent(): Promise<{
     summary: {
       doab: doabRows.length,
       open_textbook_library: otlRows.length,
+      gutendex: gutendexRows.length,
       total: rows.length,
     },
     diagnostics,
