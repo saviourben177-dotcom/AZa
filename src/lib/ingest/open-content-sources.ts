@@ -448,7 +448,16 @@ function gutendexAuthorNames(authors: GutendexBook["authors"]): string | null {
 async function fetchGutendex(diagnostics: QueryDiagnostic[]): Promise<OpenContentIngestRow[]> {
   const results = await Promise.all(
     GUTENDEX_QUERIES.map(async ({ topic, category }) => {
-      const url = `https://gutendex.com/books?topic=${encodeURIComponent(topic)}&languages=en&mime_type=application%2Fpdf`;
+      // No server-side mime_type filter: Project Gutenberg's own file-
+      // formats documentation confirms PDF is a minor/rare format in
+      // their catalog (the vast majority of books are plain text, HTML,
+      // or EPUB) — requiring mime_type=application/pdf up front returned
+      // zero results across every single topic tried in production, not
+      // because of a bug, but because so few matching books exist.
+      // Fetching the full result set per topic and checking formats
+      // client-side (below) for any key containing "pdf" is more
+      // resilient to minor MIME-string variations too.
+      const url = `https://gutendex.com/books?topic=${encodeURIComponent(topic)}&languages=en`;
       const { data, httpStatus, httpStatusText, errorMessage } = await safeFetchJson(url);
 
       const diag: QueryDiagnostic = {
@@ -486,15 +495,7 @@ async function fetchGutendex(diagnostics: QueryDiagnostic[]): Promise<OpenConten
           if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: copyright=true (not public domain)`);
           continue;
         }
-        // Exact-key lookup on "application/pdf" was the bug: Gutendex's
-        // own API treats mime_type as a prefix match (confirmed against
-        // its README — "/books?mime_type=text%2Fhtml gives books with
-        // types text/html, text/html; charset=utf-8, etc."), so a format
-        // key can legitimately come back as "application/pdf" with a
-        // trailing "; charset=..." or similar. Match on any key that
-        // *starts with* "application/pdf" instead of requiring an exact
-        // match, so those variants aren't silently dropped client-side.
-        const pdfFormatKey = Object.keys(book.formats ?? {}).find((k) => k.toLowerCase().startsWith("application/pdf"));
+        const pdfFormatKey = book.formats ? Object.keys(book.formats).find((k) => k.toLowerCase().includes("pdf")) : undefined;
         const pdfUrl = pdfFormatKey ? book.formats![pdfFormatKey] : null;
         if (!pdfUrl) {
           if (diag.rejectedSamples.length < 3) diag.rejectedSamples.push(`"${truncate(book.title, 40)}" rejected: no application/pdf format available`);

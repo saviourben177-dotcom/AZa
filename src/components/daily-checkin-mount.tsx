@@ -35,7 +35,17 @@ export default function DailyCheckinMount() {
       if (!user) return;
 
       const { data, error } = await supabase.rpc("award_daily_checkin_coin");
-      if (error) return; // Silent — a missed daily coin isn't worth surfacing an error toast for.
+      if (error) {
+        // Was previously silent (a missed daily coin isn't worth a toast
+        // interrupting someone's session) — but that also meant a real,
+        // persistent failure here (e.g. a schema/grant mismatch) would
+        // never surface anywhere, to the user or to debugging. Logging
+        // it to the console costs nothing and makes a real bug visible
+        // to anyone checking devtools, without bothering the user with a
+        // toast for what's still a minor, non-blocking feature.
+        console.error("[daily-checkin] award_daily_checkin_coin failed:", error.message, error);
+        return;
+      }
 
       const row = data?.[0];
       if (row?.awarded) {

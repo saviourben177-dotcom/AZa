@@ -8,7 +8,6 @@ import CoinBadge from "@/components/aza/coin-badge";
 import UnlockGate from "./unlock-gate";
 import FlowableReader from "./flowable-reader";
 import { recordCourseOpened } from "@/lib/actions/courses";
-import { openExternalUrl } from "@/lib/open-external-url";
 import type { Tables } from "@/lib/supabase/database.types";
 
 function categoryLabel(c: string): string {
@@ -94,13 +93,14 @@ export default function CourseDetailClient({
           <p className="text-sm text-muted-foreground">
             This course lives on an external site.
           </p>
-          <button
-            type="button"
-            onClick={() => openExternalUrl(course.external_url!)}
+          <a
+            href={course.external_url}
+            target="_blank"
+            rel="noopener noreferrer"
             className={btn.primary}
           >
             Open course <ExternalLink className="size-4" />
-          </button>
+          </a>
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">

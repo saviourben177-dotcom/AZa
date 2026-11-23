@@ -13,7 +13,6 @@ import OpportunityMatchAnalysisCard from "@/components/cv/opportunity-match-anal
 import OpportunityExitIntent from "./opportunity-exit-intent";
 import type { Opportunity } from "@/lib/aza-data";
 import { api } from "@/lib/aza/api";
-import { openExternalUrl } from "@/lib/open-external-url";
 import { cn } from "@/lib/utils";
 
 const statuses = ["Not started", "In progress", "Submitted", "Accepted", "Rejected"];
@@ -170,13 +169,14 @@ export default function OpportunityDetailClient({
 
           <div className="space-y-3 rounded-lg border bg-card p-5 shadow-[var(--shadow-lift)]">
             {d.applyUrl ? (
-              <button
-                type="button"
-                onClick={() => openExternalUrl(d.applyUrl!)}
+              <a
+                href={d.applyUrl}
+                target="_blank"
+                rel="noreferrer"
                 className={cn(btn.primary, "w-full justify-center")}
               >
                 Apply now <ExternalLink className="size-4" />
-              </button>
+              </a>
             ) : (
               <p className="rounded-md border border-dashed p-3 text-center text-sm text-muted-foreground">
                 No application link provided yet.

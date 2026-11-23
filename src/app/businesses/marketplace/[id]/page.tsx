@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { minorToDisplay } from "@/lib/types";
 import ListingOwnerControls from "@/components/business/listing-owner-controls";
-import ExternalLinkButton from "@/components/aza/external-link-button";
 
 export const dynamic = "force-dynamic";
 
@@ -63,12 +62,14 @@ export default async function ListingDetailPage({
       {listing.status === "active" && (listing.contact_phone || listing.contact_whatsapp) && (
         <div className="mt-6 flex gap-3">
           {listing.contact_whatsapp && (
-            <ExternalLinkButton
-              url={`https://wa.me/${listing.contact_whatsapp.replace(/[^0-9]/g, "")}`}
+            <a
+              href={`https://wa.me/${listing.contact_whatsapp.replace(/[^0-9]/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex-1 rounded-pill bg-aza py-3.5 text-center text-[14px] font-bold text-white shadow-glow-accent"
             >
               WhatsApp Seller
-            </ExternalLinkButton>
+            </a>
           )}
           {listing.contact_phone && (
             <a href={`tel:${listing.contact_phone}`} className="flex-1 rounded-pill border border-line-strong bg-surface py-3.5 text-center text-[14px] font-bold text-ink shadow-card">

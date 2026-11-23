@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import ExternalLinkButton from "@/components/aza/external-link-button";
 
 export const dynamic = "force-dynamic";
 
@@ -40,9 +39,9 @@ export default async function BusinessToolsPage() {
               {content}
             </Link>
           ) : (
-            <ExternalLinkButton key={tool.id} url={tool.url} className="block w-full text-left rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
+            <a key={tool.id} href={tool.url} target="_blank" rel="noopener noreferrer" className="block rounded-card-sm border border-line-strong bg-surface p-4 shadow-card">
               {content}
-            </ExternalLinkButton>
+            </a>
           );
         })}
       </div>

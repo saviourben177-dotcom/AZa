@@ -13,7 +13,6 @@ import ShareIdeaButton from "@/components/growth/share-idea-button";
 import CommentForm from "@/components/growth/comment-form";
 import CommentThread from "@/components/growth/comment-thread";
 import IdeaAuthorRow from "@/components/growth/idea-author-row";
-import ExternalLinkButton from "@/components/aza/external-link-button";
 import type { CommentReaction, IdeaComment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -220,13 +219,15 @@ export default async function IdeaDetailPage({
           )}
 
           {idea.link_url && (
-            <ExternalLinkButton
-              url={idea.link_url}
-              className="mt-4 flex w-full items-center gap-2 rounded-lg border bg-card p-3 text-left text-sm font-semibold text-primary hover:border-border-strong"
+            <a
+              href={idea.link_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-2 rounded-lg border bg-card p-3 text-sm font-semibold text-primary hover:border-border-strong"
             >
               <Globe className="size-4 shrink-0" />
               <span className="truncate">{idea.link_url}</span>
-            </ExternalLinkButton>
+            </a>
           )}
 
           <div className="mt-4 flex items-center gap-2 border-t pt-3">
