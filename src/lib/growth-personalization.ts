@@ -14,7 +14,23 @@
  * not a guess) for anything unrecognized.
  */
 
-export type CourseCategory = "coding" | "business" | "design" | "general";
+export type CourseCategory =
+  | "coding"
+  | "business"
+  | "design"
+  | "general"
+  // 4 new fine-grained categories added 2026-11-23 (see
+  // open-content-sources.ts for the ingest side) — not yet wired into
+  // RULES below, since none of today's onboarding field_of_interest/
+  // industry free text reliably distinguishes "wants data analysis"
+  // from "wants coding" etc. without a real false-positive check the
+  // way matchesKeyword() already guards against for "ai"/"ui". Left as
+  // valid category values only, so the Courses category pills and any
+  // future suggestion rule can use them without another type change.
+  | "data_analysis"
+  | "copywriting"
+  | "client_acquisition"
+  | "automation";
 export const PREP_FIELD_SLUGS = [
   "web-dev",
   "data-ai",

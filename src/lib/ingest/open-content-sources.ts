@@ -59,6 +59,20 @@
 // returns alongside rows/summary — so a single curl call now shows
 // exactly what each live request did, without needing Vercel log access.
 
+// 2026-11-23 update: added 4 new fine-grained categories — data_analysis,
+// copywriting, client_acquisition, automation — after real user feedback
+// (coursemates specifically wanted Data Analysis, Ghostwriting/
+// Copywriting, Client Acquisition & Retention, and Automation/Bot
+// Building, which Aza had nothing for). These are DOAB + Gutendex query
+// additions only (see DOAB_QUERIES / GUTENDEX_QUERIES below for why OTL
+// wasn't extended — a source_ref dedup-key collision risk, not a
+// shortcut). Unverified from this sandbox (its egress can't reach
+// directory.doabooks.org or gutendex.com directly) — run
+// POST /api/ingest/courses?phase=metadata after deploy and check the
+// `diagnostics` array in the response for each new query's rawItemCount/
+// acceptedCount before assuming it's actually producing rows, the same
+// way every other query in this file was confirmed.
+
 export type IngestSource = "doab" | "open_textbook_library" | "gutendex";
 
 export interface OpenContentIngestRow {
@@ -191,6 +205,34 @@ const DOAB_QUERIES: { query: string; category: string }[] = [
     query: '"CC BY" AND (user experience OR product design OR human computer interaction)',
     category: "design",
   },
+  // 4 new fine-grained categories, added in response to real user feedback
+  // (coursemates specifically wanted Data Analysis, Ghostwriting/
+  // Copywriting, Client Acquisition/Retention, and Automation/Bot
+  // Building — Nigeria-trending freelance/digital skills — and found the
+  // app had nothing for them). Kept as their own `category` values
+  // rather than folded into "business"/"coding" so each gets its own
+  // Courses pill and can be targeted by growth-personalization.ts later,
+  // instead of being buried inside a broad bucket the way "Data
+  // Analysis" and "Copywriting" silently were in skill_resources (0 rows
+  // each — see that table's retirement note above). Query wording kept
+  // close to DOAB's own existing working queries' style (plain OR'd
+  // subject nouns under a CC BY filter) rather than guessed new syntax.
+  {
+    query: '"CC BY" AND (data analysis OR statistics OR data science OR business analytics)',
+    category: "data_analysis",
+  },
+  {
+    query: '"CC BY" AND (copywriting OR business writing OR professional writing OR technical writing)',
+    category: "copywriting",
+  },
+  {
+    query: '"CC BY" AND (customer relationship management OR sales OR client management OR customer retention)',
+    category: "client_acquisition",
+  },
+  {
+    query: '"CC BY" AND (automation OR chatbot OR business process automation OR workflow automation)',
+    category: "automation",
+  },
 ];
 
 async function fetchDoab(diagnostics: QueryDiagnostic[]): Promise<OpenContentIngestRow[]> {
@@ -302,6 +344,19 @@ const OTL_SUBJECT_QUERIES: { subject: string; category: string }[] = [
   { subject: "finance", category: "business" },
   { subject: "management", category: "business" },
   { subject: "arts", category: "design" },
+  // Deliberately NOT adding more OTL subject queries for the 4 new
+  // categories below: source_ref for this source is `otl-${book.id}`
+  // with no category in the key, and the upsert is keyed on
+  // (source, source_ref) — querying the same "business"/"management"
+  // slugs again under a different category would just overwrite those
+  // books' existing business-tagged rows in place, not add real new
+  // coverage. OTL also has no separate confirmed slug for data
+  // analysis/copywriting/automation specifically (unlike DOAB/Gutendex,
+  // which take freeform query/topic strings, OTL's subjects.json only
+  // accepts its own fixed slug list, and inventing an unconfirmed one
+  // would repeat the exact guessed-slug mistake already documented above
+  // — "art-design" vs the real "arts"). DOAB and Gutendex below carry
+  // the real new coverage for these 4 skills.
 ];
 
 function otlAuthorNames(authors: OtlBook["authors"]): string | null {
@@ -437,6 +492,17 @@ const GUTENDEX_QUERIES: { topic: string; category: string }[] = [
   { topic: "computer", category: "coding" },
   { topic: "engineering", category: "coding" },
   { topic: "art", category: "design" },
+  // 4 new categories (see the DOAB_QUERIES comment above for why).
+  // Gutendex's topic param is freeform (matches against Gutenberg's own
+  // bookshelf/subject tags server-side), not a fixed slug list like OTL,
+  // so adding new topic strings here carries none of OTL's guessed-slug
+  // risk — worst case a topic just returns few/no matches, which
+  // fetchAllOpenContent's diagnostics will show plainly (rawItemCount: 0)
+  // rather than failing silently or erroring.
+  { topic: "statistics", category: "data_analysis" },
+  { topic: "rhetoric", category: "copywriting" },
+  { topic: "salesmanship", category: "client_acquisition" },
+  { topic: "automation", category: "automation" },
 ];
 
 function gutendexAuthorNames(authors: GutendexBook["authors"]): string | null {
