@@ -19,18 +19,19 @@ export type CourseCategory =
   | "business"
   | "design"
   | "general"
-  // 4 new fine-grained categories added 2026-11-23 (see
-  // open-content-sources.ts for the ingest side) — not yet wired into
-  // RULES below, since none of today's onboarding field_of_interest/
-  // industry free text reliably distinguishes "wants data analysis"
-  // from "wants coding" etc. without a real false-positive check the
-  // way matchesKeyword() already guards against for "ai"/"ui". Left as
-  // valid category values only, so the Courses category pills and any
-  // future suggestion rule can use them without another type change.
+  // 5 fine-grained categories added in response to real user feedback
+  // (Data Analysis, Trading/Forex, AI Automation & Bot Building, Client
+  // Acquisition & Retention, Ghostwriting/Copywriting — see
+  // open-content-sources.ts and the curated rows added 2026-11-25).
+  // Wired into RULES below with their own specific keyword sets, placed
+  // ahead of the generic "business" rule so e.g. "forex trader" or
+  // "copywriter" resolve to the new, more specific category instead of
+  // being swallowed by the broad business bucket.
   | "data_analysis"
-  | "copywriting"
+  | "trading_forex"
+  | "automation"
   | "client_acquisition"
-  | "automation";
+  | "copywriting";
 export const PREP_FIELD_SLUGS = [
   "web-dev",
   "data-ai",
@@ -59,10 +60,19 @@ interface KeywordRule {
 // "science") resolves to the more specific/likely-intended one.
 const RULES: KeywordRule[] = [
   { keywords: ["computer science", "software", "web dev", "programming", "coding", "information technology"], category: "coding", prepFieldSlug: "web-dev" },
-  { keywords: ["data", "machine learning", "artificial intelligence", "statistics", "analytics"], category: "coding", prepFieldSlug: "data-ai" },
+  // Specific, trending digital-skill categories placed ahead of the
+  // generic "coding"/"business" rules below so e.g. "forex trader" or
+  // "copywriter" resolve here instead of being swallowed by broader
+  // keywords ("trade", "business") further down.
+  { keywords: ["data analysis", "data analyst", "data science", "statistics", "business analytics"], category: "data_analysis", prepFieldSlug: "data-ai" },
+  { keywords: ["forex", "fx trading", "currency trading", "stock trading", "crypto trading", "day trading"], category: "trading_forex", prepFieldSlug: "business-entrepreneurship" },
+  { keywords: ["automation", "chatbot", "telegram bot", "whatsapp bot", "bot building", "ai agent"], category: "automation", prepFieldSlug: "web-dev" },
+  { keywords: ["client acquisition", "lead generation", "customer retention", "sales rep", "business development"], category: "client_acquisition", prepFieldSlug: "business-entrepreneurship" },
+  { keywords: ["copywriting", "copywriter", "ghostwriting", "ghostwriter", "content writing", "content writer"], category: "copywriting", prepFieldSlug: "general-workplace" },
+  { keywords: ["data", "machine learning", "artificial intelligence", "analytics"], category: "coding", prepFieldSlug: "data-ai" },
   { keywords: ["engineering", "mechanical", "marine", "electrical", "civil"], category: "coding", prepFieldSlug: "web-dev" },
   { keywords: ["art", "textile", "design", "graphic", "fashion"], category: "design", prepFieldSlug: "product-design" },
-  { keywords: ["business", "trader", "trade", "economics", "finance", "banking", "retail", "entrepreneur", "marketing"], category: "business", prepFieldSlug: "business-entrepreneurship" },
+  { keywords: ["business", "economics", "finance", "banking", "retail", "entrepreneur", "marketing"], category: "business", prepFieldSlug: "business-entrepreneurship" },
 ];
 
 /**
