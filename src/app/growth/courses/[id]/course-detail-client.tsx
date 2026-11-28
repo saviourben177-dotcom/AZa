@@ -81,6 +81,12 @@ export default function CourseDetailClient({
           initialProgressPercent={initialProgressPercent}
         />
       ) : course.reader_mode === "pdf_fallback" && course.pdf_url ? (
+        // Rendered directly in-app, in place — the same as the flowable
+        // reader above, not a separate screen or an "Open" button. For an
+        // actual PDF file this shows the file itself; when pdf_url is a
+        // landing/reader page on the source site instead (several ingested
+        // rows point there rather than at a file), that page's own content
+        // renders in-place the same way, as seen in testing on this build.
         <div className="overflow-hidden rounded-lg border bg-card">
           <iframe
             src={course.pdf_url}
