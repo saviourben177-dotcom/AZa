@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Clock, ExternalLink } from "lucide-react";
 import { PageHeader, Tag } from "@/components/aza/ui";
 import { btn } from "@/components/aza/kit";
@@ -8,6 +8,7 @@ import CoinBadge from "@/components/aza/coin-badge";
 import UnlockGate from "./unlock-gate";
 import FlowableReader from "./flowable-reader";
 import { recordCourseOpened } from "@/lib/actions/courses";
+import { openExternalUrl } from "@/lib/open-external-url";
 import type { Tables } from "@/lib/supabase/database.types";
 
 function categoryLabel(c: string): string {
@@ -15,59 +16,39 @@ function categoryLabel(c: string): string {
 }
 
 /**
- * Many PDF hosts (including the Red & Yellow / Strapi host used by some
- * ingested open textbooks) send `X-Frame-Options: deny` or an equivalent
- * CSP, which makes a plain <iframe src={pdf_url}> render as a silent,
- * completely empty box — no error, no console warning visible to the
- * user, nothing. That's the "newest courses show a blank box" bug:
- * every course that landed in pdf_fallback mode after ingest hit this.
+ * Root cause of "new courses show a blank box with a dead button":
  *
- * There's no reliable cross-origin way to detect "the iframe loaded but
- * was blocked by X-Frame-Options" from JS (the load event still fires).
- * So instead of pretending the iframe will always work, this always
- * shows a visible "Open PDF" link up front — the one guaranteed way to
- * read the document — with the iframe as a bonus preview underneath for
- * the hosts that do allow framing.
+ * 1. The <iframe src={pdf_url}> many of these PDF hosts refuse to be
+ *    framed by (X-Frame-Options/CSP) — the iframe loads an empty
+ *    response with no visible error, which is the blank box itself.
+ *
+ * 2. The "Open PDF" button was a plain <a target="_blank">. This app
+ *    ships as a Capacitor WebView (see capacitor.config.ts — server.url
+ *    points at the live site, so the native shell is one WebView with
+ *    no "new tab" concept). A bare target="_blank"/window.open reliably
+ *    does nothing there — same issue this codebase already solved for
+ *    Google sign-in via openExternalUrl()/@capacitor/browser, just not
+ *    wired up here. That's why the button looked broken, not just the
+ *    preview box.
+ *
+ * Fix: route the button through openExternalUrl (in-app browser tab on
+ * native, window.open on web), and drop the iframe — for the hosts that
+ * block framing it never showed anything anyway, so it was dead weight
+ * that only delayed finding the real "Open PDF" action.
  */
-function PdfFallbackViewer({ title, pdfUrl }: { title: string; pdfUrl: string }) {
-  const [iframeLoaded, setIframeLoaded] = useState(false);
-  const loadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    // A blocked iframe still fires `load` (the browser loaded an empty
-    // response), so this timeout doesn't detect blocking — it just
-    // avoids showing a "loading" flash forever if `load` never fires
-    // for some other reason (e.g. the request itself hangs).
-    loadTimeoutRef.current = setTimeout(() => setIframeLoaded(true), 4000);
-    return () => {
-      if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
-    };
-  }, []);
-
+function PdfFallbackViewer({ pdfUrl }: { pdfUrl: string }) {
   return (
-    <div className="flex flex-col gap-3">
-      <a
-        href={pdfUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+    <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-10 text-center">
+      <p className="text-sm text-muted-foreground">
+        This course reads best as a PDF — open it below.
+      </p>
+      <button
+        type="button"
+        onClick={() => openExternalUrl(pdfUrl)}
         className={btn.primary}
       >
-        Open PDF in new tab <ExternalLink className="size-4" />
-      </a>
-      <p className="text-xs text-muted-foreground">
-        Some PDFs can&apos;t be previewed inline — if the box below stays empty, use the button above.
-      </p>
-      <div className="overflow-hidden rounded-lg border bg-card">
-        <iframe
-          src={pdfUrl}
-          title={title}
-          className="h-[75vh] w-full"
-          onLoad={() => setIframeLoaded(true)}
-        />
-      </div>
-      {!iframeLoaded ? (
-        <p className="text-center text-xs text-muted-foreground">Loading preview…</p>
-      ) : null}
+        Open PDF <ExternalLink className="size-4" />
+      </button>
     </div>
   );
 }
@@ -139,20 +120,19 @@ export default function CourseDetailClient({
           initialProgressPercent={initialProgressPercent}
         />
       ) : course.reader_mode === "pdf_fallback" && course.pdf_url ? (
-        <PdfFallbackViewer title={course.title} pdfUrl={course.pdf_url} />
+        <PdfFallbackViewer pdfUrl={course.pdf_url} />
       ) : course.external_url ? (
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-10 text-center">
           <p className="text-sm text-muted-foreground">
             This course lives on an external site.
           </p>
-          <a
-            href={course.external_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => openExternalUrl(course.external_url!)}
             className={btn.primary}
           >
             Open course <ExternalLink className="size-4" />
-          </a>
+          </button>
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
